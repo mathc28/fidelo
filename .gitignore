@@ -1,0 +1,6 @@
+node_modules/
+.next/
+.env
+*.pem
+*.p12
+*.p8
