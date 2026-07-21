@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID, randomBytes } from "crypto";
 import { db, getMerchantBySlug } from "@/lib/supabaseAdmin";
+import { clientIp, isRateLimited } from "@/lib/rateLimit";
 
 /** Inscription publique d'un client final, scopée au commerce du slug. */
 export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
   const merchant = await getMerchantBySlug(params.slug);
   if (!merchant) return new NextResponse("Commerce introuvable", { status: 404 });
+
+  const ip = clientIp(req);
+  if (await isRateLimited(`signup:${merchant.id}`, ip, { max: 10, windowSeconds: 3600 })) {
+    return new NextResponse("Trop de tentatives, réessayez plus tard", { status: 429 });
+  }
 
   const { firstName, email, website } = await req.json();
 

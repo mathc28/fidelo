@@ -262,3 +262,19 @@ create table pairing_codes (
 alter table pairing_codes enable row level security;
 create policy pairing_own on pairing_codes
   for all using (merchant_id = my_merchant_id());
+
+-- ------------------------------------------------------------
+-- 9. RATE_LIMIT_HITS — anti brute-force sur les endpoints publics
+--    (ex: code d'appairage caisse, inscription client). Voir lib/rateLimit.ts.
+-- ------------------------------------------------------------
+create table rate_limit_hits (
+  id bigint generated always as identity primary key,
+  bucket text not null,        -- ex: 'scan-pair', 'signup:<merchant_id>'
+  ip text not null,
+  created_at timestamptz not null default now()
+);
+
+create index idx_rate_limit_bucket_ip on rate_limit_hits(bucket, ip, created_at);
+
+-- Jamais interrogée qu'en service_role (comme apple_registrations).
+alter table rate_limit_hits enable row level security;

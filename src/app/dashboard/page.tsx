@@ -244,8 +244,14 @@ export default function DashboardPage() {
   if (!session) {
     return (
       <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
-        <Logo height={40} />
-        <h1 style={{ fontSize: 22, margin: "20px 0 4px" }}>Espace commerçant</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+          <Logo height={34} />
+          <span style={{
+            fontSize: 11, fontWeight: 700, color: "var(--color-coral-hover)", background: "var(--color-cream)",
+            borderRadius: 999, padding: "4px 10px", letterSpacing: ".05em",
+          }}>ESPACE COMMERÇANT</span>
+        </div>
+        <h1 style={{ fontSize: 22, margin: "0 0 18px" }}>Connexion</h1>
         <Field type="email" placeholder="Votre email" value={email}
           onChange={(e) => setEmail(e.target.value)} />
         <Field type="password" placeholder="Mot de passe" value={password}

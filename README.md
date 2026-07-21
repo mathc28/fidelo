@@ -28,6 +28,9 @@ passkit-generator · Google Wallet API · html5-qrcode.
   échangeant un code d'appairage à 6 chiffres généré depuis le dashboard.
   Stocké hashé (sha256) dans `devices`, révocable à distance.
 - **Client final / web service Apple** → service_role côté serveur uniquement.
+- **Anti brute-force** (`lib/rateLimit.ts`, table `rate_limit_hits`) : limite
+  par IP sur `/api/scan/pair` (10/10 min) et `/api/m/[slug]/signup` (10/h) —
+  pas de service externe, tout reste sur Supabase.
 
 ## Le moteur de points
 
@@ -84,6 +87,5 @@ transaction, `lib/loyalty.ts` pousse la mise à jour vers les deux wallets.
 - Stripe Billing + webhook → subscription_status
 - Re-push de tous les passes d'un merchant quand il change son design
 - PDF chevalet de comptoir (QR vers /m/[slug]/inscription)
-- Rate limiting IP sur /api/m/[slug]/signup (Upstash)
 - Page /dashboard : gestion des récompenses et liste des devices avec révocation
 # fidelo

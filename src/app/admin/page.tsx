@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseBrowser";
 import { Button, Field, Logo, SubscriptionBadge, ProgramBadge } from "@/components/ui";
 
@@ -29,14 +30,15 @@ function slugify(text: string): string {
  * C'est ici que TU crées les comptes de tes clients commerçants.
  */
 export default function AdminPage() {
+  const router = useRouter();
   const [session, setSession] = useState<any>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
   const [merchants, setMerchants] = useState<Merchant[] | null>(null);
-  const [loadError, setLoadError] = useState("");
   const [search, setSearch] = useState("");
+  const [notAdmin, setNotAdmin] = useState(false);
 
   // Formulaire de création
   const [name, setName] = useState("");
@@ -71,8 +73,8 @@ export default function AdminPage() {
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
     if (res.status === 401) {
-      setLoadError("❌ Ce compte n'est pas admin plateforme (PLATFORM_ADMIN_EMAILS).");
-      setMerchants([]);
+      setNotAdmin(true);
+      setTimeout(() => router.replace("/dashboard"), 1800);
       return;
     }
     const data = await res.json();
@@ -126,16 +128,47 @@ export default function AdminPage() {
 
   if (!session) {
     return (
-      <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
-        <Logo height={40} />
-        <h1 style={{ fontSize: 22, margin: "20px 0 4px" }}>Back-office plateforme</h1>
-        <Field type="email" placeholder="Email admin" value={email}
-          onChange={(e) => setEmail(e.target.value)} />
-        <Field type="password" placeholder="Mot de passe" value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && login()} />
-        {authError && <p style={{ color: "var(--color-error)", fontSize: 14 }}>{authError}</p>}
-        <Button block onClick={login}>Connexion</Button>
+      <main style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--color-marine)", padding: 20,
+      }}>
+        <div style={{ width: "100%", maxWidth: 380 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 22 }}>
+            <Logo variant="symbol" theme="white" height={30} />
+            <span style={{
+              fontSize: 11, fontWeight: 700, color: "#B9C2DC", background: "rgba(255,255,255,.1)",
+              borderRadius: 999, padding: "4px 10px", letterSpacing: ".05em",
+            }}>BACK-OFFICE PLATEFORME</span>
+          </div>
+          <h1 style={{ fontSize: 22, margin: "0 0 18px", color: "#fff" }}>Connexion admin</h1>
+          <Field type="email" placeholder="Email admin" value={email}
+            onChange={(e) => setEmail(e.target.value)} />
+          <Field type="password" placeholder="Mot de passe" value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && login()} />
+          {authError && <p style={{ color: "#FF9C93", fontSize: 14 }}>{authError}</p>}
+          <Button block onClick={login}>Connexion</Button>
+          <p style={{ color: "#B9C2DC", fontSize: 12.5, marginTop: 14, textAlign: "center" }}>
+            Vous êtes commerçant ? <a href="/dashboard" style={{ color: "#fff", fontWeight: 600 }}>Connectez-vous à votre espace</a>
+          </p>
+        </div>
+      </main>
+    );
+  }
+
+  if (notAdmin) {
+    return (
+      <main style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--color-marine)", padding: 20, textAlign: "center",
+      }}>
+        <div style={{ maxWidth: 340 }}>
+          <Logo variant="symbol" theme="white" height={30} />
+          <p style={{ color: "#fff", fontSize: 15, margin: "18px 0 0", lineHeight: 1.5 }}>
+            Ce compte n'a pas accès au back-office plateforme.
+            <br />Redirection vers votre espace commerçant…
+          </p>
+        </div>
       </main>
     );
   }
@@ -183,10 +216,6 @@ export default function AdminPage() {
               placeholder="Rechercher nom ou slug…" className="field-input"
               style={{ width: 240, padding: "9px 12px", fontSize: 13 }} />
           </div>
-
-          {loadError && (
-            <div style={{ padding: "0 22px 14px", color: "var(--color-error)", fontSize: 13 }}>{loadError}</div>
-          )}
 
           <div className="table-head" style={{ gridTemplateColumns: "2fr 1.1fr 1.1fr 0.8fr 0.7fr" }}>
             <div>Commerce</div><div>Programme</div><div>Abonnement</div>
