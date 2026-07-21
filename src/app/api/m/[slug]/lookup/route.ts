@@ -1,11 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, getMerchantBySlug } from "@/lib/supabaseAdmin";
 import { getActiveRewards } from "@/lib/loyalty";
+import { clientIp, isRateLimited } from "@/lib/rateLimit";
 
 /** Espace client public : lookup par email, scopé au commerce. */
 export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
   const merchant = await getMerchantBySlug(params.slug);
   if (!merchant) return new NextResponse("Commerce introuvable", { status: 404 });
+
+  const ip = clientIp(req);
+  if (await isRateLimited(`lookup:${merchant.id}`, ip, { max: 10, windowSeconds: 3600 })) {
+    return new NextResponse("Trop de tentatives, réessayez plus tard", { status: 429 });
+  }
 
   const { email } = await req.json();
   if (!email) return new NextResponse("Email requis", { status: 400 });
