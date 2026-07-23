@@ -77,9 +77,16 @@ export default function SignupForm({ slug, labelColor }: { slug: string; labelCo
         <button
           onClick={() => setForceOther((v) => !v)}
           style={{
-            background: "none", border: "none", color: "rgba(255,255,255,0.4)",
-            fontSize: 13, marginTop: 12, cursor: "pointer", textDecoration: "underline",
-            display: "block", marginLeft: "auto", marginRight: "auto",
+            background: "none",
+            border: "none",
+            color: "rgba(255,255,255,0.4)",
+            fontSize: 13,
+            marginTop: 12,
+            cursor: "pointer",
+            textDecoration: "underline",
+            display: "block",
+            marginLeft: "auto",
+            marginRight: "auto",
           }}
         >
           {showApple ? "J'ai un Android" : "J'ai un iPhone"}
@@ -90,21 +97,43 @@ export default function SignupForm({ slug, labelColor }: { slug: string; labelCo
 
   return (
     <>
-      <input style={input} placeholder="Prénom" value={firstName}
-        onChange={(e) => setFirstName(e.target.value)} />
-      <input style={input} type="email" placeholder="Email" value={email}
-        onChange={(e) => setEmail(e.target.value)} />
+      <input
+        style={input}
+        placeholder="Prénom"
+        value={firstName}
+        onChange={(e) => setFirstName(e.target.value)}
+      />
+      <input
+        style={input}
+        type="email"
+        placeholder="Email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+      />
       {/* Honeypot anti-bot */}
-      <input type="text" name="website" tabIndex={-1} autoComplete="off"
-        style={{ position: "absolute", left: -9999 }} aria-hidden="true" />
+      <input
+        type="text"
+        name="website"
+        tabIndex={-1}
+        autoComplete="off"
+        style={{ position: "absolute", left: -9999 }}
+        aria-hidden="true"
+      />
       {error && <p style={{ color: "#ff8a8a", fontSize: 14 }}>{error}</p>}
       <button
         onClick={handleSubmit}
         disabled={loading}
         style={{
-          width: "100%", padding: 16, borderRadius: "var(--radius-md)", border: "none",
-          background: labelColor, color: "#111", fontSize: 16, fontWeight: 700,
-          cursor: "pointer", opacity: loading ? 0.6 : 1,
+          width: "100%",
+          padding: 16,
+          borderRadius: "var(--radius-md)",
+          border: "none",
+          background: labelColor,
+          color: "#111",
+          fontSize: 16,
+          fontWeight: 700,
+          cursor: "pointer",
+          opacity: loading ? 0.6 : 1,
         }}
       >
         {loading ? "Création…" : "Créer ma carte"}

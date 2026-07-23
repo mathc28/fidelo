@@ -8,15 +8,15 @@ export async function POST(req: NextRequest) {
   const merchant = await requireMerchant(req);
   if (!merchant) return new NextResponse("Non autorisé", { status: 401 });
 
-  const { name, bgColor, address } = await req.json();
+  const { name, themeId, address } = await req.json();
   const updates: Record<string, unknown> = {};
 
   if (typeof name === "string" && name.trim()) {
     updates.name = name.trim();
   }
 
-  if (typeof bgColor === "string" && bgColor) {
-    updates.bg_color = bgColor;
+  if (typeof themeId === "string" && themeId) {
+    updates.theme_id = themeId;
   }
 
   if (typeof address === "string") {
@@ -34,7 +34,10 @@ export async function POST(req: NextRequest) {
     .select()
     .single();
 
-  if (error) return new NextResponse(error.message, { status: 500 });
+  if (error) {
+    if (error.code === "23503") return new NextResponse("Thème invalide", { status: 400 });
+    return new NextResponse(error.message, { status: 500 });
+  }
 
   return NextResponse.json({ ok: true, merchant: data, geocoded: data.lat != null });
 }

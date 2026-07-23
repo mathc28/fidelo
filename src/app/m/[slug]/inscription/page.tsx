@@ -1,4 +1,4 @@
-import { getMerchantBySlug } from "@/lib/supabaseAdmin";
+import { getMerchantBySlug, getCardTheme } from "@/lib/supabaseAdmin";
 import { db } from "@/lib/supabaseAdmin";
 import { notFound } from "next/navigation";
 import SignupForm from "./SignupForm";
@@ -13,6 +13,7 @@ export const revalidate = 300;
 export default async function InscriptionPage({ params }: { params: { slug: string } }) {
   const merchant = await getMerchantBySlug(params.slug);
   if (!merchant) notFound();
+  const theme = await getCardTheme(merchant.theme_id);
 
   const { data: rewards } = await db
     .from("rewards")
@@ -36,7 +37,7 @@ export default async function InscriptionPage({ params }: { params: { slug: stri
         margin: "0 auto",
         minHeight: "100vh",
         padding: "48px 20px",
-        background: merchant.bg_color,
+        background: theme.bg_color,
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 24 }}>
@@ -47,13 +48,23 @@ export default async function InscriptionPage({ params }: { params: { slug: stri
         <span style={{ fontWeight: 600, fontSize: 16 }}>{merchant.name}</span>
       </div>
 
-      <h1 style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: 26, margin: "0 0 6px", lineHeight: 1.25 }}>{hook}</h1>
+      <h1
+        style={{
+          fontFamily: "var(--font-heading)",
+          fontWeight: 600,
+          fontSize: 26,
+          margin: "0 0 6px",
+          lineHeight: 1.25,
+        }}
+      >
+        {hook}
+      </h1>
       <p style={{ color: "rgba(255,255,255,0.6)", marginBottom: 28, lineHeight: 1.5 }}>
-        Carte gratuite, directement dans votre téléphone. Rien à installer — elle
-        apparaîtra même sur votre écran verrouillé quand vous passerez à côté.
+        Carte gratuite, directement dans votre téléphone. Rien à installer — elle apparaîtra même
+        sur votre écran verrouillé quand vous passerez à côté.
       </p>
 
-      <SignupForm slug={merchant.slug} labelColor={merchant.label_color} />
+      <SignupForm slug={merchant.slug} labelColor={theme.label_color} />
 
       <div style={{ display: "flex", justifyContent: "center", marginTop: 40 }}>
         <PoweredByBadge variant="pill" />

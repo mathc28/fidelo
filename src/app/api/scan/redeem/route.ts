@@ -14,10 +14,19 @@ export async function POST(req: NextRequest) {
   const { serial, rewardId } = await req.json();
 
   const [{ data: customer }, { data: reward }] = await Promise.all([
-    db.from("customers").select("*")
-      .eq("serial_number", serial).eq("merchant_id", auth.merchant.id).single(),
-    db.from("rewards").select("*")
-      .eq("id", rewardId).eq("merchant_id", auth.merchant.id).eq("active", true).single(),
+    db
+      .from("customers")
+      .select("*")
+      .eq("serial_number", serial)
+      .eq("merchant_id", auth.merchant.id)
+      .single(),
+    db
+      .from("rewards")
+      .select("*")
+      .eq("id", rewardId)
+      .eq("merchant_id", auth.merchant.id)
+      .eq("active", true)
+      .single(),
   ]);
 
   if (!customer) return new NextResponse("Carte inconnue", { status: 404 });

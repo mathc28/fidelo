@@ -4,7 +4,7 @@ import { db } from "./supabaseAdmin";
 /** IP du client, en tenant compte d'un éventuel proxy devant l'app. */
 export function clientIp(req: NextRequest): string {
   const fwd = req.headers.get("x-forwarded-for");
-  return fwd ? fwd.split(",")[0].trim() : req.headers.get("x-real-ip") ?? "unknown";
+  return fwd ? fwd.split(",")[0].trim() : (req.headers.get("x-real-ip") ?? "unknown");
 }
 
 /**

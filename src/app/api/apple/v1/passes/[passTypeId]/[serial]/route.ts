@@ -10,7 +10,10 @@ export async function GET(
   const token = req.headers.get("authorization")?.replace("ApplePass ", "");
 
   const { data: customer } = await db
-    .from("customers").select("*").eq("serial_number", params.serial).single();
+    .from("customers")
+    .select("*")
+    .eq("serial_number", params.serial)
+    .single();
   if (!customer || customer.auth_token !== token) {
     return new NextResponse(null, { status: 401 });
   }

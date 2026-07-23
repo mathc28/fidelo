@@ -24,10 +24,9 @@ export async function POST(req: NextRequest) {
     .gte("sent_at", weekAgo);
 
   if ((count ?? 0) >= MAX_PROMOS_PER_WEEK) {
-    return new NextResponse(
-      `Limite de ${MAX_PROMOS_PER_WEEK} promos par semaine atteinte`,
-      { status: 429 }
-    );
+    return new NextResponse(`Limite de ${MAX_PROMOS_PER_WEEK} promos par semaine atteinte`, {
+      status: 429,
+    });
   }
 
   // Le message devient le champ "récompense/promo" des passes Apple :

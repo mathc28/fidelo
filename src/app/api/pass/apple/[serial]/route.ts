@@ -5,7 +5,10 @@ import { getActiveRewards } from "@/lib/loyalty";
 
 export async function GET(_req: NextRequest, { params }: { params: { serial: string } }) {
   const { data: customer } = await db
-    .from("customers").select("*").eq("serial_number", params.serial).single();
+    .from("customers")
+    .select("*")
+    .eq("serial_number", params.serial)
+    .single();
   if (!customer) return new NextResponse("Carte introuvable", { status: 404 });
 
   const merchant = await getMerchantById(customer.merchant_id);

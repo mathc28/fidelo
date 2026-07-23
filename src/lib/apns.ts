@@ -29,7 +29,9 @@ function pushToDevice(client: http2.ClientHttp2Session, pushToken: string): Prom
       "apns-push-type": "background",
     });
     let status = 0;
-    req.on("response", (h) => { status = Number(h[":status"] ?? 0); });
+    req.on("response", (h) => {
+      status = Number(h[":status"] ?? 0);
+    });
     req.on("close", () => resolve(status));
     req.on("error", () => resolve(0));
     req.end(JSON.stringify({}));
@@ -69,7 +71,10 @@ export async function pushMerchantPasses(merchantId: string): Promise<number> {
   const { data: regs } = await db
     .from("apple_registrations")
     .select("push_token")
-    .in("serial_number", customers.map((c) => c.serial_number));
+    .in(
+      "serial_number",
+      customers.map((c) => c.serial_number)
+    );
 
   const tokens = [...new Set((regs ?? []).map((r) => r.push_token))];
   await pushTokens(tokens);

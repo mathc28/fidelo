@@ -13,8 +13,7 @@ export type Merchant = {
   slug: string;
   name: string;
   logo_url: string | null;
-  bg_color: string;
-  label_color: string;
+  theme_id: string;
   address: string | null;
   lat: number | null;
   lng: number | null;
@@ -45,6 +44,16 @@ export type Reward = {
   active: boolean;
 };
 
+export type CardTheme = {
+  id: string;
+  label: string;
+  bg_color: string;
+  text_color: string;
+  label_color: string;
+  sort_order: number;
+  is_light: boolean;
+};
+
 export async function getMerchantBySlug(slug: string): Promise<Merchant | null> {
   const { data } = await db.from("merchants").select("*").eq("slug", slug).single();
   return data;
@@ -53,6 +62,12 @@ export async function getMerchantBySlug(slug: string): Promise<Merchant | null> 
 export async function getMerchantById(id: string): Promise<Merchant | null> {
   const { data } = await db.from("merchants").select("*").eq("id", id).single();
   return data;
+}
+
+/** Le theme_id d'un merchant référence toujours une ligne existante (contrainte FK). */
+export async function getCardTheme(themeId: string): Promise<CardTheme> {
+  const { data } = await db.from("card_themes").select("*").eq("id", themeId).single();
+  return data as CardTheme;
 }
 
 /** Un abonnement inactif bloque les actions du commerçant, jamais celles du client final. */

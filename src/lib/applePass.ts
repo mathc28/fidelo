@@ -1,6 +1,6 @@
 import { PKPass } from "passkit-generator";
 import { config } from "./config";
-import { Customer, Merchant, Reward } from "./supabaseAdmin";
+import { Customer, Merchant, Reward, getCardTheme } from "./supabaseAdmin";
 import { getPassImages } from "./passAssets";
 
 /**
@@ -14,6 +14,7 @@ export async function buildApplePass(
   rewards: Reward[]
 ): Promise<Buffer> {
   const images = await getPassImages(merchant);
+  const theme = await getCardTheme(merchant.theme_id);
   const isVisits = merchant.program_type === "visits";
 
   const nextReward = rewards
@@ -24,49 +25,52 @@ export async function buildApplePass(
     .filter((r) => r.active && r.cost_points <= customer.points)
     .sort((a, b) => b.cost_points - a.cost_points)[0];
 
-  const pass = new PKPass(images, {
-    wwdr: config.apple.wwdrCert(),
-    signerCert: config.apple.signerCert(),
-    signerKey: config.apple.signerKey(),
-    signerKeyPassphrase: config.apple.signerKeyPassphrase,
-  }, {
-    formatVersion: 1,
-    passTypeIdentifier: config.apple.passTypeId,
-    teamIdentifier: config.apple.teamId,
-    serialNumber: customer.serial_number,
-    organizationName: merchant.name,
-    description: `Carte de fidélité ${merchant.name}`,
+  const pass = new PKPass(
+    images,
+    {
+      wwdr: config.apple.wwdrCert(),
+      signerCert: config.apple.signerCert(),
+      signerKey: config.apple.signerKey(),
+      signerKeyPassphrase: config.apple.signerKeyPassphrase,
+    },
+    {
+      formatVersion: 1,
+      passTypeIdentifier: config.apple.passTypeId,
+      teamIdentifier: config.apple.teamId,
+      serialNumber: customer.serial_number,
+      organizationName: merchant.name,
+      description: `Carte de fidélité ${merchant.name}`,
 
-    webServiceURL: `${config.baseUrl}/api/apple`,
-    authenticationToken: customer.auth_token,
+      webServiceURL: `${config.baseUrl}/api/apple`,
+      authenticationToken: customer.auth_token,
 
-    ...(merchant.lat != null && merchant.lng != null
-      ? {
-          locations: [{
-            latitude: merchant.lat,
-            longitude: merchant.lng,
-            relevantText: `${merchant.name} est juste à côté — votre carte est prête !`,
-          }],
-          maxDistance: 300,
-        }
-      : {}),
+      ...(merchant.lat != null && merchant.lng != null
+        ? {
+            locations: [
+              {
+                latitude: merchant.lat,
+                longitude: merchant.lng,
+                relevantText: `${merchant.name} est juste à côté — votre carte est prête !`,
+              },
+            ],
+            maxDistance: 300,
+          }
+        : {}),
 
-    backgroundColor: hexToRgb(merchant.bg_color),
-    foregroundColor: "rgb(255, 255, 255)",
-    labelColor: hexToRgb(merchant.label_color),
-  });
+      backgroundColor: hexToRgb(theme.bg_color),
+      foregroundColor: hexToRgb(theme.text_color),
+      labelColor: hexToRgb(theme.label_color),
+    }
+  );
 
   pass.type = "storeCard";
 
   pass.primaryFields.push({
     key: "balance",
     label: isVisits ? "PASSAGES" : "POINTS",
-    value: isVisits && nextReward
-      ? `${customer.points} / ${nextReward.cost_points}`
-      : customer.points,
-    changeMessage: isVisits
-      ? "Passage enregistré ! %@"
-      : "Vous avez maintenant %@ points !",
+    value:
+      isVisits && nextReward ? `${customer.points} / ${nextReward.cost_points}` : customer.points,
+    changeMessage: isVisits ? "Passage enregistré ! %@" : "Vous avez maintenant %@ points !",
   });
 
   pass.secondaryFields.push({
@@ -114,6 +118,14 @@ export async function buildApplePass(
 
 function hexToRgb(hex: string): string {
   const h = hex.replace("#", "");
-  const n = parseInt(h.length === 3 ? h.split("").map((c) => c + c).join("") : h, 16);
+  const n = parseInt(
+    h.length === 3
+      ? h
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : h,
+    16
+  );
   return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
 }

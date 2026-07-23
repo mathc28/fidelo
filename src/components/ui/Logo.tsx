@@ -6,9 +6,12 @@ type LogoProps = {
 
 /** eslint-disable-next-line @next/next/no-img-element -- logo statique, pas besoin d'optimisation next/image */
 export function Logo({ variant = "full", theme = "color", height = 40 }: LogoProps) {
-  const src = variant === "full"
-    ? theme === "white" ? "/brand/logo-full-white.png" : "/brand/logo-full.png"
-    : "/brand/logo-symbol.png";
+  const src =
+    variant === "full"
+      ? theme === "white"
+        ? "/brand/logo-full-white.png"
+        : "/brand/logo-full.png"
+      : "/brand/logo-symbol.png";
   const whiteSymbol = variant === "symbol" && theme === "white";
   return (
     // eslint-disable-next-line @next/next/no-img-element
@@ -24,10 +27,16 @@ export function Logo({ variant = "full", theme = "color", height = 40 }: LogoPro
 export function PoweredByBadge({ variant = "plain" }: { variant?: "plain" | "pill" }) {
   if (variant === "pill") {
     return (
-      <div style={{
-        display: "inline-flex", alignItems: "center", gap: 7,
-        background: "var(--color-marine)", borderRadius: 999, padding: "7px 14px",
-      }}>
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 7,
+          background: "var(--color-marine)",
+          borderRadius: 999,
+          padding: "7px 14px",
+        }}
+      >
         <Logo variant="symbol" theme="white" height={14} />
         <span style={{ fontSize: 11, color: "#fff", fontWeight: 600 }}>
           Propulsé par <span style={{ fontFamily: "var(--font-heading)" }}>Fidelo</span>
@@ -36,7 +45,7 @@ export function PoweredByBadge({ variant = "plain" }: { variant?: "plain" | "pil
     );
   }
   return (
-    <div style={{ display: "inline-flex", alignItems: "center", gap: 7, opacity: .75 }}>
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 7, opacity: 0.75 }}>
       <Logo variant="symbol" height={16} />
       <span style={{ fontSize: 12, color: "var(--color-text)", fontWeight: 600 }}>
         Propulsé par <span style={{ fontFamily: "var(--font-heading)" }}>Fidelo</span>

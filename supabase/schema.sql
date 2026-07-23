@@ -278,3 +278,44 @@ create index idx_rate_limit_bucket_ip on rate_limit_hits(bucket, ip, created_at)
 
 -- Jamais interrogée qu'en service_role (comme apple_registrations).
 alter table rate_limit_hits enable row level security;
+
+-- ------------------------------------------------------------
+-- 10. CARD_THEMES — palette de thèmes de carte (fond + texte + accent)
+--     Chaque thème est validé pour le contraste WCAG AA. Le commerçant
+--     choisit un thème, jamais une couleur libre : garantit qu'une carte
+--     n'est jamais illisible ni moche. Remplace merchants.bg_color /
+--     merchants.label_color, lus désormais via merchants.theme_id.
+-- ------------------------------------------------------------
+create table card_themes (
+  id text primary key,
+  label text not null,
+  bg_color text not null,      -- fond de la carte
+  text_color text not null,    -- valeurs des champs (le « 7/10 », le prénom)
+  label_color text not null,   -- labels + accents (le corail, les titres de champs)
+  sort_order integer not null default 0,
+  is_light boolean not null default false  -- fond clair — adapter l'UI de preview
+);
+
+insert into card_themes (id, label, bg_color, text_color, label_color, sort_order, is_light) values
+  ('marine',     'Marine Fidelo', '#1A2E60', '#F3EFE3', '#F56C5A', 1,  false),
+  ('nuit',       'Bleu nuit',     '#141B2E', '#F3EFE3', '#F2C14E', 2,  false),
+  ('bordeaux',   'Bordeaux',      '#5C1F2E', '#F3EFE3', '#E8A87C', 3,  false),
+  ('foret',      'Forêt',         '#1E3D34', '#F3EFE3', '#E8B44A', 4,  false),
+  ('terracotta', 'Terracotta',    '#7A3B2E', '#F8EFE8', '#F0C05A', 5,  false),
+  ('cafe',       'Café',          '#3A2B22', '#F3EFE3', '#D9A566', 6,  false),
+  ('ardoise',    'Ardoise',       '#2B3038', '#F3EFE3', '#6FB4C9', 7,  false),
+  ('prune',      'Prune',         '#3D2645', '#F3EFE3', '#D98BB0', 8,  false),
+  ('olive',      'Olive',         '#3A3A22', '#F5F0DE', '#C9B458', 9,  false),
+  ('charbon',    'Charbon',       '#1C1C1E', '#F3EFE3', '#F56C5A', 10, false);
+
+alter table card_themes enable row level security;
+
+-- Catalogue public, lu par le picker du dashboard (JWT du gérant) et par
+-- le générateur de pass (service_role, qui bypass de toute façon).
+create policy card_themes_read on card_themes for select using (true);
+
+alter table merchants
+  add column theme_id text not null default 'marine' references card_themes(id);
+
+alter table merchants drop column bg_color;
+alter table merchants drop column label_color;

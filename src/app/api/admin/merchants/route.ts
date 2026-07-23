@@ -44,12 +44,18 @@ export async function POST(req: NextRequest) {
     return new NextResponse("name, slug, ownerEmail et programType requis", { status: 400 });
   }
 
-  const cleanSlug = String(slug).toLowerCase().trim().replace(/[^a-z0-9-]/g, "-");
+  const cleanSlug = String(slug)
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9-]/g, "-");
   const email = String(ownerEmail).toLowerCase().trim();
 
   // Slug déjà pris ?
   const { data: existingSlug } = await db
-    .from("merchants").select("id").eq("slug", cleanSlug).single();
+    .from("merchants")
+    .select("id")
+    .eq("slug", cleanSlug)
+    .single();
   if (existingSlug) return new NextResponse("Ce slug est déjà utilisé", { status: 409 });
 
   // 1. Inviter le gérant. Si le compte existe déjà (re-création après erreur),
@@ -72,11 +78,14 @@ export async function POST(req: NextRequest) {
 
   // Un gérant = un commerce (contrainte V1, index unique sur owner_id)
   const { data: existingMerchant } = await db
-    .from("merchants").select("slug").eq("owner_id", ownerId).single();
+    .from("merchants")
+    .select("slug")
+    .eq("owner_id", ownerId)
+    .single();
   if (existingMerchant) {
-    return new NextResponse(
-      `Ce gérant a déjà un commerce (${existingMerchant.slug})`, { status: 409 }
-    );
+    return new NextResponse(`Ce gérant a déjà un commerce (${existingMerchant.slug})`, {
+      status: 409,
+    });
   }
 
   // 2. Créer le commerce

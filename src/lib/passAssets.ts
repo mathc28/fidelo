@@ -4,7 +4,14 @@ import { db, Merchant } from "./supabaseAdmin";
 
 export type PassImages = Record<string, Buffer>;
 
-const REQUIRED = ["icon.png", "icon@2x.png", "logo.png", "logo@2x.png", "strip.png", "strip@2x.png"];
+const REQUIRED = [
+  "icon.png",
+  "icon@2x.png",
+  "logo.png",
+  "logo@2x.png",
+  "strip.png",
+  "strip@2x.png",
+];
 
 const cache = new Map<string, { images: PassImages; at: number }>();
 
@@ -21,16 +28,12 @@ export async function getPassImages(merchant: Merchant): Promise<PassImages> {
   const images: PassImages = {};
 
   for (const name of REQUIRED) {
-    const { data } = await db.storage
-      .from("pass-assets")
-      .download(`${merchant.id}/${name}`);
+    const { data } = await db.storage.from("pass-assets").download(`${merchant.id}/${name}`);
 
     if (data) {
       images[name] = Buffer.from(await data.arrayBuffer());
     } else {
-      images[name] = fs.readFileSync(
-        path.join(process.cwd(), "assets", "pass-defaults", name)
-      );
+      images[name] = fs.readFileSync(path.join(process.cwd(), "assets", "pass-defaults", name));
     }
   }
 

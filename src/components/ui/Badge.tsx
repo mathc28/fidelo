@@ -27,7 +27,10 @@ const SUBSCRIPTION_LABELS: Record<string, { variant: BadgeVariant; label: string
 
 /** Mappe le statut d'abonnement Supabase (active/trialing/past_due…) sur un badge. */
 export function SubscriptionBadge({ status }: { status: string }) {
-  const { variant, label } = SUBSCRIPTION_LABELS[status] ?? { variant: "error" as const, label: status };
+  const { variant, label } = SUBSCRIPTION_LABELS[status] ?? {
+    variant: "error" as const,
+    label: status,
+  };
   return (
     <Badge variant={variant} dot>
       {label}
@@ -39,8 +42,6 @@ export function SubscriptionBadge({ status }: { status: string }) {
 export function ProgramBadge({ programType }: { programType: string }) {
   const isVisits = programType === "visits";
   return (
-    <Badge variant={isVisits ? "purple" : "blue"}>
-      {isVisits ? "Au passage" : "Aux points"}
-    </Badge>
+    <Badge variant={isVisits ? "purple" : "blue"}>{isVisits ? "Au passage" : "Aux points"}</Badge>
   );
 }

@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     .from("customers")
     .select("*")
     .eq("serial_number", serial)
-    .eq("merchant_id", auth.merchant.id)  // un QR d'un autre commerce = introuvable
+    .eq("merchant_id", auth.merchant.id) // un QR d'un autre commerce = introuvable
     .single();
 
   if (!customer) return new NextResponse("Carte inconnue dans ce commerce", { status: 404 });

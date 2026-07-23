@@ -32,13 +32,24 @@ export default function DefinirMotDePassePage() {
 
   async function save() {
     setError("");
-    if (password.length < 8) { setError("8 caractères minimum."); return; }
-    if (password !== confirm) { setError("Les deux mots de passe ne correspondent pas."); return; }
+    if (password.length < 8) {
+      setError("8 caractères minimum.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Les deux mots de passe ne correspondent pas.");
+      return;
+    }
 
     const { error } = await supabase.auth.updateUser({ password });
-    if (error) { setError(error.message); return; }
+    if (error) {
+      setError(error.message);
+      return;
+    }
     setDone(true);
-    setTimeout(() => { window.location.href = "/dashboard"; }, 1500);
+    setTimeout(() => {
+      window.location.href = "/dashboard";
+    }, 1500);
   }
 
   if (!ready) return null;
@@ -48,9 +59,8 @@ export default function DefinirMotDePassePage() {
       <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
         <h1 style={{ fontSize: 22 }}>Lien invalide ou expiré</h1>
         <p style={{ color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.6 }}>
-          Ce lien d'invitation n'est plus valable (il expire après 24 h et ne
-          fonctionne qu'une fois). Contactez la personne qui vous a invité
-          pour en recevoir un nouveau.
+          Ce lien d’invitation n’est plus valable (il expire après 24 h et ne fonctionne qu’une
+          fois). Contactez la personne qui vous a invité pour en recevoir un nouveau.
         </p>
       </main>
     );
@@ -61,7 +71,9 @@ export default function DefinirMotDePassePage() {
       <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px", textAlign: "center" }}>
         <p style={{ fontSize: 40, margin: 0 }}>🎉</p>
         <h1 style={{ fontSize: 22 }}>Mot de passe enregistré</h1>
-        <p style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>Redirection vers votre dashboard…</p>
+        <p style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>
+          Redirection vers votre dashboard…
+        </p>
       </main>
     );
   }
@@ -73,11 +85,19 @@ export default function DefinirMotDePassePage() {
       <p style={{ color: "var(--color-text-secondary)", fontSize: 14, marginBottom: 24 }}>
         Choisissez le mot de passe de votre espace commerçant.
       </p>
-      <Field type="password" placeholder="Mot de passe (8 caractères min.)"
-        value={password} onChange={(e) => setPassword(e.target.value)} />
-      <Field type="password" placeholder="Confirmez le mot de passe"
-        value={confirm} onChange={(e) => setConfirm(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && save()} />
+      <Field
+        type="password"
+        placeholder="Mot de passe (8 caractères min.)"
+        value={password}
+        onChange={(e) => setPassword(e.target.value)}
+      />
+      <Field
+        type="password"
+        placeholder="Confirmez le mot de passe"
+        value={confirm}
+        onChange={(e) => setConfirm(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && save()}
+      />
       {error && <p style={{ color: "var(--color-error)", fontSize: 14 }}>{error}</p>}
       <Button size="lg" block onClick={save}>
         Accéder à mon dashboard

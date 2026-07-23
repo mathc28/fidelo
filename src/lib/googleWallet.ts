@@ -1,7 +1,7 @@
 import { GoogleAuth } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { config } from "./config";
-import { db, Customer, Merchant } from "./supabaseAdmin";
+import { db, Customer, Merchant, getCardTheme } from "./supabaseAdmin";
 
 const API = "https://walletobjects.googleapis.com/walletobjects/v1";
 
@@ -29,6 +29,7 @@ function slugToClassSuffix(slug: string): string {
 export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
   if (merchant.google_class_id) return merchant.google_class_id;
 
+  const theme = await getCardTheme(merchant.theme_id);
   const classId = `${config.google.issuerId}.${slugToClassSuffix(merchant.slug)}`;
 
   await request("POST", `${API}/loyaltyClass`, {
@@ -40,7 +41,7 @@ export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
       contentDescription: { defaultValue: { language: "fr-FR", value: `Logo ${merchant.name}` } },
     },
     reviewStatus: "UNDER_REVIEW",
-    hexBackgroundColor: merchant.bg_color,
+    hexBackgroundColor: theme.bg_color,
     ...(merchant.lat != null && merchant.lng != null
       ? { locations: [{ latitude: merchant.lat, longitude: merchant.lng }] }
       : {}),

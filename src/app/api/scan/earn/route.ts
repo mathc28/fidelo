@@ -16,8 +16,11 @@ export async function POST(req: NextRequest) {
   const { serial, amountEuros } = await req.json();
 
   const { data: customer } = await db
-    .from("customers").select("*")
-    .eq("serial_number", serial).eq("merchant_id", auth.merchant.id).single();
+    .from("customers")
+    .select("*")
+    .eq("serial_number", serial)
+    .eq("merchant_id", auth.merchant.id)
+    .single();
   if (!customer) return new NextResponse("Carte inconnue", { status: 404 });
 
   const isVisits = auth.merchant.program_type === "visits";

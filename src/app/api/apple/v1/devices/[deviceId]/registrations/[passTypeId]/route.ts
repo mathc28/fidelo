@@ -17,13 +17,19 @@ export async function GET(
   let query = db
     .from("customers")
     .select("serial_number, updated_at")
-    .in("serial_number", regs.map((r) => r.serial_number));
+    .in(
+      "serial_number",
+      regs.map((r) => r.serial_number)
+    );
   if (since) query = query.gt("updated_at", since);
 
   const { data: updated } = await query;
   if (!updated?.length) return new NextResponse(null, { status: 204 });
 
-  const lastUpdated = updated.map((u) => u.updated_at).sort().at(-1)!;
+  const lastUpdated = updated
+    .map((u) => u.updated_at)
+    .sort()
+    .at(-1)!;
   return NextResponse.json({
     serialNumbers: updated.map((u) => u.serial_number),
     lastUpdated,

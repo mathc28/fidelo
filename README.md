@@ -10,14 +10,14 @@ passkit-generator · Google Wallet API · html5-qrcode.
 
 ## Les surfaces
 
-| URL | Qui | Quoi |
-|---|---|---|
-| `/m/[slug]/inscription` | Client final | Création de carte, brandée au commerce |
-| `/m/[slug]/compte` | Client final | Solde, progression, re-téléchargement |
-| `/scan` | Employé en caisse | PWA : appairage par code, scan QR, crédit, récompenses |
-| `/dashboard` | Gérant | Email + mot de passe : promo, caisses, clients |
-| `/admin` | Toi (plateforme) | Back-office : création des comptes commerçants |
-| `/definir-mot-de-passe` | Gérant invité | Atterrissage du lien d'invitation |
+| URL                     | Qui               | Quoi                                                   |
+| ----------------------- | ----------------- | ------------------------------------------------------ |
+| `/m/[slug]/inscription` | Client final      | Création de carte, brandée au commerce                 |
+| `/m/[slug]/compte`      | Client final      | Solde, progression, re-téléchargement                  |
+| `/scan`                 | Employé en caisse | PWA : appairage par code, scan QR, crédit, récompenses |
+| `/dashboard`            | Gérant            | Email + mot de passe : promo, caisses, clients         |
+| `/admin`                | Toi (plateforme)  | Back-office : création des comptes commerçants         |
+| `/definir-mot-de-passe` | Gérant invité     | Atterrissage du lien d'invitation                      |
 
 ## Architecture des accès
 
@@ -45,8 +45,8 @@ transaction, `lib/loyalty.ts` pousse la mise à jour vers les deux wallets.
 1. **Supabase** : exécuter `supabase/schema.sql`, créer un bucket Storage
    `pass-assets` (privé). Activer l'auth par email (magic link).
 2. **Apple** (99 €/an, un seul compte pour toute la plateforme) : Pass Type ID
-   + certificat exporté en PEM + clé APNs .p8 — même procédure que la V1,
-   détaillée dans les commentaires de `.env.example`.
+   - certificat exporté en PEM + clé APNs .p8 — même procédure que la V1,
+     détaillée dans les commentaires de `.env.example`.
    ```bash
    openssl pkcs12 -in pass.p12 -clcerts -nokeys -out signerCert.pem -legacy
    openssl pkcs12 -in pass.p12 -nocerts -out signerKey.pem -legacy
@@ -72,6 +72,7 @@ transaction, `lib/loyalty.ts` pousse la mise à jour vers les deux wallets.
    `/definir-mot-de-passe` → choisit son mot de passe → dashboard.
 
 ⚠️ Config Supabase requise pour les invitations :
+
 - Authentication → **URL Configuration → Redirect URLs** : ajouter
   `http://localhost:3000/definir-mot-de-passe` (puis l'URL de prod).
 - Le template de l'email s'édite dans Authentication → **Email Templates →
@@ -88,4 +89,5 @@ transaction, `lib/loyalty.ts` pousse la mise à jour vers les deux wallets.
 - Re-push de tous les passes d'un merchant quand il change son design
 - PDF chevalet de comptoir (QR vers /m/[slug]/inscription)
 - Page /dashboard : gestion des récompenses et liste des devices avec révocation
+
 # fidelo

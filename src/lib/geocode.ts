@@ -5,7 +5,9 @@ import { config } from "./config";
  * Respecte la politique d'usage : User-Agent identifiant, un appel
  * ponctuel par sauvegarde d'adresse (pas de boucle/bulk).
  */
-export async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+export async function geocodeAddress(
+  address: string
+): Promise<{ lat: number; lng: number } | null> {
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
   const res = await fetch(url, {
     headers: { "User-Agent": `Fidelo/1.0 (${config.baseUrl})` },
