@@ -5,13 +5,15 @@ import { supabase } from "@/lib/supabaseBrowser";
 import { Button, Field, Logo } from "@/components/ui";
 
 /**
- * Page d'atterrissage du lien d'invitation : le gérant arrive ici avec
- * une session temporaire (token dans l'URL, géré automatiquement par
+ * Page d'atterrissage du lien d'invitation ET du lien de réinitialisation
+ * de mot de passe (même mécanique côté Supabase) : le gérant arrive ici
+ * avec une session temporaire (token dans l'URL, géré automatiquement par
  * supabase-js), définit son mot de passe, puis file sur son dashboard.
  */
 export default function DefinirMotDePassePage() {
   const [ready, setReady] = useState(false);
   const [hasSession, setHasSession] = useState(false);
+  const [isRecovery, setIsRecovery] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -24,8 +26,9 @@ export default function DefinirMotDePassePage() {
       setHasSession(Boolean(data.session));
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
       if (s) setHasSession(true);
+      if (event === "PASSWORD_RECOVERY") setIsRecovery(true);
     });
     return () => sub.subscription.unsubscribe();
   }, []);
@@ -59,8 +62,12 @@ export default function DefinirMotDePassePage() {
       <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
         <h1 style={{ fontSize: 22 }}>Lien invalide ou expiré</h1>
         <p style={{ color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.6 }}>
-          Ce lien d’invitation n’est plus valable (il expire après 24 h et ne fonctionne qu’une
-          fois). Contactez la personne qui vous a invité pour en recevoir un nouveau.
+          Ce lien n’est plus valable (il expire après 24 h et ne fonctionne qu’une fois).
+          Demandez-en un nouveau depuis la{" "}
+          <a href="/mot-de-passe-oublie" style={{ color: "var(--color-marine)", fontWeight: 600 }}>
+            page de réinitialisation
+          </a>
+          , ou contactez la personne qui vous a invité si vous attendiez une invitation.
         </p>
       </main>
     );
@@ -81,9 +88,13 @@ export default function DefinirMotDePassePage() {
   return (
     <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
       <Logo height={40} />
-      <h1 style={{ fontSize: 22, margin: "20px 0 4px" }}>Bienvenue ! 👋</h1>
+      <h1 style={{ fontSize: 22, margin: "20px 0 4px" }}>
+        {isRecovery ? "Réinitialisez votre mot de passe" : "Bienvenue ! 👋"}
+      </h1>
       <p style={{ color: "var(--color-text-secondary)", fontSize: 14, marginBottom: 24 }}>
-        Choisissez le mot de passe de votre espace commerçant.
+        {isRecovery
+          ? "Choisissez un nouveau mot de passe pour votre espace commerçant."
+          : "Choisissez le mot de passe de votre espace commerçant."}
       </p>
       <Field
         type="password"

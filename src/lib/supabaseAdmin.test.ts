@@ -8,6 +8,7 @@ function buildMerchant(subscriptionStatus: Merchant["subscription_status"]): Mer
     slug: "test-merchant",
     name: "Test Merchant",
     logo_url: null,
+    is_square_logo: false,
     theme_id: "marine",
     address: null,
     lat: null,

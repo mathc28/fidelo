@@ -44,6 +44,10 @@ export async function buildApplePass(
       webServiceURL: `${config.baseUrl}/api/apple`,
       authenticationToken: customer.auth_token,
 
+      // Un logo carré ou portrait devient trop étroit une fois contraint par
+      // la hauteur : sans le nom à côté, la marque est invisible sur le pass.
+      ...(merchant.is_square_logo ? { logoText: merchant.name } : {}),
+
       ...(merchant.lat != null && merchant.lng != null
         ? {
             locations: [

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseBrowser";
 import { Button, Field, Logo, SubscriptionBadge, Badge, PoweredByBadge } from "@/components/ui";
+import WalletPreview from "@/components/WalletPreview";
 
 type Merchant = {
   id: string;
@@ -36,6 +37,7 @@ type CardTheme = {
 const NAV = [
   { href: "#stats", label: "Vue d'ensemble" },
   { href: "#carte", label: "Ma carte" },
+  { href: "#inscription", label: "QR d'inscription" },
   { href: "#promo", label: "Promos" },
   { href: "#caisses", label: "Mes caisses" },
   { href: "#recompenses", label: "Récompenses" },
@@ -89,6 +91,12 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<any>(null);
+  const [previewPlatform, setPreviewPlatform] = useState<"apple" | "google">("apple");
+  const [framed, setFramed] = useState(false);
+  const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
+
+  const [inscriptionUrl, setInscriptionUrl] = useState<string | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -183,6 +191,29 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, [pairingCode]);
 
+  useEffect(() => {
+    if (!merchant) return;
+    let cancelled = false;
+    const url = `${window.location.origin}/m/${merchant.slug}/inscription`;
+    setInscriptionUrl(url);
+    import("qrcode")
+      .then((QR) => QR.toDataURL(url, { width: 1200 }))
+      .then((d) => !cancelled && setQrDataUrl(d))
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [merchant?.slug]);
+
+  function downloadQr() {
+    if (!qrDataUrl || !merchant) return;
+    const a = document.createElement("a");
+    a.href = qrDataUrl;
+    a.download = `fidelo-${merchant.slug}-qr.png`;
+    a.click();
+  }
+
   function showToast(msg: string) {
     clearTimeout(toastTimer.current);
     setToast(msg);
@@ -218,6 +249,9 @@ export default function DashboardPage() {
 
   async function uploadLogo(file: File) {
     if (!session) return;
+    // Aperçu instantané du fichier choisi, avant même la fin de l'upload —
+    // l'aperçu de carte ne doit pas attendre l'aller-retour serveur.
+    setLogoPreviewUrl(URL.createObjectURL(file));
     setUploadingLogo(true);
     const form = new FormData();
     form.append("logo", file);
@@ -233,7 +267,15 @@ export default function DashboardPage() {
     }
     const data = await res.json();
     setMerchant((m) => (m ? { ...m, logo_url: data.logoUrl } : m));
-    showToast("Logo mis à jour — vos clients le verront à leur prochain passage");
+    setLogoPreviewUrl((url) => {
+      if (url) URL.revokeObjectURL(url);
+      return null;
+    });
+    showToast(
+      data.warning
+        ? `⚠️ ${data.warning}`
+        : "Logo mis à jour — vos clients le verront à leur prochain passage"
+    );
   }
 
   const promoMaxed = promosThisWeek >= 3;
@@ -347,7 +389,9 @@ export default function DashboardPage() {
           Connexion
         </Button>
         <p style={{ color: "var(--color-text-secondary)", fontSize: 13, marginTop: 12 }}>
-          Votre compte est créé sur invitation. Mot de passe oublié ? Contactez votre interlocuteur.
+          <a href="/mot-de-passe-oublie" style={{ color: "var(--color-marine)", fontWeight: 600 }}>
+            Mot de passe oublié ?
+          </a>
         </p>
       </main>
     );
@@ -368,12 +412,23 @@ export default function DashboardPage() {
   const isVisits = merchant.program_type === "visits";
   const unit = isVisits ? "passages" : "points";
   const theme = themes.find((t) => t.id === themeId);
-  const previewBg = theme?.bg_color ?? "#1A2E60";
-  const previewText = theme?.text_color ?? "#F3EFE3";
-  const previewLabel = theme?.label_color ?? "#F56C5A";
+  const activeTheme = theme ?? {
+    bg_color: "#1A2E60",
+    text_color: "#F3EFE3",
+    label_color: "#F56C5A",
+  };
   const bestReward = rewards
     .filter((r) => r.active)
     .sort((a, b) => a.cost_points - b.cost_points)[0];
+  const previewPoints = isVisits
+    ? bestReward?.cost_points
+      ? Math.min(7, bestReward.cost_points)
+      : 7
+    : 182;
+  const previewThreshold = isVisits ? (bestReward?.cost_points ?? 10) : null;
+  const previewReward = bestReward
+    ? `${bestReward.label} au ${bestReward.cost_points}e ${unit}`
+    : undefined;
   const mm = Math.floor(codeLeft / 60),
     ss = String(codeLeft % 60).padStart(2, "0");
   const greeting = (session.user.email as string).split("@")[0];
@@ -613,177 +668,40 @@ export default function DashboardPage() {
                 C’est la carte que vos clients voient dans leur téléphone.
               </p>
               <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-                <div
-                  style={{
-                    width: 250,
-                    flex: "none",
-                    borderRadius: 16,
-                    padding: "16px 16px 14px",
-                    boxShadow: "0 10px 30px rgba(26,46,96,.18)",
-                    background: previewBg,
-                    transition: "background .3s",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <div
-                        style={{
-                          width: 26,
-                          height: 26,
-                          borderRadius: "50%",
-                          background: "rgba(255,255,255,.92)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          overflow: "hidden",
-                          fontFamily: "var(--font-heading)",
-                          fontWeight: 700,
-                          fontSize: 13,
-                          color: previewBg,
-                        }}
-                      >
-                        {merchant.logo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={merchant.logo_url}
-                            alt=""
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                        ) : (
-                          (name || merchant.name).charAt(0).toUpperCase()
-                        )}
-                      </div>
-                      <span style={{ color: previewText, fontWeight: 700, fontSize: 12.5 }}>
-                        {name || merchant.name}
-                      </span>
-                    </div>
-                    <span style={{ color: previewLabel, fontSize: 14 }}>♥</span>
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 9.5,
-                      fontWeight: 700,
-                      letterSpacing: ".1em",
-                      color: previewLabel,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {isVisits ? "Mes passages" : "Mes points"}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 42,
-                      fontWeight: 800,
-                      color: previewText,
-                      letterSpacing: -1,
-                      lineHeight: 1.1,
-                      margin: "2px 0 10px",
-                    }}
-                  >
-                    {isVisits
-                      ? `${bestReward?.cost_points ? Math.min(7, bestReward.cost_points) : 7} / ${bestReward?.cost_points ?? 10}`
-                      : "182 pts"}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      gap: 10,
-                      marginBottom: 14,
-                    }}
-                  >
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 9.5,
-                          fontWeight: 700,
-                          letterSpacing: ".1em",
-                          color: previewLabel,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        Récompense
-                      </div>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: previewText }}>
-                        {bestReward
-                          ? `${bestReward.label} au ${bestReward.cost_points}e ${unit}`
-                          : "Configurez une récompense"}
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    style={{
-                      background: "#fff",
-                      borderRadius: 10,
-                      padding: 10,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 88,
-                        height: 88,
-                        borderRadius: 4,
-                        background:
-                          "repeating-conic-gradient(#1A2E60 0% 25%, #fff 0% 50%) 0 0/12px 12px",
-                        position: "relative",
-                      }}
+                <div style={{ flex: "none" }}>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
+                    <Button
+                      size="sm"
+                      variant={previewPlatform === "apple" ? "primary" : "secondary"}
+                      onClick={() => setPreviewPlatform("apple")}
                     >
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 4,
-                          left: 4,
-                          width: 18,
-                          height: 18,
-                          background: "#fff",
-                          border: "4px solid #1A2E60",
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: 4,
-                          right: 4,
-                          width: 18,
-                          height: 18,
-                          background: "#fff",
-                          border: "4px solid #1A2E60",
-                        }}
-                      />
-                      <div
-                        style={{
-                          position: "absolute",
-                          bottom: 4,
-                          left: 4,
-                          width: 18,
-                          height: 18,
-                          background: "#fff",
-                          border: "4px solid #1A2E60",
-                        }}
-                      />
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: "ui-monospace, monospace",
-                        fontSize: 9,
-                        color: "var(--color-text-secondary)",
-                      }}
+                      Apple Wallet
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={previewPlatform === "google" ? "primary" : "secondary"}
+                      onClick={() => setPreviewPlatform("google")}
                     >
-                      FID·{merchant.slug.slice(0, 6).toUpperCase()}·
-                      {String(totalCards).padStart(4, "0")}
-                    </div>
+                      Google Wallet
+                    </Button>
                   </div>
+                  <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+                    <Button size="sm" variant="ghost" onClick={() => setFramed((f) => !f)}>
+                      {framed ? "Voir la carte seule" : "Voir sur l’écran verrouillé"}
+                    </Button>
+                  </div>
+                  <WalletPreview
+                    platform={previewPlatform}
+                    framed={framed}
+                    theme={activeTheme}
+                    merchantName={name || merchant.name}
+                    logoUrl={logoPreviewUrl ?? merchant.logo_url}
+                    programType={merchant.program_type}
+                    points={previewPoints}
+                    threshold={previewThreshold}
+                    rewardLabel={previewReward}
+                    firstName="Léa"
+                  />
                 </div>
 
                 <div
@@ -911,6 +829,63 @@ export default function DashboardPage() {
                     style={{ alignSelf: "flex-start" }}
                   >
                     {savingCard ? "Enregistrement…" : "Enregistrer ma carte"}
+                  </Button>
+                </div>
+              </div>
+            </section>
+
+            {/* ===== QR d'inscription ===== */}
+            <section id="inscription" className="card" style={{ padding: "24px 26px" }}>
+              <h2 style={{ fontSize: 20, marginBottom: 4 }}>Mon QR code d’inscription</h2>
+              <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 16px" }}>
+                À poser sur le comptoir : vos clients le scannent pour recevoir leur carte de
+                fidélité.
+              </p>
+              <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
+                <div
+                  style={{
+                    width: 180,
+                    height: 180,
+                    flex: "none",
+                    borderRadius: "var(--radius-md)",
+                    background: "#fff",
+                    border: "1px solid var(--color-border)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {qrDataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={qrDataUrl}
+                      alt="QR code d’inscription"
+                      style={{ width: 160, height: 160 }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: 160,
+                        height: 160,
+                        borderRadius: 8,
+                        background: "var(--color-surface)",
+                      }}
+                    />
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 220 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--color-text-secondary)",
+                      marginBottom: 14,
+                      wordBreak: "break-all",
+                    }}
+                  >
+                    {inscriptionUrl ?? "…"}
+                  </div>
+                  <Button onClick={downloadQr} disabled={!qrDataUrl}>
+                    Télécharger le QR
                   </Button>
                 </div>
               </div>

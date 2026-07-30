@@ -9,6 +9,7 @@ const REQUIRED = [
   "icon@2x.png",
   "logo.png",
   "logo@2x.png",
+  "logo@3x.png",
   "strip.png",
   "strip@2x.png",
 ];

@@ -32,12 +32,19 @@ export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
   const theme = await getCardTheme(merchant.theme_id);
   const classId = `${config.google.issuerId}.${slugToClassSuffix(merchant.slug)}`;
 
+  // programLogo veut un carré 660x660 plein bleed avec marge (Google masque
+  // en cercle) — distinct de merchant.logo_url, qui reste le petit avatar
+  // recadré utilisé dans notre propre UI. Voir lib/wallet/logo-pipeline.ts.
+  const googleLogoUrl = merchant.logo_url
+    ? db.storage.from("pass-assets").getPublicUrl(`${merchant.id}/google-logo.png`).data.publicUrl
+    : `${config.baseUrl}/logo-default.png`;
+
   await request("POST", `${API}/loyaltyClass`, {
     id: classId,
     issuerName: merchant.name,
     programName: `Fidelo ${merchant.name}`,
     programLogo: {
-      sourceUri: { uri: merchant.logo_url ?? `${config.baseUrl}/logo-default.png` },
+      sourceUri: { uri: googleLogoUrl },
       contentDescription: { defaultValue: { language: "fr-FR", value: `Logo ${merchant.name}` } },
     },
     reviewStatus: "UNDER_REVIEW",

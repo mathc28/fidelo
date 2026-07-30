@@ -319,3 +319,12 @@ alter table merchants
 
 alter table merchants drop column bg_color;
 alter table merchants drop column label_color;
+
+-- ------------------------------------------------------------
+-- 11. LOGO — ratio détecté à l'upload (voir lib/wallet/logo-pipeline.ts)
+-- ------------------------------------------------------------
+-- true pour un logo carré ou portrait : une fois contraint par la hauteur
+-- sur le pass Apple, il devient trop étroit pour être lisible seul, donc
+-- logoText (le nom du commerce) doit être affiché à côté. false seulement
+-- pour un wordmark en paysage net.
+alter table merchants add column is_square_logo boolean not null default false;

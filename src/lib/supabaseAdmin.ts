@@ -13,6 +13,7 @@ export type Merchant = {
   slug: string;
   name: string;
   logo_url: string | null;
+  is_square_logo: boolean;
   theme_id: string;
   address: string | null;
   lat: number | null;
