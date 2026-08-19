@@ -1,7 +1,7 @@
 import { GoogleAuth } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { config } from "./config";
-import { db, Customer, Merchant, getCardTheme } from "./supabaseAdmin";
+import { db, Customer, Merchant, Reward, getCardTheme } from "./supabaseAdmin";
 
 const API = "https://walletobjects.googleapis.com/walletobjects/v1";
 
@@ -23,14 +23,15 @@ function slugToClassSuffix(slug: string): string {
 }
 
 /**
- * Crée la loyaltyClass du merchant si nécessaire et persiste son id.
- * Appelée paresseusement au premier pass Google du commerce.
+ * Crée la loyaltyClass du merchant si nécessaire, puis la resynchronise à
+ * chaque appel : logo, couleurs et libellés du commerce sont repoussés vers
+ * Google, sinon un changement fait depuis le dashboard ne serait jamais
+ * visible sur les cartes déjà installées.
  */
 export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
-  if (merchant.google_class_id) return merchant.google_class_id;
-
   const theme = await getCardTheme(merchant.theme_id);
-  const classId = `${config.google.issuerId}.${slugToClassSuffix(merchant.slug)}`;
+  const classId =
+    merchant.google_class_id ?? `${config.google.issuerId}.${slugToClassSuffix(merchant.slug)}`;
 
   // programLogo veut un carré 660x660 plein bleed avec marge (Google masque
   // en cercle) — distinct de merchant.logo_url, qui reste le petit avatar
@@ -39,33 +40,73 @@ export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
     ? db.storage.from("pass-assets").getPublicUrl(`${merchant.id}/google-logo.png`).data.publicUrl
     : `${config.baseUrl}/logo-default.png`;
 
-  await request("POST", `${API}/loyaltyClass`, {
-    id: classId,
+  // Le nom du commerce vit dans issuerName : programName reste générique pour
+  // que la carte s'annonce comme une carte de fidélité chez tous les clients.
+  const classFields = {
     issuerName: merchant.name,
-    programName: `Fidelo ${merchant.name}`,
+    programName: "Carte de fidélité",
     programLogo: {
       sourceUri: { uri: googleLogoUrl },
       contentDescription: { defaultValue: { language: "fr-FR", value: `Logo ${merchant.name}` } },
     },
-    reviewStatus: "UNDER_REVIEW",
     hexBackgroundColor: theme.bg_color,
     ...(merchant.lat != null && merchant.lng != null
       ? { locations: [{ latitude: merchant.lat, longitude: merchant.lng }] }
       : {}),
+  };
+
+  if (merchant.google_class_id) {
+    // reviewStatus est volontairement absent du PATCH : le renvoyer à
+    // UNDER_REVIEW ferait repasser en revue une classe déjà approuvée.
+    await request("PATCH", `${API}/loyaltyClass/${classId}`, classFields);
+    return classId;
+  }
+
+  await request("POST", `${API}/loyaltyClass`, {
+    id: classId,
+    ...classFields,
+    reviewStatus: "UNDER_REVIEW",
   });
 
   await db.from("merchants").update({ google_class_id: classId }).eq("id", merchant.id);
   return classId;
 }
 
+/** Ordinal français au masculin (passage) : 1 → "1er", n → "ne". */
+export function frenchOrdinal(n: number): string {
+  return n === 1 ? "1er" : `${n}e`;
+}
+
+/**
+ * Résumé statique du programme, affiché sur la carte : seuil + libellé de la
+ * première récompense active. null si le commerce n'en a aucune.
+ *
+ * Le seuil s'énonce différemment selon le mode : un passage se compte
+ * ("au 10e passage"), des points s'accumulent ("à 100 points").
+ */
+export function rewardSummary(rewards: Reward[], isVisits: boolean): string | null {
+  const first = rewards.filter((r) => r.active).sort((a, b) => a.cost_points - b.cost_points)[0];
+  if (!first) return null;
+
+  const threshold = isVisits
+    ? `au ${frenchOrdinal(first.cost_points)} passage`
+    : `à ${first.cost_points} points`;
+  return `${first.label} ${threshold}`;
+}
+
 function objectId(serial: string): string {
   return `${config.google.issuerId}.${serial.replace(/[^a-zA-Z0-9_-]/g, "_")}`;
 }
 
-export async function ensureLoyaltyObject(customer: Customer, merchant: Merchant): Promise<string> {
+export async function ensureLoyaltyObject(
+  customer: Customer,
+  merchant: Merchant,
+  rewards: Reward[] = []
+): Promise<string> {
   const classId = await ensureMerchantClass(merchant);
   const id = objectId(customer.serial_number);
   const isVisits = merchant.program_type === "visits";
+  const reward = rewardSummary(rewards, isVisits);
 
   await request("POST", `${API}/loyaltyObject`, {
     id,
@@ -77,6 +118,10 @@ export async function ensureLoyaltyObject(customer: Customer, merchant: Merchant
       label: isVisits ? "Passages" : "Points",
       balance: { int: customer.points },
     },
+    textModulesData: [
+      { id: "member", header: "Membre", body: customer.first_name },
+      ...(reward ? [{ id: "reward", header: "Récompense", body: reward }] : []),
+    ],
     barcode: {
       type: "QR_CODE",
       value: customer.serial_number,
