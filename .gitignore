@@ -4,3 +4,4 @@ node_modules/
 *.pem
 *.p12
 *.p8
+*.tsbuildinfo
