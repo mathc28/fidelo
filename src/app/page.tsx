@@ -277,9 +277,7 @@ export default function LandingPage() {
                     <div className="landing-wallet-topbar">
                       <div className="landing-wallet-icon-btn">✕</div>
                       <div className="landing-wallet-title">Wallet</div>
-                      <div className="landing-wallet-icon-btn landing-wallet-icon-btn--sm">
-                        ···
-                      </div>
+                      <div className="landing-wallet-icon-btn landing-wallet-icon-btn--sm">···</div>
                     </div>
                     <div className="landing-wallet-preview-wrap">
                       <WalletPreview
@@ -335,10 +333,7 @@ export default function LandingPage() {
           </div>
           <div className="landing-steps-dots">
             {Array.from({ length: 10 }, (_, i) => (
-              <div
-                key={i}
-                className={`landing-steps-dot${i < filled ? " is-filled" : ""}`}
-              >
+              <div key={i} className={`landing-steps-dot${i < filled ? " is-filled" : ""}`}>
                 {i < filled && i === filled - 1 ? "♥" : ""}
               </div>
             ))}
@@ -531,15 +526,10 @@ export default function LandingPage() {
                   </div>
                 ))}
               </div>
-              <a
-                href="#cta"
-                className="btn btn-accent landing-btn-lift landing-pricing-cta"
-              >
+              <a href="#cta" className="btn btn-accent landing-btn-lift landing-pricing-cta">
                 Commencer mes 14 jours gratuits
               </a>
-              <div className="landing-pricing-footnote">
-                Sans carte bancaire · sans engagement
-              </div>
+              <div className="landing-pricing-footnote">Sans carte bancaire · sans engagement</div>
             </div>
           </div>
         </div>
