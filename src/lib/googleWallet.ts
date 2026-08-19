@@ -10,16 +10,35 @@ const auth = new GoogleAuth({
   scopes: ["https://www.googleapis.com/auth/wallet_object.issuer"],
 });
 
-async function request(method: "GET" | "POST" | "PATCH", url: string, body?: unknown) {
+/**
+ * `tolerate` liste les statuts d'erreur rendus à l'appelant au lieu d'être
+ * levés : 409 par défaut (ressource déjà créée, cas normal sur nos POST
+ * idempotents), à surcharger quand le statut fait partie de la logique.
+ */
+async function request(
+  method: "GET" | "POST" | "PATCH",
+  url: string,
+  body?: unknown,
+  tolerate: number[] = [409]
+) {
   const client = await auth.getClient();
   return client.request({ method, url, data: body }).catch((e) => {
-    if (e?.response?.status === 409) return e.response;
+    if (tolerate.includes(e?.response?.status)) return e.response;
     throw e;
   });
 }
 
 function slugToClassSuffix(slug: string): string {
   return slug.replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+/**
+ * Id de classe dérivé du slug, jamais lu depuis la base : merchants.google_class_id
+ * n'est qu'une trace de ce qui a été poussé, pas la source de vérité (buildSaveUrl
+ * recalcule déjà l'id de la même façon).
+ */
+function merchantClassId(merchant: Merchant): string {
+  return `${config.google.issuerId}.${slugToClassSuffix(merchant.slug)}`;
 }
 
 /**
@@ -30,8 +49,7 @@ function slugToClassSuffix(slug: string): string {
  */
 export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
   const theme = await getCardTheme(merchant.theme_id);
-  const classId =
-    merchant.google_class_id ?? `${config.google.issuerId}.${slugToClassSuffix(merchant.slug)}`;
+  const classId = merchantClassId(merchant);
 
   // programLogo veut un carré 660x660 plein bleed avec marge (Google masque
   // en cercle) — distinct de merchant.logo_url, qui reste le petit avatar
@@ -55,20 +73,28 @@ export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
       : {}),
   };
 
-  if (merchant.google_class_id) {
-    // reviewStatus est volontairement absent du PATCH : le renvoyer à
-    // UNDER_REVIEW ferait repasser en revue une classe déjà approuvée.
-    await request("PATCH", `${API}/loyaltyClass/${classId}`, classFields);
-    return classId;
+  // On tente toujours le PATCH, sans regarder merchant.google_class_id : la
+  // classe peut très bien exister chez Google alors que la colonne est vide
+  // (vidée à la main, base restaurée…). Partir sur un POST dans ce cas donne un
+  // 409 et la mise à jour est perdue — c'est exactement ce qui figeait
+  // programName et le logo sur leurs anciennes valeurs.
+  //
+  // reviewStatus est volontairement absent du PATCH : le renvoyer à
+  // UNDER_REVIEW ferait repasser en revue une classe déjà approuvée.
+  const patched = await request("PATCH", `${API}/loyaltyClass/${classId}`, classFields, [404]);
+
+  // 404 = la classe est réellement absente chez Google, c'est le seul cas où on crée.
+  if (patched.status === 404) {
+    await request("POST", `${API}/loyaltyClass`, {
+      id: classId,
+      ...classFields,
+      reviewStatus: "UNDER_REVIEW",
+    });
   }
 
-  await request("POST", `${API}/loyaltyClass`, {
-    id: classId,
-    ...classFields,
-    reviewStatus: "UNDER_REVIEW",
-  });
-
-  await db.from("merchants").update({ google_class_id: classId }).eq("id", merchant.id);
+  if (merchant.google_class_id !== classId) {
+    await db.from("merchants").update({ google_class_id: classId }).eq("id", merchant.id);
+  }
   return classId;
 }
 
@@ -132,7 +158,7 @@ export async function ensureLoyaltyObject(
 }
 
 export function buildSaveUrl(customer: Customer, merchant: Merchant): string {
-  const classId = `${config.google.issuerId}.${slugToClassSuffix(merchant.slug)}`;
+  const classId = merchantClassId(merchant);
   const claims = {
     iss: config.google.saEmail,
     aud: "google",
