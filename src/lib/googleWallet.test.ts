@@ -75,12 +75,21 @@ describe("ensureMerchantClass", () => {
     update.mockClear();
   });
 
-  it("ne met jamais reviewStatus dans le PATCH", async () => {
+  // Google refuse en 400 tout PATCH omettant reviewStatus sur une classe déjà
+  // approuvée : il faut la resoumettre explicitement à revue.
+  it("envoie reviewStatus UNDER_REVIEW dans le PATCH", async () => {
     await ensureMerchantClass(buildMerchant({ google_class_id: "3388000000000000000.old" }));
 
     const patch = calls.find((c) => c.method === "PATCH");
     expect(patch).toBeDefined();
-    expect(patch!.data).not.toHaveProperty("reviewStatus");
+    expect(patch!.data.reviewStatus).toBe("UNDER_REVIEW");
+  });
+
+  it("ne met jamais APPROVED dans une écriture", async () => {
+    patchStatus = 404;
+    await ensureMerchantClass(buildMerchant());
+
+    for (const call of calls) expect(call.data.reviewStatus).not.toBe("APPROVED");
   });
 
   it("patche l'id déterministe même quand google_class_id est vide", async () => {

@@ -79,9 +79,17 @@ export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
   // 409 et la mise à jour est perdue — c'est exactement ce qui figeait
   // programName et le logo sur leurs anciennes valeurs.
   //
-  // reviewStatus est volontairement absent du PATCH : le renvoyer à
-  // UNDER_REVIEW ferait repasser en revue une classe déjà approuvée.
-  const patched = await request("PATCH", `${API}/loyaltyClass/${classId}`, classFields, [404]);
+  // reviewStatus DOIT accompagner le PATCH : sur une classe déjà approuvée,
+  // Google rejette toute mise à jour qui l'omet (Invalid review status
+  // « APPROVED ». Use « UNDER_REVIEW » instead, 400) — il exige qu'on resoumette
+  // explicitement la classe à revue. En pratique il conserve le statut approved,
+  // les cartes déjà installées ne repassent donc pas en attente.
+  const patched = await request(
+    "PATCH",
+    `${API}/loyaltyClass/${classId}`,
+    { ...classFields, reviewStatus: "UNDER_REVIEW" },
+    [404]
+  );
 
   // 404 = la classe est réellement absente chez Google, c'est le seul cas où on crée.
   if (patched.status === 404) {
