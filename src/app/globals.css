@@ -125,6 +125,7 @@ h3 {
 }
 .btn-accent:hover:not(:disabled) {
   background: var(--color-coral-hover);
+  color: #1a2e60;
 }
 
 .btn-secondary {
@@ -436,94 +437,4 @@ h3 {
   align-items: center;
   gap: 10px;
   z-index: 50;
-}
-
-/* ---------- Landing page ---------- */
-.landing-wrap {
-  max-width: 1120px;
-  margin: 0 auto;
-}
-
-.landing-eyebrow {
-  display: inline-block;
-  font-family: var(--font-body), sans-serif;
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-.landing-nav-link,
-.landing-link-marine,
-.landing-footer-link {
-  transition: color 0.15s ease;
-}
-.landing-nav-link {
-  color: #5c6478;
-  font-weight: 700;
-  font-size: 14.5px;
-  text-decoration: none;
-}
-.landing-link-marine {
-  color: var(--color-marine);
-}
-.landing-footer-link {
-  color: #b9c2db;
-  font-weight: 600;
-  font-size: 14px;
-}
-.landing-nav-link:hover,
-.landing-link-marine:hover,
-.landing-footer-link:hover {
-  color: var(--color-coral);
-}
-.landing-reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  transition:
-    opacity 0.5s ease,
-    transform 0.5s ease;
-}
-.landing-reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-.landing-btn-lift {
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
-}
-.landing-btn-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 38px rgba(245, 108, 90, 0.45);
-}
-
-@keyframes landing-floaty {
-  0%,
-  100% {
-    transform: rotate(6deg) translateY(0);
-  }
-  50% {
-    transform: rotate(6deg) translateY(-14px);
-  }
-}
-@keyframes landing-ping {
-  0% {
-    transform: scale(0.6);
-    opacity: 0.7;
-  }
-  80%,
-  100% {
-    transform: scale(1.9);
-    opacity: 0;
-  }
-}
-@keyframes landing-slidein {
-  from {
-    transform: translateY(-120%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Baloo_2, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import "./landing.css";
 
 const baloo2 = Baloo_2({
   subsets: ["latin"],

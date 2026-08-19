@@ -6,6 +6,7 @@ import { IOSDevice } from "@/components/IOSFrame";
 import { Reveal } from "@/components/Reveal";
 import { useInView } from "@/lib/useInView";
 import WalletPreview, { type Theme } from "@/components/WalletPreview";
+import "./landing.css";
 
 const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
 
@@ -118,16 +119,7 @@ function FormulaMiniCard({ isPass }: { isPass: boolean }) {
   const label = isPass ? "PASSAGES" : "POINTS";
   const val = isPass ? "7 / 10" : "124 pts";
   return (
-    <svg
-      viewBox="0 0 320 120"
-      style={{
-        width: "100%",
-        height: "auto",
-        display: "block",
-        borderRadius: 16,
-        boxShadow: "0 10px 26px rgba(26,46,96,.25)",
-      }}
-    >
+    <svg viewBox="0 0 320 120" className="landing-formula-svg">
       <rect width="320" height="120" rx="16" fill={bg} />
       <text
         x="20"
@@ -196,21 +188,9 @@ function Stat({ num, label }: { num: string; label: string }) {
   }, [inView, target]);
 
   return (
-    <div ref={ref} style={{ textAlign: "center" }}>
-      <div
-        style={{
-          fontFamily: "var(--font-heading)",
-          fontWeight: 800,
-          fontSize: 52,
-          lineHeight: 1,
-          color: "#fff",
-        }}
-      >
-        {target === null ? num : `${value}${suffix}`}
-      </div>
-      <div style={{ fontSize: 15, fontWeight: 700, color: "#fff", opacity: 0.9, marginTop: 6 }}>
-        {label}
-      </div>
+    <div ref={ref} className="landing-stat">
+      <div className="landing-stat-num">{target === null ? num : `${value}${suffix}`}</div>
+      <div className="landing-stat-label">{label}</div>
     </div>
   );
 }
@@ -227,31 +207,13 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <div
-      style={{
-        background: "#F3EFE3",
-        fontFamily: "var(--font-body), sans-serif",
-        color: "#1A2E60",
-      }}
-    >
+    <div className="landing-page">
       {/* ===== NAV ===== */}
-      <header
-        style={{
-          position: "sticky",
-          top: 0,
-          zIndex: 40,
-          background: "rgba(243,239,227,.82)",
-          backdropFilter: "blur(12px)",
-          borderBottom: "1px solid rgba(26,46,96,.08)",
-        }}
-      >
-        <div
-          className="landing-wrap"
-          style={{ height: 74, display: "flex", alignItems: "center", gap: 16 }}
-        >
+      <header className="landing-header">
+        <div className="landing-wrap landing-header-inner">
           <Logo variant="full" height={38} />
-          <div style={{ flex: 1 }} />
-          <nav style={{ display: "flex", alignItems: "center", gap: 30 }}>
+          <div className="landing-spacer" />
+          <nav className="landing-nav">
             <a href="#marche" className="landing-nav-link">
               Comment ça marche
             </a>
@@ -264,11 +226,7 @@ export default function LandingPage() {
             <a href="/dashboard" className="landing-nav-link">
               Se connecter
             </a>
-            <a
-              href="#cta"
-              className="btn btn-accent landing-btn-lift"
-              style={{ padding: "12px 22px", fontSize: 15 }}
-            >
+            <a href="#cta" className="btn btn-accent landing-btn-lift landing-nav-cta">
               Essayer gratuitement
             </a>
           </nav>
@@ -276,204 +234,54 @@ export default function LandingPage() {
       </header>
 
       {/* ===== HERO (crème) ===== */}
-      <section style={{ background: "#F3EFE3", position: "relative", overflow: "hidden" }}>
-        <div
-          style={{
-            position: "absolute",
-            top: -120,
-            right: -80,
-            width: 420,
-            height: 420,
-            borderRadius: "50%",
-            background: "rgba(245,108,90,.14)",
-            filter: "blur(10px)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: -160,
-            left: -120,
-            width: 340,
-            height: 340,
-            borderRadius: "50%",
-            background: "rgba(26,46,96,.08)",
-          }}
-        />
-        <div
-          className="landing-wrap"
-          style={{
-            position: "relative",
-            display: "grid",
-            gridTemplateColumns: "2fr 1fr",
-            gap: 24,
-            alignItems: "center",
-            paddingTop: 72,
-            paddingBottom: 96,
-          }}
-        >
+      <section className="landing-section--cream landing-section--overflow">
+        <div className="landing-hero-blob-1" />
+        <div className="landing-hero-blob-2" />
+        <div className="landing-wrap landing-hero-inner">
           <div>
-            <h1 style={{ fontWeight: 800, fontSize: 66, lineHeight: 0.98, marginBottom: 24 }}>
+            <h1 className="landing-hero-title">
               Vos clients reviennent.
               <br />
-              <span style={{ color: "#F56C5A" }}>Leur carte est déjà</span>
+              <span className="landing-hero-title-accent">Leur carte est déjà</span>
               <br />
               dans leur téléphone.
             </h1>
-            <p
-              style={{
-                fontSize: 20,
-                lineHeight: 1.55,
-                color: "#5C6478",
-                maxWidth: 480,
-                margin: "0 0 34px",
-                fontWeight: 500,
-              }}
-            >
+            <p className="landing-hero-desc">
               Fini le carton tamponné qui finit à la poubelle. La carte de fidélité de votre
               commerce vit dans Apple Wallet et Google Wallet — et rappelle à vos clients de
               repasser vous voir.
             </p>
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-              <a
-                href="#cta"
-                className="btn btn-accent landing-btn-lift"
-                style={{ fontSize: 18, padding: "20px 34px" }}
-              >
+            <div className="landing-hero-actions">
+              <a href="#cta" className="btn btn-accent landing-btn-lift landing-hero-cta">
                 Essayer 14 jours gratuitement
               </a>
-              <a
-                href="#marche"
-                className="landing-link-marine"
-                style={{
-                  fontSize: 16,
-                  fontWeight: 700,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                }}
-              >
-                Voir comment ça marche →
+              <a href="#marche" className="btn btn-primary landing-btn-lift landing-cta-btn">
+                Comment ça marche ?
               </a>
             </div>
-            <div style={{ display: "flex", gap: 26, marginTop: 32, flexWrap: "wrap" }}>
+            <div className="landing-hero-badges">
               {["Sans appli à installer", "Sans matériel", "Prêt en 10 min"].map((label) => (
-                <div
-                  key={label}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 9,
-                    fontSize: 14,
-                    fontWeight: 700,
-                    color: "#1A2E60",
-                  }}
-                >
-                  <span
-                    style={{
-                      width: 22,
-                      height: 22,
-                      borderRadius: "50%",
-                      background: "#1A2E60",
-                      color: "#F3EFE3",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 12,
-                    }}
-                  >
-                    ✓
-                  </span>
+                <div key={label} className="landing-hero-badge">
+                  <span className="landing-hero-badge-icon">✓</span>
                   {label}
                 </div>
               ))}
             </div>
           </div>
           {/* iPhone incliné, en débord */}
-          <div style={{ position: "relative", height: 600 }}>
-            <div
-              style={{
-                position: "absolute",
-                top: -40,
-                left: "50%",
-                marginLeft: -201,
-                animation: "landing-floaty 6s ease-in-out infinite",
-              }}
-            >
-              <div
-                style={{
-                  width: 402,
-                  height: 874,
-                  transform: "scale(0.65)",
-                  transformOrigin: "top center",
-                }}
-              >
+          <div className="landing-hero-phone">
+            <div className="landing-hero-phone-float">
+              <div className="landing-hero-phone-scale">
                 <IOSDevice width={402} height={874}>
-                  <div
-                    style={{
-                      height: "100%",
-                      background: "#DEDBD4",
-                      display: "flex",
-                      flexDirection: "column",
-                    }}
-                  >
-                    <div
-                      style={{
-                        padding: "64px 26px 16px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: "50%",
-                          background: "rgba(120,120,128,.18)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#5C6478",
-                          fontSize: 16,
-                        }}
-                      >
-                        ✕
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 16,
-                          fontWeight: 800,
-                          letterSpacing: 0.5,
-                          color: "#5C6478",
-                        }}
-                      >
-                        Wallet
-                      </div>
-                      <div
-                        style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: "50%",
-                          background: "rgba(120,120,128,.18)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#5C6478",
-                          fontSize: 15,
-                        }}
-                      >
+                  <div className="landing-wallet-screen">
+                    <div className="landing-wallet-topbar">
+                      <div className="landing-wallet-icon-btn">✕</div>
+                      <div className="landing-wallet-title">Wallet</div>
+                      <div className="landing-wallet-icon-btn landing-wallet-icon-btn--sm">
                         ···
                       </div>
                     </div>
-                    <div
-                      style={{
-                        margin: "8px 18px 0",
-                        display: "flex",
-                        justifyContent: "center",
-                        filter: "drop-shadow(0 22px 50px rgba(26,46,96,.4))",
-                      }}
-                    >
+                    <div className="landing-wallet-preview-wrap">
                       <WalletPreview
                         theme={HERO_THEME}
                         merchantName="Boulangerie Martin"
@@ -485,16 +293,8 @@ export default function LandingPage() {
                         platform="apple"
                       />
                     </div>
-                    <div style={{ flex: 1 }} />
-                    <div
-                      style={{
-                        padding: "0 26px 30px",
-                        textAlign: "center",
-                        color: "#8A8A8F",
-                        fontSize: 14,
-                        fontWeight: 600,
-                      }}
-                    >
+                    <div className="landing-spacer" />
+                    <div className="landing-wallet-hint">
                       Passe le téléphone au commerçant pour cumuler
                     </div>
                   </div>
@@ -506,48 +306,19 @@ export default function LandingPage() {
       </section>
 
       {/* ===== LA DOULEUR (marine) ===== */}
-      <section style={{ background: "#1A2E60", color: "#fff", position: "relative" }}>
-        <div className="landing-wrap" style={{ paddingTop: 90, paddingBottom: 90 }}>
-          <div className="landing-eyebrow" style={{ color: "#F56C5A", marginBottom: 18 }}>
-            Soyons honnêtes
-          </div>
-          <h2
-            style={{
-              fontWeight: 800,
-              fontSize: 46,
-              lineHeight: 1.05,
-              maxWidth: 720,
-              marginBottom: 52,
-            }}
-          >
+      <section className="landing-section--marine">
+        <div className="landing-wrap landing-section-pad">
+          <div className="landing-eyebrow landing-eyebrow--loose">Soyons honnêtes</div>
+          <h2 className="landing-pains-title">
             La fidélité au comptoir, aujourd’hui, c’est compliqué.
           </h2>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 24 }}>
+          <div className="landing-pains-grid">
             {PAINS.map((p, i) => (
               <Reveal key={p.title} delay={i * 60}>
-                <div
-                  style={{
-                    background: "rgba(255,255,255,.06)",
-                    border: "1px solid rgba(255,255,255,.1)",
-                    borderRadius: 24,
-                    padding: "32px 28px",
-                  }}
-                >
-                  <div style={{ fontSize: 40, marginBottom: 18 }}>{p.icon}</div>
-                  <h3 style={{ fontWeight: 700, fontSize: 23, color: "#fff", marginBottom: 10 }}>
-                    {p.title}
-                  </h3>
-                  <p
-                    style={{
-                      fontSize: 15.5,
-                      lineHeight: 1.6,
-                      color: "#B9C2DC",
-                      margin: 0,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {p.desc}
-                  </p>
+                <div className="landing-pain-card">
+                  <div className="landing-pain-icon">{p.icon}</div>
+                  <h3 className="landing-pain-title">{p.title}</h3>
+                  <p className="landing-pain-desc">{p.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -556,94 +327,30 @@ export default function LandingPage() {
       </section>
 
       {/* ===== COMMENT ÇA MARCHE (crème) ===== */}
-      <section id="marche" style={{ background: "#F3EFE3" }}>
-        <div className="landing-wrap" style={{ paddingTop: 90, paddingBottom: 90 }}>
-          <div style={{ textAlign: "center", marginBottom: 20 }}>
-            <div className="landing-eyebrow" style={{ color: "#F56C5A", marginBottom: 16 }}>
-              Simple, promis
-            </div>
-            <h2
-              style={{
-                fontWeight: 800,
-                fontSize: 52,
-                lineHeight: 1,
-                maxWidth: 640,
-                margin: "0 auto",
-              }}
-            >
-              Trois gestes, et c’est parti.
-            </h2>
+      <section id="marche" className="landing-section--cream">
+        <div className="landing-wrap landing-section-pad">
+          <div className="landing-steps-header">
+            <div className="landing-eyebrow">Simple, promis</div>
+            <h2 className="landing-steps-title">Trois gestes, et c’est parti.</h2>
           </div>
-          <div
-            style={{ display: "flex", justifyContent: "center", gap: 12, margin: "34px 0 54px" }}
-          >
+          <div className="landing-steps-dots">
             {Array.from({ length: 10 }, (_, i) => (
               <div
                 key={i}
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: "50%",
-                  background: i < filled ? "#F56C5A" : "transparent",
-                  border: "2px solid #1A2E60",
-                  transition: "background .4s ease",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 12,
-                  color: "#fff",
-                }}
+                className={`landing-steps-dot${i < filled ? " is-filled" : ""}`}
               >
                 {i < filled && i === filled - 1 ? "♥" : ""}
               </div>
             ))}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 26 }}>
+          <div className="landing-steps-grid">
             {STEPS.map((s, i) => (
               <Reveal key={s.num} delay={i * 60}>
-                <div
-                  style={{
-                    background: "#fff",
-                    borderRadius: 26,
-                    padding: "34px 30px",
-                    position: "relative",
-                    boxShadow: "0 8px 26px rgba(26,46,96,.06)",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: -20,
-                      left: 30,
-                      width: 52,
-                      height: 52,
-                      borderRadius: "50%",
-                      background: "#F56C5A",
-                      color: "#fff",
-                      fontFamily: "var(--font-heading)",
-                      fontWeight: 800,
-                      fontSize: 24,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      boxShadow: "0 8px 18px rgba(245,108,90,.4)",
-                    }}
-                  >
-                    {s.num}
-                  </div>
-                  <div style={{ fontSize: 38, margin: "18px 0 14px" }}>{s.icon}</div>
-                  <h3 style={{ fontWeight: 700, fontSize: 22, marginBottom: 10 }}>{s.title}</h3>
-                  <p
-                    style={{
-                      fontSize: 15.5,
-                      lineHeight: 1.6,
-                      color: "#5C6478",
-                      margin: 0,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {s.desc}
-                  </p>
+                <div className="landing-step-card">
+                  <div className="landing-step-num">{s.num}</div>
+                  <div className="landing-step-icon">{s.icon}</div>
+                  <h3 className="landing-step-title">{s.title}</h3>
+                  <p className="landing-step-desc">{s.desc}</p>
                 </div>
               </Reveal>
             ))}
@@ -652,124 +359,43 @@ export default function LandingPage() {
       </section>
 
       {/* ===== LES 2 FORMULES (blanc) ===== */}
-      <section id="formules" style={{ background: "#fff" }}>
-        <div className="landing-wrap" style={{ paddingTop: 90, paddingBottom: 90 }}>
-          <div style={{ textAlign: "center", marginBottom: 52 }}>
-            <div className="landing-eyebrow" style={{ color: "#F56C5A", marginBottom: 16 }}>
-              À vous de choisir
-            </div>
-            <h2 style={{ fontWeight: 800, fontSize: 52, lineHeight: 1, marginBottom: 14 }}>
-              Deux façons de fidéliser.
-            </h2>
-            <p
-              style={{
-                fontSize: 18,
-                color: "#5C6478",
-                fontWeight: 500,
-                maxWidth: 560,
-                margin: "0 auto",
-              }}
-            >
+      <section id="formules" className="landing-section--white">
+        <div className="landing-wrap landing-section-pad">
+          <div className="landing-formulas-header">
+            <div className="landing-eyebrow">À vous de choisir</div>
+            <h2 className="landing-formulas-title">Deux façons de fidéliser.</h2>
+            <p className="landing-formulas-desc">
               Celle qui colle à votre commerce. On configure tout avec vous, en direct.
             </p>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 28,
-              maxWidth: 900,
-              margin: "0 auto",
-            }}
-          >
-            <div
-              style={{
-                background: "#F3EFE3",
-                borderRadius: 28,
-                padding: "36px 32px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 20,
-              }}
-            >
+          <div className="landing-formulas-grid">
+            <div className="landing-formula-card landing-formula-card--light">
               <div>
-                <div
-                  style={{
-                    display: "inline-block",
-                    background: "#1A2E60",
-                    color: "#fff",
-                    borderRadius: 999,
-                    padding: "7px 16px",
-                    fontSize: 13,
-                    fontWeight: 800,
-                    marginBottom: 14,
-                  }}
-                >
+                <div className="landing-formula-badge landing-formula-badge--dark">
                   🥖 À la visite
                 </div>
-                <h3 style={{ fontWeight: 800, fontSize: 30, marginBottom: 8 }}>
-                  10 passages = récompense
-                </h3>
-                <p
-                  style={{
-                    fontSize: 15.5,
-                    color: "#5C6478",
-                    fontWeight: 500,
-                    lineHeight: 1.55,
-                    margin: 0,
-                  }}
-                >
+                <h3 className="landing-formula-title">10 passages = récompense</h3>
+                <p className="landing-formula-desc">
                   Une visite, un tampon. La carte à tampons que vos clients connaissent déjà — sans
                   le carton. Parfait pour boulangeries, cafés, restos.
                 </p>
               </div>
-              <div style={{ marginTop: "auto" }}>
+              <div className="landing-formula-mini-wrap">
                 <FormulaMiniCard isPass />
               </div>
             </div>
-            <div
-              style={{
-                background: "#1A2E60",
-                borderRadius: 28,
-                padding: "36px 32px",
-                display: "flex",
-                flexDirection: "column",
-                gap: 20,
-                color: "#fff",
-              }}
-            >
+            <div className="landing-formula-card landing-formula-card--dark">
               <div>
-                <div
-                  style={{
-                    display: "inline-block",
-                    background: "#F56C5A",
-                    color: "#fff",
-                    borderRadius: 999,
-                    padding: "7px 16px",
-                    fontSize: 13,
-                    fontWeight: 800,
-                    marginBottom: 14,
-                  }}
-                >
+                <div className="landing-formula-badge landing-formula-badge--coral">
                   🧾 Aux points
                 </div>
-                <h3 style={{ fontWeight: 800, fontSize: 30, marginBottom: 8, color: "#fff" }}>
-                  1 € dépensé = 1 point
-                </h3>
-                <p
-                  style={{
-                    fontSize: 15.5,
-                    color: "#B9C2DC",
-                    fontWeight: 500,
-                    lineHeight: 1.55,
-                    margin: 0,
-                  }}
-                >
+                <h3 className="landing-formula-title">1 € dépensé = 1 point</h3>
+                <p className="landing-formula-desc landing-formula-desc--light">
                   Des paliers de récompenses à votre main. Idéal caviste, épicerie fine, primeur —
                   quand le panier compte.
                 </p>
               </div>
-              <div style={{ marginTop: "auto" }}>
+              <div className="landing-formula-mini-wrap">
                 <FormulaMiniCard isPass={false} />
               </div>
             </div>
@@ -778,219 +404,60 @@ export default function LandingPage() {
       </section>
 
       {/* ===== RAPPEL DE PROXIMITÉ (marine) ===== */}
-      <section
-        style={{ background: "#1A2E60", color: "#fff", overflow: "hidden", position: "relative" }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: -100,
-            right: -60,
-            width: 360,
-            height: 360,
-            borderRadius: "50%",
-            background: "rgba(245,108,90,.12)",
-          }}
-        />
-        <div
-          className="landing-wrap"
-          style={{
-            position: "relative",
-            display: "grid",
-            gridTemplateColumns: "1fr .8fr",
-            gap: 40,
-            alignItems: "center",
-            paddingTop: 90,
-            paddingBottom: 90,
-          }}
-        >
+      <section className="landing-section--marine landing-section--overflow">
+        <div className="landing-proximity-blob" />
+        <div className="landing-wrap landing-proximity-inner">
           <div>
-            <div className="landing-eyebrow" style={{ color: "#F56C5A", marginBottom: 18 }}>
-              La magie de la géoloc
-            </div>
-            <h2 style={{ fontWeight: 800, fontSize: 56, lineHeight: 1, marginBottom: 22 }}>
+            <div className="landing-eyebrow landing-eyebrow--loose">La magie de la géoloc</div>
+            <h2 className="landing-proximity-title">
               Votre vitrine,
               <br />
               dans leur poche.
             </h2>
-            <p
-              style={{
-                fontSize: 19,
-                lineHeight: 1.55,
-                color: "#B9C2DC",
-                fontWeight: 500,
-                maxWidth: 460,
-                margin: "0 0 28px",
-              }}
-            >
+            <p className="landing-proximity-desc">
               Quand un client passe à moins de 300 m de chez vous, sa carte s’affiche toute seule
               sur son écran verrouillé. Un petit rappel, pile au bon moment. Pas d’appli, pas de pub
               — juste vous, au bon endroit.
             </p>
-            <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
-              <div
-                style={{
-                  background: "rgba(255,255,255,.08)",
-                  borderRadius: 16,
-                  padding: "16px 22px",
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "var(--font-heading)",
-                    fontWeight: 800,
-                    fontSize: 30,
-                    color: "#F56C5A",
-                  }}
-                >
-                  300 m
-                </div>
-                <div style={{ fontSize: 13, color: "#B9C2DC", fontWeight: 600 }}>
-                  rayon de rappel
-                </div>
+            <div className="landing-proximity-stats">
+              <div className="landing-proximity-stat">
+                <div className="landing-proximity-stat-num">300 m</div>
+                <div className="landing-proximity-stat-label">rayon de rappel</div>
               </div>
-              <div
-                style={{
-                  background: "rgba(255,255,255,.08)",
-                  borderRadius: 16,
-                  padding: "16px 22px",
-                }}
-              >
-                <div
-                  style={{
-                    fontFamily: "var(--font-heading)",
-                    fontWeight: 800,
-                    fontSize: 30,
-                    color: "#F56C5A",
-                  }}
-                >
-                  0
-                </div>
-                <div style={{ fontSize: 13, color: "#B9C2DC", fontWeight: 600 }}>
-                  appli à installer
-                </div>
+              <div className="landing-proximity-stat">
+                <div className="landing-proximity-stat-num">0</div>
+                <div className="landing-proximity-stat-label">appli à installer</div>
               </div>
             </div>
           </div>
-          <div
-            style={{ display: "flex", justifyContent: "center", position: "relative", height: 560 }}
-          >
-            <div style={{ position: "absolute", top: -30 }}>
-              <div
-                style={{
-                  width: 402,
-                  height: 874,
-                  transform: "scale(.72)",
-                  transformOrigin: "top center",
-                }}
-              >
+          <div className="landing-proximity-phone">
+            <div className="landing-proximity-phone-inner">
+              <div className="landing-proximity-phone-scale">
                 <IOSDevice width={402} height={874} dark>
-                  <div
-                    style={{
-                      height: "100%",
-                      background: "linear-gradient(165deg,#24346B 0%,#0E1A3C 60%,#1A2E60 100%)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      position: "relative",
-                    }}
-                  >
-                    <div style={{ marginTop: 120, textAlign: "center", color: "#fff" }}>
-                      <div
-                        style={{ fontSize: 22, fontWeight: 600, opacity: 0.85, letterSpacing: 0.5 }}
-                      >
-                        lundi 28 juillet
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 96,
-                          fontWeight: 700,
-                          lineHeight: 1,
-                          letterSpacing: -2,
-                          marginTop: 2,
-                        }}
-                      >
-                        8:12
-                      </div>
+                  <div className="landing-lockscreen">
+                    <div className="landing-lockscreen-time-wrap">
+                      <div className="landing-lockscreen-date">lundi 28 juillet</div>
+                      <div className="landing-lockscreen-clock">8:12</div>
                     </div>
-                    <div
-                      style={{
-                        marginTop: 56,
-                        width: 340,
-                        background: "rgba(255,255,255,.16)",
-                        backdropFilter: "blur(20px)",
-                        borderRadius: 24,
-                        padding: "16px 18px",
-                        display: "flex",
-                        gap: 14,
-                        alignItems: "flex-start",
-                        animation: "landing-slidein .8s ease-out",
-                        boxShadow: "0 12px 40px rgba(0,0,0,.3)",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: 44,
-                          height: 44,
-                          flex: "none",
-                          borderRadius: 12,
-                          background: "#fff",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
+                    <div className="landing-lockscreen-notif">
+                      <div className="landing-lockscreen-notif-icon">
                         <Logo variant="symbol" height={26} />
                       </div>
-                      <div style={{ flex: 1, color: "#fff" }}>
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "space-between",
-                            alignItems: "baseline",
-                          }}
-                        >
-                          <span style={{ fontWeight: 800, fontSize: 15 }}>Boulangerie Martin</span>
-                          <span style={{ fontSize: 12, opacity: 0.7 }}>maintenant</span>
+                      <div className="landing-lockscreen-notif-body">
+                        <div className="landing-lockscreen-notif-head">
+                          <span className="landing-lockscreen-notif-app">Boulangerie Martin</span>
+                          <span className="landing-lockscreen-notif-time">maintenant</span>
                         </div>
-                        <div
-                          style={{ fontSize: 14.5, lineHeight: 1.4, marginTop: 3, fontWeight: 500 }}
-                        >
+                        <div className="landing-lockscreen-notif-text">
                           Votre boulangerie est juste à côté ! 🥖 Plus que 3 passages avant votre
                           récompense.
                         </div>
                       </div>
                     </div>
-                    <div style={{ flex: 1 }} />
-                    <div
-                      style={{
-                        marginBottom: 40,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 8,
-                        color: "rgba(255,255,255,.6)",
-                        fontSize: 14,
-                        fontWeight: 600,
-                      }}
-                    >
-                      <span
-                        style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
-                          background: "#F56C5A",
-                          position: "relative",
-                        }}
-                      >
-                        <span
-                          style={{
-                            position: "absolute",
-                            inset: 0,
-                            borderRadius: "50%",
-                            background: "#F56C5A",
-                            animation: "landing-ping 1.8s ease-out infinite",
-                          }}
-                        />
+                    <div className="landing-spacer" />
+                    <div className="landing-lockscreen-distance">
+                      <span className="landing-ping-dot">
+                        <span className="landing-ping-dot-pulse" />
                       </span>
                       à 280 m de vous
                     </div>
@@ -1003,97 +470,34 @@ export default function LandingPage() {
       </section>
 
       {/* ===== PREUVE SOCIALE (corail) ===== */}
-      <section style={{ background: "#F56C5A", color: "#fff" }}>
-        <div className="landing-wrap" style={{ paddingTop: 84, paddingBottom: 84 }}>
-          <div style={{ textAlign: "center", marginBottom: 48 }}>
-            <div
-              className="landing-eyebrow"
-              style={{ color: "#fff", opacity: 0.85, marginBottom: 14 }}
-            >
-              Ils l’ont adoptée
-            </div>
-            <h2 style={{ fontWeight: 800, fontSize: 48, lineHeight: 1, color: "#fff" }}>
+      <section className="landing-section--coral">
+        <div className="landing-wrap landing-section-pad--tight">
+          <div className="landing-testimonials-header">
+            <div className="landing-eyebrow landing-eyebrow--white">Ils l’ont adoptée</div>
+            <h2 className="landing-testimonials-title">
               Vos voisins de quartier
               <br />
               ne reviendraient pas en arrière.
             </h2>
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3,1fr)",
-              gap: 22,
-              marginBottom: 52,
-            }}
-          >
+          <div className="landing-testimonials-grid">
             {TESTIMONIALS.map((t, i) => (
               <Reveal key={t.name} delay={i * 60}>
-                <div
-                  style={{
-                    background: "#fff",
-                    borderRadius: 24,
-                    padding: "30px 28px",
-                    color: "#1A2E60",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 34,
-                      color: "#F56C5A",
-                      lineHeight: 0.6,
-                      fontFamily: "var(--font-heading)",
-                      fontWeight: 800,
-                    }}
-                  >
-                    &ldquo;
-                  </div>
-                  <p
-                    style={{
-                      fontSize: 16,
-                      lineHeight: 1.55,
-                      fontWeight: 600,
-                      margin: "8px 0 22px",
-                    }}
-                  >
-                    {t.quote}
-                  </p>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div
-                      style={{
-                        width: 46,
-                        height: 46,
-                        borderRadius: "50%",
-                        background: "#F3EFE3",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontFamily: "var(--font-heading)",
-                        fontWeight: 800,
-                        fontSize: 18,
-                      }}
-                    >
-                      {t.initial}
-                    </div>
+                <div className="landing-testimonial-card">
+                  <div className="landing-testimonial-quote-mark">&ldquo;</div>
+                  <p className="landing-testimonial-text">{t.quote}</p>
+                  <div className="landing-testimonial-author">
+                    <div className="landing-testimonial-avatar">{t.initial}</div>
                     <div>
-                      <div style={{ fontWeight: 800, fontSize: 15 }}>{t.name}</div>
-                      <div style={{ fontSize: 13, color: "#5C6478", fontWeight: 600 }}>
-                        {t.role}
-                      </div>
+                      <div className="landing-testimonial-name">{t.name}</div>
+                      <div className="landing-testimonial-role">{t.role}</div>
                     </div>
                   </div>
                 </div>
               </Reveal>
             ))}
           </div>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3,1fr)",
-              gap: 20,
-              borderTop: "1px solid rgba(255,255,255,.3)",
-              paddingTop: 40,
-            }}
-          >
+          <div className="landing-stats-grid">
             {STATS.map((st) => (
               <Stat key={st.label} num={st.num} label={st.label} />
             ))}
@@ -1102,108 +506,38 @@ export default function LandingPage() {
       </section>
 
       {/* ===== TARIF (crème) ===== */}
-      <section id="tarif" style={{ background: "#F3EFE3" }}>
-        <div className="landing-wrap" style={{ paddingTop: 90, paddingBottom: 90 }}>
-          <div style={{ textAlign: "center", marginBottom: 44 }}>
-            <div className="landing-eyebrow" style={{ color: "#F56C5A", marginBottom: 16 }}>
-              Un seul prix, tout compris
-            </div>
-            <h2 style={{ fontWeight: 800, fontSize: 52, lineHeight: 1 }}>
-              Pas de surprise, jamais.
-            </h2>
+      <section id="tarif" className="landing-section--cream">
+        <div className="landing-wrap landing-section-pad">
+          <div className="landing-pricing-header">
+            <div className="landing-eyebrow">Un seul prix, tout compris</div>
+            <h2 className="landing-pricing-title">Pas de surprise, jamais.</h2>
           </div>
-          <div
-            style={{
-              maxWidth: 460,
-              margin: "0 auto",
-              background: "#1A2E60",
-              borderRadius: 32,
-              padding: "44px 40px",
-              color: "#fff",
-              position: "relative",
-              overflow: "hidden",
-              boxShadow: "0 24px 60px rgba(26,46,96,.3)",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: -60,
-                right: -40,
-                width: 200,
-                height: 200,
-                borderRadius: "50%",
-                background: "rgba(245,108,90,.2)",
-              }}
-            />
-            <div style={{ position: "relative" }}>
-              <div className="landing-eyebrow" style={{ color: "#F56C5A", marginBottom: 10 }}>
-                Abonnement Fidelo
+          <div className="landing-pricing-card">
+            <div className="landing-pricing-blob" />
+            <div className="landing-pricing-content">
+              <div className="landing-eyebrow landing-eyebrow--tight">Abonnement Fidelo</div>
+              <div className="landing-pricing-amount-row">
+                <span className="landing-pricing-amount">XX €</span>
+                <span className="landing-pricing-period">/ mois</span>
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 6 }}>
-                <span
-                  style={{
-                    fontFamily: "var(--font-heading)",
-                    fontWeight: 800,
-                    fontSize: 74,
-                    lineHeight: 0.9,
-                  }}
-                >
-                  XX €
-                </span>
-                <span style={{ fontSize: 18, color: "#B9C2DC", fontWeight: 700 }}>/ mois</span>
-              </div>
-              <div style={{ fontSize: 16, color: "#B9C2DC", fontWeight: 600, marginBottom: 26 }}>
+              <div className="landing-pricing-subtitle">
                 Cartes illimitées · rappels de proximité · promos
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 14, marginBottom: 30 }}>
+              <div className="landing-pricing-includes">
                 {PRICE_INCLUDES.map((i) => (
-                  <div
-                    key={i.text}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      fontSize: 16,
-                      fontWeight: 600,
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 24,
-                        height: 24,
-                        flex: "none",
-                        borderRadius: "50%",
-                        background: "#F56C5A",
-                        color: "#fff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 13,
-                      }}
-                    >
-                      ✓
-                    </span>
+                  <div key={i.text} className="landing-pricing-include-item">
+                    <span className="landing-pricing-check">✓</span>
                     {i.text}
                   </div>
                 ))}
               </div>
               <a
                 href="#cta"
-                className="btn btn-accent landing-btn-lift"
-                style={{ width: "100%", justifyContent: "center", fontSize: 18 }}
+                className="btn btn-accent landing-btn-lift landing-pricing-cta"
               >
                 Commencer mes 14 jours gratuits
               </a>
-              <div
-                style={{
-                  textAlign: "center",
-                  fontSize: 13,
-                  color: "#8A93B5",
-                  fontWeight: 600,
-                  marginTop: 14,
-                }}
-              >
+              <div className="landing-pricing-footnote">
                 Sans carte bancaire · sans engagement
               </div>
             </div>
@@ -1212,92 +546,27 @@ export default function LandingPage() {
       </section>
 
       {/* ===== FAQ (blanc) ===== */}
-      <section style={{ background: "#fff" }}>
-        <div className="landing-wrap" style={{ paddingTop: 90, paddingBottom: 90, maxWidth: 760 }}>
-          <div style={{ textAlign: "center", marginBottom: 44 }}>
-            <div className="landing-eyebrow" style={{ color: "#F56C5A", marginBottom: 16 }}>
-              Les vraies questions
-            </div>
-            <h2 style={{ fontWeight: 800, fontSize: 48, lineHeight: 1 }}>On vous dit tout.</h2>
+      <section className="landing-section--white">
+        <div className="landing-wrap landing-faq-wrap">
+          <div className="landing-faq-header">
+            <div className="landing-eyebrow">Les vraies questions</div>
+            <h2 className="landing-faq-title">On vous dit tout.</h2>
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          <div className="landing-faq-list">
             {FAQS.map((f, i) => {
               const open = openFaq === i;
               return (
                 <Reveal key={f.q} delay={i * 60}>
-                  <div
-                    style={{
-                      background: "#F3EFE3",
-                      borderRadius: 20,
-                      overflow: "hidden",
-                      transition: "background .2s",
-                    }}
-                  >
+                  <div className="landing-faq-item">
                     <button
                       onClick={() => setOpenFaq(open ? null : i)}
-                      style={{
-                        width: "100%",
-                        textAlign: "left",
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        padding: "22px 26px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 16,
-                        fontFamily: "var(--font-body), sans-serif",
-                      }}
+                      className="landing-faq-question"
                     >
-                      <span
-                        style={{
-                          fontFamily: "var(--font-heading)",
-                          fontWeight: 700,
-                          fontSize: 19,
-                          color: "#1A2E60",
-                        }}
-                      >
-                        {f.q}
-                      </span>
-                      <span
-                        style={{
-                          width: 32,
-                          height: 32,
-                          flex: "none",
-                          borderRadius: "50%",
-                          background: open ? "#F56C5A" : "rgba(26,46,96,.1)",
-                          color: open ? "#fff" : "#1A2E60",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 18,
-                          fontWeight: 700,
-                          transition: "transform .25s ease",
-                          transform: open ? "rotate(45deg)" : "rotate(0deg)",
-                        }}
-                      >
-                        +
-                      </span>
+                      <span className="landing-faq-question-text">{f.q}</span>
+                      <span className={`landing-faq-icon${open ? " is-open" : ""}`}>+</span>
                     </button>
-                    <div
-                      style={{
-                        maxHeight: open ? 200 : 0,
-                        overflow: "hidden",
-                        transition: "max-height .3s ease",
-                      }}
-                    >
-                      <p
-                        style={{
-                          margin: 0,
-                          padding: "0 26px 24px",
-                          fontSize: 16,
-                          lineHeight: 1.6,
-                          color: "#5C6478",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {f.a}
-                      </p>
+                    <div className={`landing-faq-panel${open ? " is-open" : ""}`}>
+                      <p className="landing-faq-answer">{f.a}</p>
                     </div>
                   </div>
                 </Reveal>
@@ -1308,97 +577,34 @@ export default function LandingPage() {
       </section>
 
       {/* ===== CTA FINAL (corail) ===== */}
-      <section
-        id="cta"
-        style={{ background: "#F56C5A", color: "#fff", position: "relative", overflow: "hidden" }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            bottom: -140,
-            left: -80,
-            width: 360,
-            height: 360,
-            borderRadius: "50%",
-            background: "rgba(255,255,255,.12)",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            top: -100,
-            right: -60,
-            width: 280,
-            height: 280,
-            borderRadius: "50%",
-            background: "rgba(26,46,96,.18)",
-          }}
-        />
-        <div
-          className="landing-wrap"
-          style={{ position: "relative", textAlign: "center", paddingTop: 100, paddingBottom: 100 }}
-        >
-          <h2
-            style={{
-              fontWeight: 800,
-              fontSize: 60,
-              lineHeight: 1,
-              color: "#fff",
-              maxWidth: 760,
-              margin: "0 auto 22px",
-            }}
-          >
-            Vos clients ont déjà tout dans leur poche.
-          </h2>
-          <p
-            style={{
-              fontSize: 20,
-              color: "rgba(255,255,255,.92)",
-              fontWeight: 500,
-              maxWidth: 520,
-              margin: "0 auto 38px",
-            }}
-          >
+      <section id="cta" className="landing-section--coral landing-section--overflow">
+        <div className="landing-cta-blob-1" />
+        <div className="landing-cta-blob-2" />
+        <div className="landing-wrap landing-cta-inner">
+          <h2 className="landing-cta-title">Vos clients ont déjà tout dans leur poche.</h2>
+          <p className="landing-cta-desc">
             Ajoutez-y leur fidélité. En 10 minutes, sans matériel, sans vous prendre la tête.
           </p>
           <a
             href="mailto:bonjour@fidelo.app"
-            className="btn btn-primary landing-btn-lift"
-            style={{
-              fontSize: 19,
-              padding: "22px 40px",
-              boxShadow: "0 16px 40px rgba(26,46,96,.35)",
-            }}
+            className="btn btn-primary landing-btn-lift landing-cta-btn"
           >
             Essayer 14 jours gratuitement
           </a>
-          <div style={{ marginTop: 44, display: "flex", justifyContent: "center", opacity: 0.95 }}>
+          <div className="landing-cta-logo-wrap">
             <Logo variant="full" theme="white" height={44} />
           </div>
         </div>
       </section>
 
       {/* ===== FOOTER (marine) ===== */}
-      <footer style={{ background: "#1A2E60", color: "#fff" }}>
-        <div
-          className="landing-wrap"
-          style={{
-            paddingTop: 44,
-            paddingBottom: 30,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 24,
-            flexWrap: "wrap",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+      <footer className="landing-footer">
+        <div className="landing-wrap landing-footer-inner">
+          <div className="landing-footer-brand">
             <Logo variant="symbol" theme="white" height={26} />
-            <span style={{ fontSize: 14, color: "#8A93B5", fontWeight: 600 }}>
-              © 2026 Fidelo · Fabriqué à Lyon 🦁
-            </span>
+            <span className="landing-footer-copy">© 2026 Fidelo · Fabriqué à Lyon 🦁</span>
           </div>
-          <div style={{ display: "flex", gap: 26, fontSize: 14, fontWeight: 600 }}>
+          <div className="landing-footer-links">
             <a href="#" className="landing-footer-link">
               Mentions légales
             </a>
