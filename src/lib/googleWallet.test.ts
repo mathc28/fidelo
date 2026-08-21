@@ -4,8 +4,8 @@ import type { Merchant } from "./supabaseAdmin";
 type Call = { method: string; url: string; data: Record<string, unknown> };
 
 const calls: Call[] = [];
-/** Statut renvoyé par le prochain PATCH : 404 simule une classe absente chez Google. */
-let patchStatus = 200;
+/** Statut du prochain PATCH par type de ressource : 404 simule une absence chez Google. */
+let patchStatus = { loyaltyClass: 200, loyaltyObject: 200 };
 
 vi.mock("google-auth-library", () => ({
   GoogleAuth: class {
@@ -13,8 +13,9 @@ vi.mock("google-auth-library", () => ({
       return {
         async request(opts: Call) {
           calls.push(opts);
-          if (opts.method === "PATCH" && patchStatus !== 200) {
-            throw { response: { status: patchStatus, data: {} } };
+          const kind = opts.url.includes("/loyaltyObject") ? "loyaltyObject" : "loyaltyClass";
+          if (opts.method === "PATCH" && patchStatus[kind] !== 200) {
+            throw { response: { status: patchStatus[kind], data: {} } };
           }
           return { status: 200, data: {} };
         },
@@ -46,7 +47,7 @@ vi.mock("./supabaseAdmin", () => ({
   getCardTheme: async () => ({ bg_color: "#123456" }),
 }));
 
-const { ensureMerchantClass } = await import("./googleWallet");
+const { ensureMerchantClass, ensureLoyaltyObject } = await import("./googleWallet");
 
 function buildMerchant(overrides: Partial<Merchant> = {}): Merchant {
   return {
@@ -71,7 +72,7 @@ function buildMerchant(overrides: Partial<Merchant> = {}): Merchant {
 describe("ensureMerchantClass", () => {
   beforeEach(() => {
     calls.length = 0;
-    patchStatus = 200;
+    patchStatus = { loyaltyClass: 200, loyaltyObject: 200 };
     update.mockClear();
   });
 
@@ -86,7 +87,7 @@ describe("ensureMerchantClass", () => {
   });
 
   it("ne met jamais APPROVED dans une écriture", async () => {
-    patchStatus = 404;
+    patchStatus.loyaltyClass = 404;
     await ensureMerchantClass(buildMerchant());
 
     for (const call of calls) expect(call.data.reviewStatus).not.toBe("APPROVED");
@@ -100,7 +101,7 @@ describe("ensureMerchantClass", () => {
   });
 
   it("ne crée la classe que sur 404, avec reviewStatus UNDER_REVIEW", async () => {
-    patchStatus = 404;
+    patchStatus.loyaltyClass = 404;
     await ensureMerchantClass(buildMerchant());
 
     const post = calls.find((c) => c.method === "POST");
@@ -109,9 +110,70 @@ describe("ensureMerchantClass", () => {
   });
 
   it("laisse remonter les autres erreurs du PATCH", async () => {
-    patchStatus = 400;
+    patchStatus.loyaltyClass = 400;
     await expect(ensureMerchantClass(buildMerchant())).rejects.toMatchObject({
       response: { status: 400 },
     });
+  });
+
+  it("décrit le recto : compteur seul, puis prénom + récompense", async () => {
+    await ensureMerchantClass(buildMerchant());
+
+    const rows = (calls.find((c) => c.method === "PATCH")!.data as any).classTemplateInfo
+      .cardTemplateOverride.cardRowTemplateInfos;
+    expect(rows).toHaveLength(2);
+    expect(rows[0].oneItem.item.firstValue.fields[0].fieldPath).toBe(
+      "object.loyaltyPoints.balance"
+    );
+    expect(rows[1].twoItems.startItem.firstValue.fields[0].fieldPath).toBe("object.accountName");
+    expect(rows[1].twoItems.endItem.firstValue.fields[0].fieldPath).toBe(
+      "object.textModulesData['reward']"
+    );
+  });
+});
+
+describe("ensureLoyaltyObject", () => {
+  const customer = {
+    serial_number: "abc123",
+    email: "a@b.c",
+    first_name: "Camille",
+    points: 7,
+  } as any;
+  const rewards = [{ active: true, cost_points: 10, label: "Café offert" }] as any;
+
+  beforeEach(() => {
+    calls.length = 0;
+    patchStatus = { loyaltyClass: 200, loyaltyObject: 200 };
+  });
+
+  it("ne porte le prénom que via accountName, sans textModule Membre", async () => {
+    await ensureLoyaltyObject(customer, buildMerchant(), rewards);
+
+    const patch = calls.find((c) => c.url.includes("/loyaltyObject"))!.data as any;
+    expect(patch.accountName).toBe("Camille");
+    expect(patch.textModulesData.map((t: any) => t.id)).toEqual(["reward"]);
+  });
+
+  it("resynchronise un objet existant au lieu de le recréer", async () => {
+    await ensureLoyaltyObject(customer, buildMerchant(), rewards);
+
+    const objectCalls = calls.filter((c) => c.url.includes("/loyaltyObject"));
+    expect(objectCalls.map((c) => c.method)).toEqual(["PATCH"]);
+  });
+
+  it("crée l'objet quand Google répond 404", async () => {
+    patchStatus.loyaltyObject = 404;
+    await ensureLoyaltyObject(customer, buildMerchant(), rewards);
+
+    const objectCalls = calls.filter((c) => c.url.includes("/loyaltyObject"));
+    expect(objectCalls.map((c) => c.method)).toEqual(["PATCH", "POST"]);
+    expect((objectCalls[1].data as any).id).toBe("3388000000000000000.abc123");
+  });
+
+  it("omet le textModule récompense quand aucune n'est active", async () => {
+    await ensureLoyaltyObject(customer, buildMerchant(), []);
+
+    const patch = calls.find((c) => c.url.includes("/loyaltyObject"))!.data as any;
+    expect(patch.textModulesData).toEqual([]);
   });
 });

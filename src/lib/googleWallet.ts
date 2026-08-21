@@ -68,6 +68,32 @@ export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
       contentDescription: { defaultValue: { language: "fr-FR", value: `Logo ${merchant.name}` } },
     },
     hexBackgroundColor: theme.bg_color,
+    // Recto de la carte. Sans override, Google n'y affiche que le solde ; on
+    // ajoute donc une seconde ligne prénom + récompense. Les fieldPath sont
+    // résolus par objet au rendu, d'où les références en `object.*` sur une
+    // ressource de classe. Trois lignes maximum.
+    classTemplateInfo: {
+      cardTemplateOverride: {
+        cardRowTemplateInfos: [
+          // Le compteur reste seul sur sa ligne : pleine largeur = info principale.
+          {
+            oneItem: {
+              item: { firstValue: { fields: [{ fieldPath: "object.loyaltyPoints.balance" }] } },
+            },
+          },
+          {
+            twoItems: {
+              startItem: { firstValue: { fields: [{ fieldPath: "object.accountName" }] } },
+              // Absent tant que le commerce n'a aucune récompense active : Google
+              // rend alors la moitié droite vide plutôt que d'échouer.
+              endItem: {
+                firstValue: { fields: [{ fieldPath: "object.textModulesData['reward']" }] },
+              },
+            },
+          },
+        ],
+      },
+    },
     ...(merchant.lat != null && merchant.lng != null
       ? { locations: [{ latitude: merchant.lat, longitude: merchant.lng }] }
       : {}),
@@ -142,8 +168,7 @@ export async function ensureLoyaltyObject(
   const isVisits = merchant.program_type === "visits";
   const reward = rewardSummary(rewards, isVisits);
 
-  await request("POST", `${API}/loyaltyObject`, {
-    id,
+  const objectFields = {
     classId,
     state: "ACTIVE",
     accountId: customer.email,
@@ -152,16 +177,24 @@ export async function ensureLoyaltyObject(
       label: isVisits ? "Passages" : "Points",
       balance: { int: customer.points },
     },
-    textModulesData: [
-      { id: "member", header: "Membre", body: customer.first_name },
-      ...(reward ? [{ id: "reward", header: "Récompense", body: reward }] : []),
-    ],
+    // Le prénom vient d'accountName seul : un textModule « Membre » ferait
+    // doublon avec le « Nom de membre » natif dans la vue détails.
+    textModulesData: reward ? [{ id: "reward", header: "Récompense", body: reward }] : [],
     barcode: {
       type: "QR_CODE",
       value: customer.serial_number,
       alternateText: customer.serial_number.slice(0, 8).toUpperCase(),
     },
-  });
+  };
+
+  // Même logique que pour la classe : PATCH d'abord, création seulement sur 404.
+  // Un POST sur un objet existant renvoie 409 et ne met rien à jour — les cartes
+  // déjà installées garderaient indéfiniment leurs anciens textModules.
+  const patched = await request("PATCH", `${API}/loyaltyObject/${id}`, objectFields, [404]);
+
+  if (patched.status === 404) {
+    await request("POST", `${API}/loyaltyObject`, { id, ...objectFields });
+  }
   return id;
 }
 
