@@ -47,7 +47,8 @@ vi.mock("./supabaseAdmin", () => ({
   getCardTheme: async () => ({ bg_color: "#123456" }),
 }));
 
-const { ensureMerchantClass, ensureLoyaltyObject } = await import("./googleWallet");
+const { ensureMerchantClass, ensureLoyaltyObject, rewardSummary, frenchOrdinal } =
+  await import("./googleWallet");
 
 function buildMerchant(overrides: Partial<Merchant> = {}): Merchant {
   return {
@@ -139,7 +140,7 @@ describe("ensureLoyaltyObject", () => {
     first_name: "Camille",
     points: 7,
   } as any;
-  const rewards = [{ active: true, cost_points: 10, label: "Café offert" }] as any;
+  const reward = { active: true, cost_points: 10, label: "Café offert" } as any;
 
   beforeEach(() => {
     calls.length = 0;
@@ -147,7 +148,7 @@ describe("ensureLoyaltyObject", () => {
   });
 
   it("ne porte le prénom que via accountName, sans textModule Membre", async () => {
-    await ensureLoyaltyObject(customer, buildMerchant(), rewards);
+    await ensureLoyaltyObject(customer, buildMerchant(), reward);
 
     const patch = calls.find((c) => c.url.includes("/loyaltyObject"))!.data as any;
     expect(patch.accountName).toBe("Camille");
@@ -155,7 +156,7 @@ describe("ensureLoyaltyObject", () => {
   });
 
   it("resynchronise un objet existant au lieu de le recréer", async () => {
-    await ensureLoyaltyObject(customer, buildMerchant(), rewards);
+    await ensureLoyaltyObject(customer, buildMerchant(), reward);
 
     const objectCalls = calls.filter((c) => c.url.includes("/loyaltyObject"));
     expect(objectCalls.map((c) => c.method)).toEqual(["PATCH"]);
@@ -163,7 +164,7 @@ describe("ensureLoyaltyObject", () => {
 
   it("crée l'objet quand Google répond 404", async () => {
     patchStatus.loyaltyObject = 404;
-    await ensureLoyaltyObject(customer, buildMerchant(), rewards);
+    await ensureLoyaltyObject(customer, buildMerchant(), reward);
 
     const objectCalls = calls.filter((c) => c.url.includes("/loyaltyObject"));
     expect(objectCalls.map((c) => c.method)).toEqual(["PATCH", "POST"]);
@@ -171,9 +172,27 @@ describe("ensureLoyaltyObject", () => {
   });
 
   it("omet le textModule récompense quand aucune n'est active", async () => {
-    await ensureLoyaltyObject(customer, buildMerchant(), []);
+    await ensureLoyaltyObject(customer, buildMerchant(), null);
 
     const patch = calls.find((c) => c.url.includes("/loyaltyObject"))!.data as any;
     expect(patch.textModulesData).toEqual([]);
+  });
+});
+
+describe("rewardSummary", () => {
+  const reward = (cost: number) =>
+    ({ id: "r1", merchant_id: "m1", label: "Café offert", cost_points: cost, active: true }) as any;
+
+  it("énonce un seuil de passages comme un rang", () => {
+    expect(frenchOrdinal(1)).toBe("1er");
+    expect(rewardSummary(reward(10), true)).toBe("Café offert au 10e passage");
+  });
+
+  it("énonce un seuil de points comme un total", () => {
+    expect(rewardSummary(reward(250), false)).toBe("Café offert à 250 points");
+  });
+
+  it("rend null quand le commerce n'a pas de récompense", () => {
+    expect(rewardSummary(null, true)).toBeNull();
   });
 });

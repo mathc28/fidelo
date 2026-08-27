@@ -46,7 +46,7 @@ export default function AdminMerchantPage() {
 
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [reward, setReward] = useState<Reward | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loadError, setLoadError] = useState("");
@@ -79,7 +79,7 @@ export default function AdminMerchantPage() {
       const data = await res.json();
       setMerchant(data.merchant);
       setCustomers(data.customers);
-      setRewards(data.rewards);
+      setReward(data.reward);
       setDevices(data.devices);
       setStats(data.stats);
     })();
@@ -280,14 +280,13 @@ export default function AdminMerchantPage() {
           style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}
         >
           <section className="card" style={{ padding: "24px 26px" }}>
-            <h2 style={{ fontSize: 20, marginBottom: 4 }}>Récompenses</h2>
+            <h2 style={{ fontSize: 20, marginBottom: 4 }}>Récompense</h2>
             <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 16px" }}>
               {isVisits ? "1 tampon par visite." : "1 point par euro dépensé."}
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {rewards.map((r) => (
+              {reward && (
                 <div
-                  key={r.id}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -295,7 +294,7 @@ export default function AdminMerchantPage() {
                     border: "1px solid #F0EDE2",
                     borderRadius: "var(--radius-md)",
                     padding: "12px 16px",
-                    opacity: r.active ? 1 : 0.55,
+                    opacity: 1,
                   }}
                 >
                   <div
@@ -312,7 +311,7 @@ export default function AdminMerchantPage() {
                     }}
                   >
                     <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1 }}>
-                      {r.cost_points}
+                      {reward.cost_points}
                     </div>
                     <div
                       style={{
@@ -326,14 +325,14 @@ export default function AdminMerchantPage() {
                     </div>
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{r.label}</div>
+                    <div style={{ fontWeight: 700, fontSize: 14 }}>{reward.label}</div>
                     <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                      {r.active ? "Palier actif" : "Désactivé"}
+                      Seuil du programme
                     </div>
                   </div>
                 </div>
-              ))}
-              {rewards.length === 0 && (
+              )}
+              {!reward && (
                 <div
                   style={{
                     padding: 16,

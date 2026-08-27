@@ -1,5 +1,5 @@
 import { getMerchantBySlug, getCardTheme } from "@/lib/supabaseAdmin";
-import { db } from "@/lib/supabaseAdmin";
+import { getMerchantReward } from "@/lib/loyalty";
 import { notFound } from "next/navigation";
 import SignupForm from "./SignupForm";
 import { PoweredByBadge } from "@/components/ui";
@@ -15,19 +15,11 @@ export default async function InscriptionPage({ params }: { params: { slug: stri
   if (!merchant) notFound();
   const theme = await getCardTheme(merchant.theme_id);
 
-  const { data: rewards } = await db
-    .from("rewards")
-    .select("label, cost_points")
-    .eq("merchant_id", merchant.id)
-    .eq("active", true)
-    .order("cost_points")
-    .limit(1);
-
-  const first = rewards?.[0];
-  const hook = first
+  const reward = await getMerchantReward(merchant.id);
+  const hook = reward
     ? merchant.program_type === "visits"
-      ? `Votre ${first.cost_points}e passage vous offre : ${first.label}`
-      : `${first.cost_points} points = ${first.label}`
+      ? `Votre ${reward.cost_points}e passage vous offre : ${reward.label}`
+      : `${reward.cost_points} points = ${reward.label}`
     : `Rejoignez le programme fidélité de ${merchant.name}`;
 
   return (

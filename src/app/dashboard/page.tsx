@@ -65,13 +65,17 @@ export default function DashboardPage() {
 
   const [merchant, setMerchant] = useState<Merchant | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [reward, setReward] = useState<Reward | null>(null);
+  const [rewardLabel, setRewardLabel] = useState("");
+  const [rewardCost, setRewardCost] = useState("");
+  const [savingReward, setSavingReward] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
   const [themes, setThemes] = useState<CardTheme[]>([]);
 
   const [totalCards, setTotalCards] = useState(0);
   const [cardsThisMonth, setCardsThisMonth] = useState(0);
   const [txThisMonth, setTxThisMonth] = useState(0);
+  const [txToday, setTxToday] = useState(0);
   const [promosThisMonth, setPromosThisMonth] = useState(0);
   const [promosThisWeek, setPromosThisWeek] = useState(0);
 
@@ -137,7 +141,7 @@ export default function DashboardPage() {
           .select("id,first_name,email,points,updated_at")
           .order("updated_at", { ascending: false })
           .limit(20),
-        supabase.from("rewards").select("*").order("cost_points"),
+        supabase.from("rewards").select("*").eq("active", true).maybeSingle(),
         supabase
           .from("devices")
           .select("id,label,created_at")
@@ -151,7 +155,7 @@ export default function DashboardPage() {
           .gte("created_at", startOfMonth),
         supabase
           .from("transactions")
-          .select("delta")
+          .select("delta, created_at")
           .eq("type", "earn")
           .gte("created_at", startOfMonth),
         supabase
@@ -162,15 +166,22 @@ export default function DashboardPage() {
       ]);
 
       setCustomers(c ?? []);
-      setRewards(r ?? []);
+      setReward(r);
+      setRewardLabel(r?.label ?? "");
+      setRewardCost(r ? String(r.cost_points) : "");
       setDevices(d ?? []);
       setThemes(th ?? []);
       setTotalCards(total ?? 0);
       setCardsThisMonth(newThisMonth ?? 0);
-      setTxThisMonth(
-        m.program_type === "points"
-          ? (earnRows ?? []).reduce((sum, row) => sum + row.delta, 0)
-          : (earnRows ?? []).length
+      // Un « passage » se compte à la ligne, un point se somme.
+      const countEarn = (rows: { delta: number }[]) =>
+        m.program_type === "points" ? rows.reduce((sum, row) => sum + row.delta, 0) : rows.length;
+      const startOfDay = new Date().setHours(0, 0, 0, 0);
+      setTxThisMonth(countEarn(earnRows ?? []));
+      setTxToday(
+        countEarn(
+          (earnRows ?? []).filter((row) => new Date(row.created_at).getTime() >= startOfDay)
+        )
       );
       setPromosThisMonth(promoMonth ?? 0);
       setPromosThisWeek(promoWeek ?? 0);
@@ -321,26 +332,41 @@ export default function DashboardPage() {
     showToast(`${d.label} révoqué`);
   }
 
-  async function toggleReward(r: Reward) {
-    await supabase.from("rewards").update({ active: !r.active }).eq("id", r.id);
-    setRewards((list) => list.map((x) => (x.id === r.id ? { ...x, active: !x.active } : x)));
-  }
-
-  async function addReward() {
+  /**
+   * Le commerce n'a qu'une récompense : on met à jour la ligne existante, ou on
+   * la crée à la première sauvegarde. L'index unique partiel en base garantit
+   * qu'il ne peut jamais y en avoir deux actives.
+   */
+  async function saveReward() {
     if (!merchant) return;
-    const maxCost = Math.max(0, ...rewards.map((r) => r.cost_points));
-    const cost = maxCost + (merchant.program_type === "points" ? 250 : 10);
-    const { data } = await supabase
-      .from("rewards")
-      .insert({
-        merchant_id: merchant.id,
-        label: "Nouvelle récompense — à personnaliser",
-        cost_points: cost,
-      })
-      .select()
-      .single();
-    if (data) setRewards((list) => [...list, data]);
-    showToast("Palier ajouté — pensez à le personnaliser");
+    const label = rewardLabel.trim();
+    const cost = Number(rewardCost);
+    if (!label || !Number.isInteger(cost) || cost <= 0) {
+      showToast("Indiquez un seuil entier positif et un libellé");
+      return;
+    }
+
+    setSavingReward(true);
+    const { data, error } = reward
+      ? await supabase
+          .from("rewards")
+          .update({ label, cost_points: cost })
+          .eq("id", reward.id)
+          .select()
+          .single()
+      : await supabase
+          .from("rewards")
+          .insert({ merchant_id: merchant.id, label, cost_points: cost })
+          .select()
+          .single();
+    setSavingReward(false);
+
+    if (error || !data) {
+      showToast("Enregistrement impossible");
+      return;
+    }
+    setReward(data);
+    showToast("Récompense enregistrée");
   }
 
   const filteredClients = useMemo(() => {
@@ -417,18 +443,9 @@ export default function DashboardPage() {
     text_color: "#F3EFE3",
     label_color: "#F56C5A",
   };
-  const bestReward = rewards
-    .filter((r) => r.active)
-    .sort((a, b) => a.cost_points - b.cost_points)[0];
-  const previewPoints = isVisits
-    ? bestReward?.cost_points
-      ? Math.min(7, bestReward.cost_points)
-      : 7
-    : 182;
-  const previewThreshold = isVisits ? (bestReward?.cost_points ?? 10) : null;
-  const previewReward = bestReward
-    ? `${bestReward.label} au ${bestReward.cost_points}e ${unit}`
-    : undefined;
+  const previewPoints = isVisits ? Math.min(7, reward?.cost_points ?? 7) : 182;
+  const previewThreshold = isVisits ? (reward?.cost_points ?? 10) : null;
+  const previewReward = reward ? `${reward.label} au ${reward.cost_points}e ${unit}` : undefined;
   const mm = Math.floor(codeLeft / 60),
     ss = String(codeLeft % 60).padStart(2, "0");
   const greeting = (session.user.email as string).split("@")[0];
@@ -587,56 +604,13 @@ export default function DashboardPage() {
                   marginBottom: 8,
                 }}
               >
-                Répartition iOS / Android
+                {isVisits ? "Passages aujourd'hui" : "Points crédités aujourd'hui"}
               </div>
-              <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 24, fontWeight: 800 }}>68 %</span>
-                <span
-                  style={{ fontSize: 13, color: "var(--color-text-secondary)", fontWeight: 600 }}
-                >
-                  / 32 %
-                </span>
+              <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
+                {txToday.toLocaleString("fr-FR")}
               </div>
-              <div
-                style={{ display: "flex", height: 8, borderRadius: 99, overflow: "hidden", gap: 2 }}
-              >
-                <div
-                  style={{ width: "68%", background: "var(--color-marine)", borderRadius: 99 }}
-                />
-                <div style={{ flex: 1, background: "var(--color-coral)", borderRadius: 99 }} />
-              </div>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 14,
-                  marginTop: 8,
-                  fontSize: 11,
-                  color: "var(--color-text-secondary)",
-                  fontWeight: 600,
-                }}
-              >
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: "var(--color-marine)",
-                    }}
-                  />
-                  Apple Wallet
-                </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                  <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: "50%",
-                      background: "var(--color-coral)",
-                    }}
-                  />
-                  Google Wallet
-                </span>
+              <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 8 }}>
+                depuis minuit
               </div>
             </div>
           </div>
@@ -1054,78 +1028,71 @@ export default function DashboardPage() {
               </p>
             </section>
 
-            {/* ===== Récompenses ===== */}
+            {/* ===== Récompense ===== */}
             <section id="recompenses" className="card" style={{ padding: "24px 26px" }}>
-              <h2 style={{ fontSize: 20, marginBottom: 4 }}>Récompenses</h2>
+              <h2 style={{ fontSize: 20, marginBottom: 4 }}>Récompense</h2>
               <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 16px" }}>
                 {isVisits
-                  ? "Vos clients gagnent 1 tampon par visite."
-                  : "Vos clients gagnent 1 point par euro dépensé."}
+                  ? "Vos clients gagnent 1 tampon par visite. Au seuil atteint, la caisse propose la récompense et remet le compteur à zéro."
+                  : "Vos clients gagnent 1 point par euro dépensé. Au seuil atteint, la caisse propose la récompense et remet le compteur à zéro."}
               </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
-                {rewards.map((r) => (
-                  <div
-                    key={r.id}
+
+              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                <div>
+                  <label
                     style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 14,
-                      border: "1px solid #F0EDE2",
-                      borderRadius: "var(--radius-md)",
-                      padding: "12px 16px",
-                      opacity: r.active ? 1 : 0.55,
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      marginBottom: 6,
+                      color: "var(--color-text-secondary)",
                     }}
                   >
-                    <div
-                      style={{
-                        width: 44,
-                        height: 44,
-                        flex: "none",
-                        borderRadius: "var(--radius-md)",
-                        background: "var(--color-cream)",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1 }}>
-                        {r.cost_points}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 8.5,
-                          fontWeight: 700,
-                          color: "var(--color-text-secondary)",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {unit}
-                      </div>
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{r.label}</div>
-                      <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                        {r.active ? "Palier actif" : "Désactivé"}
-                      </div>
-                    </div>
-                    <button
-                      className="switch"
-                      onClick={() => toggleReward(r)}
-                      style={{
-                        background: r.active
-                          ? "var(--color-success)"
-                          : "var(--color-border-strong)",
-                      }}
-                    >
-                      <span className="switch-knob" style={{ left: r.active ? 21 : 3 }} />
-                    </button>
-                  </div>
-                ))}
+                    Seuil ({unit})
+                  </label>
+                  <Field
+                    type="number"
+                    min={1}
+                    step={1}
+                    inputMode="numeric"
+                    value={rewardCost}
+                    onChange={(e) => setRewardCost(e.target.value)}
+                    placeholder={isVisits ? "10" : "250"}
+                  />
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      marginBottom: 6,
+                      color: "var(--color-text-secondary)",
+                    }}
+                  >
+                    Libellé de la récompense
+                  </label>
+                  <Field
+                    value={rewardLabel}
+                    onChange={(e) => setRewardLabel(e.target.value)}
+                    placeholder="-10 % sur votre achat"
+                    maxLength={60}
+                  />
+                </div>
+
+                <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: 0 }}>
+                  {rewardLabel.trim() && Number(rewardCost) > 0
+                    ? isVisits
+                      ? `Aperçu : « ${rewardLabel.trim()} » au ${rewardCost}e passage.`
+                      : `Aperçu : « ${rewardLabel.trim()} » à ${rewardCost} points.`
+                    : "Renseignez un seuil et un libellé pour activer la récompense."}
+                </p>
+
+                <Button onClick={saveReward} disabled={savingReward}>
+                  {savingReward ? "Enregistrement…" : "Enregistrer la récompense"}
+                </Button>
               </div>
-              <button className="btn-dashed" onClick={addReward}>
-                + Ajouter un palier
-              </button>
             </section>
 
             {/* ===== Clients ===== */}

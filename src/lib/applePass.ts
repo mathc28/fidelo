@@ -11,19 +11,16 @@ import { getPassImages } from "./passAssets";
 export async function buildApplePass(
   customer: Customer,
   merchant: Merchant,
-  rewards: Reward[]
+  reward: Reward | null
 ): Promise<Buffer> {
   const images = await getPassImages(merchant);
   const theme = await getCardTheme(merchant.theme_id);
   const isVisits = merchant.program_type === "visits";
 
-  const nextReward = rewards
-    .filter((r) => r.active)
-    .sort((a, b) => a.cost_points - b.cost_points)
-    .find((r) => r.cost_points > customer.points);
-  const reachedReward = rewards
-    .filter((r) => r.active && r.cost_points <= customer.points)
-    .sort((a, b) => b.cost_points - a.cost_points)[0];
+  // Une seule récompense : soit le seuil est atteint et elle est à retirer,
+  // soit elle reste l'objectif à afficher.
+  const reachedReward = reward && customer.points >= reward.cost_points ? reward : undefined;
+  const nextReward = reachedReward ? undefined : (reward ?? undefined);
 
   const pass = new PKPass(
     images,

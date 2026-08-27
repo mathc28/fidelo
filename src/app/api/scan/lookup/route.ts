@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireDevice } from "@/lib/deviceAuth";
 import { db } from "@/lib/supabaseAdmin";
-import { getActiveRewards } from "@/lib/loyalty";
+import { getMerchantReward } from "@/lib/loyalty";
 
 /**
  * POST { serial } — après scan du QR
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   if (!customer) return new NextResponse("Carte inconnue dans ce commerce", { status: 404 });
 
-  const rewards = await getActiveRewards(auth.merchant.id);
+  const reward = await getMerchantReward(auth.merchant.id);
   const { count: scansToday } = await db
     .from("transactions")
     .select("*", { count: "exact", head: true })
@@ -53,7 +53,8 @@ export async function POST(req: NextRequest) {
     alreadyScannedToday:
       auth.merchant.program_type === "visits" &&
       (scansToday ?? 0) >= auth.merchant.max_scans_per_day,
-    availableRewards: rewards.filter((r) => r.cost_points <= customer.points),
-    nextReward: rewards.find((r) => r.cost_points > customer.points) ?? null,
+    reward: reward ? { label: reward.label, cost_points: reward.cost_points } : null,
+    // Seuil atteint : la caisse propose « Récompense utilisée », qui remet à zéro.
+    rewardAvailable: reward != null && customer.points >= reward.cost_points,
   });
 }

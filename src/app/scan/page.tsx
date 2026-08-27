@@ -7,8 +7,8 @@ type Lookup = {
   customer: { serial: string; firstName: string; points: number; memberSince: string };
   programType: "visits" | "points";
   alreadyScannedToday: boolean;
-  availableRewards: { id: string; label: string; cost_points: number }[];
-  nextReward: { label: string; cost_points: number } | null;
+  reward: { label: string; cost_points: number } | null;
+  rewardAvailable: boolean;
 };
 
 const TOKEN_KEY = "fidelite_device_token";
@@ -151,13 +151,14 @@ export default function ScanPage() {
     setAmount("");
   }
 
-  async function redeem(rewardId: string) {
+  /** Remet le compteur à zéro via une transaction 'redeem' tracée. */
+  async function redeem() {
     if (!lookup) return;
     setBusy(true);
     const res = await fetch("/api/scan/redeem", {
       method: "POST",
       headers: authHeaders(),
-      body: JSON.stringify({ serial: lookup.customer.serial, rewardId }),
+      body: JSON.stringify({ serial: lookup.customer.serial }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -165,7 +166,7 @@ export default function ScanPage() {
       return;
     }
     const data = await res.json();
-    setFlash(`🎁 ${data.reward} appliquée — reste ${data.points}`);
+    setFlash(`🎁 ${data.reward} — compteur remis à zéro`);
     setLookup(null);
   }
 
@@ -303,16 +304,15 @@ export default function ScanPage() {
                 {lookup.programType === "visits" ? "passages" : "points"}
               </span>
             </p>
-            {lookup.nextReward && (
+            {lookup.reward && !lookup.rewardAvailable && (
               <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--color-text-secondary)" }}>
-                Prochaine récompense à {lookup.nextReward.cost_points} : {lookup.nextReward.label}
+                Récompense à {lookup.reward.cost_points} : {lookup.reward.label}
               </p>
             )}
           </Card>
 
-          {lookup.availableRewards.map((r) => (
+          {lookup.rewardAvailable && lookup.reward && (
             <div
-              key={r.id}
               style={{
                 display: "flex",
                 alignItems: "center",
@@ -325,13 +325,16 @@ export default function ScanPage() {
               }}
             >
               <span style={{ flex: 1, fontSize: 14 }}>
-                🎁 {r.label} <Badge variant="success">{r.cost_points} pts</Badge>
+                🎁 {lookup.reward.label}{" "}
+                <Badge variant="success">
+                  {lookup.reward.cost_points} {lookup.programType === "visits" ? "passages" : "pts"}
+                </Badge>
               </span>
-              <Button size="sm" variant="primary" onClick={() => redeem(r.id)} disabled={busy}>
-                Utiliser
+              <Button size="sm" variant="primary" onClick={redeem} disabled={busy}>
+                Récompense utilisée
               </Button>
             </div>
-          ))}
+          )}
 
           {lookup.programType === "visits" ? (
             <Button size="lg" block onClick={earn} disabled={busy || lookup.alreadyScannedToday}>

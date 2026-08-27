@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, getMerchantById } from "@/lib/supabaseAdmin";
 import { ensureLoyaltyObject, buildSaveUrl } from "@/lib/googleWallet";
-import { getActiveRewards } from "@/lib/loyalty";
+import { getMerchantReward } from "@/lib/loyalty";
 
 export async function GET(_req: NextRequest, { params }: { params: { serial: string } }) {
   const { data: customer } = await db
@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: { serial: str
   const merchant = await getMerchantById(customer.merchant_id);
   if (!merchant) return new NextResponse("Commerce introuvable", { status: 404 });
 
-  const rewards = await getActiveRewards(merchant.id);
-  await ensureLoyaltyObject(customer, merchant, rewards);
+  const reward = await getMerchantReward(merchant.id);
+  await ensureLoyaltyObject(customer, merchant, reward);
   return NextResponse.redirect(buildSaveUrl(customer, merchant));
 }

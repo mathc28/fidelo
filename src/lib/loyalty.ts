@@ -2,14 +2,19 @@ import { db, Customer, Merchant, Reward } from "./supabaseAdmin";
 import { pushPassUpdate } from "./apns";
 import { updateGooglePoints } from "./googleWallet";
 
-export async function getActiveRewards(merchantId: string): Promise<Reward[]> {
+/**
+ * La récompense du commerce — il n'en a qu'une (index unique partiel sur
+ * rewards(merchant_id) where active). null s'il n'en a configuré aucune,
+ * ou s'il l'a désactivée : le programme tourne alors sans palier.
+ */
+export async function getMerchantReward(merchantId: string): Promise<Reward | null> {
   const { data } = await db
     .from("rewards")
     .select("*")
     .eq("merchant_id", merchantId)
     .eq("active", true)
-    .order("cost_points");
-  return data ?? [];
+    .maybeSingle();
+  return data;
 }
 
 /**

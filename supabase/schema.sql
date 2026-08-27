@@ -328,3 +328,32 @@ alter table merchants drop column label_color;
 -- logoText (le nom du commerce) doit être affiché à côté. false seulement
 -- pour un wordmark en paysage net.
 alter table merchants add column is_square_logo boolean not null default false;
+
+-- ------------------------------------------------------------
+-- 12. RÉCOMPENSE UNIQUE — un commerce = une seule récompense active
+-- ------------------------------------------------------------
+-- Le modèle à paliers multiples est abandonné : un commerce définit un
+-- seuil et un libellé, rien de plus. La table rewards est conservée telle
+-- quelle — transactions.reward_id y référence l'historique des utilisations,
+-- qu'on ne veut pas perdre — mais une seule ligne active par commerce.
+--
+-- Aucun type de transaction à ajouter : 'redeem' existe déjà dans le check
+-- de transactions.type et porte déjà reward_id. La remise à zéro du compteur
+-- passe donc par une transaction 'redeem' normale, de delta = -solde.
+
+-- Dédoublonnage : on garde active la récompense au seuil le plus bas (à
+-- égalité, la plus ancienne) et on désactive les autres. Pas de delete :
+-- les paliers historiques restent référençables par transactions.reward_id.
+update rewards r set active = false
+where r.active
+  and r.id <> (
+    select r2.id from rewards r2
+    where r2.merchant_id = r.merchant_id and r2.active
+    order by r2.cost_points, r2.created_at
+    limit 1
+  );
+
+-- Index partiel : contraint l'unicité sans empêcher les anciens paliers
+-- désactivés de cohabiter.
+create unique index idx_rewards_one_active_per_merchant
+  on rewards(merchant_id) where active;

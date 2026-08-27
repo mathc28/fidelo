@@ -1,9 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireDevice } from "@/lib/deviceAuth";
 import { db, merchantActive } from "@/lib/supabaseAdmin";
-import { applyTransaction } from "@/lib/loyalty";
+import { applyTransaction, getMerchantReward } from "@/lib/loyalty";
 
-/** Utilisation d'une récompense : vérifie le palier, débite, trace. */
+/**
+ * « Récompense utilisée » en caisse : remet le compteur du client à zéro.
+ *
+ * La remise à zéro n'écrase jamais customers.points — elle passe par une
+ * transaction 'redeem' de delta = -solde, que le trigger apply_transaction
+ * répercute sur le cache. L'historique reste ainsi reconstituable, et la
+ * ligne porte reward_id pour savoir ce qui a été offert.
+ */
 export async function POST(req: NextRequest) {
   const auth = await requireDevice(req);
   if (!auth) return new NextResponse("Appareil non appairé", { status: 401 });
@@ -11,33 +18,35 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Abonnement inactif", { status: 402 });
   }
 
-  const { serial, rewardId } = await req.json();
+  const { serial } = await req.json();
 
-  const [{ data: customer }, { data: reward }] = await Promise.all([
+  const [{ data: customer }, reward] = await Promise.all([
     db
       .from("customers")
       .select("*")
       .eq("serial_number", serial)
       .eq("merchant_id", auth.merchant.id)
       .single(),
-    db
-      .from("rewards")
-      .select("*")
-      .eq("id", rewardId)
-      .eq("merchant_id", auth.merchant.id)
-      .eq("active", true)
-      .single(),
+    getMerchantReward(auth.merchant.id),
   ]);
 
   if (!customer) return new NextResponse("Carte inconnue", { status: 404 });
-  if (!reward) return new NextResponse("Récompense introuvable", { status: 404 });
+  if (!reward) return new NextResponse("Aucune récompense configurée", { status: 404 });
+
+  // Le seuil est revérifié ici : la caisse peut afficher un état périmé si le
+  // commerçant vient de le relever depuis le dashboard.
+  if (customer.points < reward.cost_points) {
+    return new NextResponse(`Seuil non atteint (${customer.points}/${reward.cost_points})`, {
+      status: 409,
+    });
+  }
 
   const result = await applyTransaction({
     merchant: auth.merchant,
     customer,
     deviceId: auth.deviceId,
     type: "redeem",
-    delta: -reward.cost_points,
+    delta: -customer.points,
     rewardId: reward.id,
   });
 

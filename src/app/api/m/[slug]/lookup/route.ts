@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db, getMerchantBySlug } from "@/lib/supabaseAdmin";
-import { getActiveRewards } from "@/lib/loyalty";
+import { getMerchantReward } from "@/lib/loyalty";
 import { clientIp, isRateLimited } from "@/lib/rateLimit";
 
 /** Espace client public : lookup par email, scopé au commerce. */
@@ -25,8 +25,8 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
 
   if (!customer) return new NextResponse("Aucune carte pour cet email", { status: 404 });
 
-  const rewards = await getActiveRewards(merchant.id);
-  const next = rewards.find((r) => r.cost_points > customer.points) ?? null;
+  const reward = await getMerchantReward(merchant.id);
+  const next = reward && reward.cost_points > customer.points ? reward : null;
 
   return NextResponse.json({
     firstName: customer.first_name,

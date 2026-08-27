@@ -16,7 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
 
   const [
     { data: customers },
-    { data: rewards },
+    { data: reward },
     { data: devices },
     { count: totalCards },
     { count: cardsThisMonth },
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
       .eq("merchant_id", merchant.id)
       .order("updated_at", { ascending: false })
       .limit(20),
-    db.from("rewards").select("*").eq("merchant_id", merchant.id).order("cost_points"),
+    db.from("rewards").select("*").eq("merchant_id", merchant.id).eq("active", true).maybeSingle(),
     db
       .from("devices")
       .select("id,label,created_at")
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   return NextResponse.json({
     merchant,
     customers: customers ?? [],
-    rewards: rewards ?? [],
+    reward,
     devices: devices ?? [],
     stats: {
       totalCards: totalCards ?? 0,

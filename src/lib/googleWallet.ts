@@ -139,19 +139,18 @@ export function frenchOrdinal(n: number): string {
 
 /**
  * Résumé statique du programme, affiché sur la carte : seuil + libellé de la
- * première récompense active. null si le commerce n'en a aucune.
+ * récompense du commerce. null s'il n'en a aucune.
  *
  * Le seuil s'énonce différemment selon le mode : un passage se compte
  * ("au 10e passage"), des points s'accumulent ("à 100 points").
  */
-export function rewardSummary(rewards: Reward[], isVisits: boolean): string | null {
-  const first = rewards.filter((r) => r.active).sort((a, b) => a.cost_points - b.cost_points)[0];
-  if (!first) return null;
+export function rewardSummary(reward: Reward | null, isVisits: boolean): string | null {
+  if (!reward) return null;
 
   const threshold = isVisits
-    ? `au ${frenchOrdinal(first.cost_points)} passage`
-    : `à ${first.cost_points} points`;
-  return `${first.label} ${threshold}`;
+    ? `au ${frenchOrdinal(reward.cost_points)} passage`
+    : `à ${reward.cost_points} points`;
+  return `${reward.label} ${threshold}`;
 }
 
 function objectId(serial: string): string {
@@ -161,12 +160,12 @@ function objectId(serial: string): string {
 export async function ensureLoyaltyObject(
   customer: Customer,
   merchant: Merchant,
-  rewards: Reward[] = []
+  reward: Reward | null = null
 ): Promise<string> {
   const classId = await ensureMerchantClass(merchant);
   const id = objectId(customer.serial_number);
   const isVisits = merchant.program_type === "visits";
-  const reward = rewardSummary(rewards, isVisits);
+  const summary = rewardSummary(reward, isVisits);
 
   const objectFields = {
     classId,
@@ -179,7 +178,7 @@ export async function ensureLoyaltyObject(
     },
     // Le prénom vient d'accountName seul : un textModule « Membre » ferait
     // doublon avec le « Nom de membre » natif dans la vue détails.
-    textModulesData: reward ? [{ id: "reward", header: "Récompense", body: reward }] : [],
+    textModulesData: summary ? [{ id: "reward", header: "Récompense", body: summary }] : [],
     barcode: {
       type: "QR_CODE",
       value: customer.serial_number,
