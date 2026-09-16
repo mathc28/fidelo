@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
 import { requireMerchant } from "@/lib/dashboardAuth";
 import { db, getCardTheme } from "@/lib/supabaseAdmin";
-import { invalidatePassImages } from "@/lib/passAssets";
+import { invalidatePassImages, touchMerchantPasses } from "@/lib/passAssets";
+import { pushMerchantPasses } from "@/lib/apns";
 import {
   LogoTooSmallError,
   generateAppleLogos,
@@ -13,11 +14,10 @@ import {
 } from "@/lib/wallet/logo-pipeline";
 
 const MAX_SIZE = 5 * 1024 * 1024;
-const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
 
 /**
  * Upload du logo du commerçant : génère les images du pass Apple/Google
- * (icon, logo, strip — voir passAssets.ts et lib/wallet/logo-pipeline.ts)
+ * (icon, logo — voir passAssets.ts et lib/wallet/logo-pipeline.ts)
  * via sharp, les stocke dans le bucket Storage "pass-assets", et met à
  * jour merchants.logo_url (utilisé par les pages publiques
  * /m/[slug]/inscription et /compte) ainsi que merchants.is_square_logo.
@@ -48,37 +48,23 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Image illisible : essayez un autre fichier.", { status: 400 });
   }
 
-  async function stripBanner(w: number, h: number, logoW: number, logoH: number) {
-    const logoBuf = await sharp(input)
-      .resize(logoW, logoH, { fit: "contain", background: TRANSPARENT })
+  const [icon, icon2x, webIcon, appleLogos, googleLogo, squareLogo, warning] = await Promise.all([
+    sharp(input)
+      .resize(29, 29, { fit: "contain", background: bg })
+      .flatten({ background: bg })
       .png()
-      .toBuffer();
-    return sharp({ create: { width: w, height: h, channels: 4, background: bg } })
-      .composite([{ input: logoBuf, gravity: "center" }])
+      .toBuffer(),
+    sharp(input)
+      .resize(58, 58, { fit: "contain", background: bg })
+      .flatten({ background: bg })
       .png()
-      .toBuffer();
-  }
-
-  const [icon, icon2x, strip, strip2x, webIcon, appleLogos, googleLogo, squareLogo, warning] =
-    await Promise.all([
-      sharp(input)
-        .resize(29, 29, { fit: "contain", background: bg })
-        .flatten({ background: bg })
-        .png()
-        .toBuffer(),
-      sharp(input)
-        .resize(58, 58, { fit: "contain", background: bg })
-        .flatten({ background: bg })
-        .png()
-        .toBuffer(),
-      stripBanner(375, 123, 220, 70),
-      stripBanner(750, 246, 440, 140),
-      sharp(input).resize(128, 128, { fit: "cover" }).png().toBuffer(),
-      generateAppleLogos(normalized),
-      generateGoogleLogo(normalized),
-      isSquareLogo(normalized),
-      getLogoSizeWarning(normalized),
-    ]);
+      .toBuffer(),
+    sharp(input).resize(128, 128, { fit: "cover" }).png().toBuffer(),
+    generateAppleLogos(normalized),
+    generateGoogleLogo(normalized),
+    isSquareLogo(normalized),
+    getLogoSizeWarning(normalized),
+  ]);
 
   const files: Record<string, Buffer> = {
     "icon.png": icon,
@@ -86,8 +72,6 @@ export async function POST(req: NextRequest) {
     "logo.png": appleLogos.logo,
     "logo@2x.png": appleLogos.logo2x,
     "logo@3x.png": appleLogos.logo3x,
-    "strip.png": strip,
-    "strip@2x.png": strip2x,
     "web-icon.png": webIcon,
     "google-logo.png": googleLogo,
   };
@@ -110,6 +94,13 @@ export async function POST(req: NextRequest) {
   if (updateError) return new NextResponse(updateError.message, { status: 500 });
 
   invalidatePassImages(merchant.id);
+
+  // Le nouveau logo ne concerne aucune ligne client, mais il change bien leur
+  // pass : sans ce bump, `passesUpdatedSince` répond 204 et les cartes déjà
+  // installées gardent l'ancienne image. Le push réveille les appareils ;
+  // sans APNs configuré ils rattraperont au prochain rafraîchissement.
+  await touchMerchantPasses(merchant.id);
+  await pushMerchantPasses(merchant.id).catch(() => {});
 
   return NextResponse.json({ ok: true, logoUrl, warning });
 }

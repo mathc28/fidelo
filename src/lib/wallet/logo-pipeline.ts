@@ -4,7 +4,16 @@ const MIN_SOURCE_SIZE = 400; // en dessous : vraiment inutilisable, on refuse
 const RECOMMENDED_SOURCE_SIZE = 660; // minimum demandé par Google pour son programLogo
 const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
 
-const APPLE_HEIGHTS = { logo: 50, logo2x: 100, logo3x: 150 } as const;
+// Apple borne le logo à 160×50 pt. Contraindre la seule hauteur ne suffit
+// pas : un logo plus large que 3,2:1 dépasse alors les 160 pt, iOS le réduit
+// pour tenir en largeur, et sa hauteur rendue tombe sous les 50 pt (un 6:1
+// s'affichait à ~27 pt). On enferme donc chaque variante dans sa boîte, le
+// ratio étant préservé par `fit: "inside"`.
+const APPLE_BOXES = {
+  logo: { width: 160, height: 50 },
+  logo2x: { width: 320, height: 100 },
+  logo3x: { width: 480, height: 150 },
+} as const;
 
 const GOOGLE_LOGO_SIZE = 660;
 const GOOGLE_LOGO_INNER = 561; // 660 * 0.85 ≈ 561 → ~15 % de marge une fois étendu
@@ -67,21 +76,26 @@ export async function getLogoSizeWarning(buffer: Buffer): Promise<string | null>
   return "Votre logo est un peu petit, il pourrait manquer de netteté sur les cartes Android. Un fichier de 1000px ou plus donnera un meilleur rendu.";
 }
 
-async function resizeAppleLogo(buffer: Buffer, height: number): Promise<Buffer> {
-  return sharp(buffer).resize({ height, fit: "inside", withoutEnlargement: true }).png().toBuffer();
+async function resizeAppleLogo(
+  buffer: Buffer,
+  box: { width: number; height: number }
+): Promise<Buffer> {
+  return sharp(buffer)
+    .resize({ ...box, fit: "inside", withoutEnlargement: true })
+    .png()
+    .toBuffer();
 }
 
 /**
  * Les 3 variantes Apple sont dérivées indépendamment de la source
- * normalisée (jamais du @3x en cascade) : la hauteur est la seule
- * contrainte, la largeur reste libre — un logo carré ne doit jamais être
- * écrasé en largeur.
+ * normalisée (jamais du @3x en cascade) : chacune est contenue dans la boîte
+ * que rend iOS, sans jamais être déformée ni agrandie.
  */
 export async function generateAppleLogos(buffer: Buffer): Promise<AppleLogos> {
   const [logo, logo2x, logo3x] = await Promise.all([
-    resizeAppleLogo(buffer, APPLE_HEIGHTS.logo),
-    resizeAppleLogo(buffer, APPLE_HEIGHTS.logo2x),
-    resizeAppleLogo(buffer, APPLE_HEIGHTS.logo3x),
+    resizeAppleLogo(buffer, APPLE_BOXES.logo),
+    resizeAppleLogo(buffer, APPLE_BOXES.logo2x),
+    resizeAppleLogo(buffer, APPLE_BOXES.logo3x),
   ]);
   return { logo, logo2x, logo3x };
 }

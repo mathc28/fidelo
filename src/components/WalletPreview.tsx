@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { texteCompteur } from "@/lib/wallet/rewardText";
 
 /**
  * Aperçu réaliste d'une carte de fidélité dans Apple Wallet / Google Wallet.
@@ -128,43 +129,26 @@ function ApplePass(p: WalletPreviewProps) {
     >
       {/* En-tête : logo + nom + champ header à droite */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 0" }}>
+        {/* Sans logo uploadé, le pass n'en embarque aucun : pas d'initiales de
+            repli ici non plus. Et aucun champ d'en-tête à droite — le pass a
+            `headerFields: []`, tout l'espace revient au nom. */}
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={logoUrl} alt="" style={{ height: 22, maxWidth: 70, objectFit: "contain" }} />
-        ) : (
-          <div
-            style={{
-              width: 22,
-              height: 22,
-              borderRadius: 6,
-              background: withAlpha(theme.text_color, 0.18),
-              color: theme.text_color,
-              fontSize: 11,
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {initials(merchantName)}
-          </div>
-        )}
+        ) : null}
         <span style={{ color: theme.text_color, fontSize: 13, fontWeight: 500, flex: 1 }}>
           {merchantName}
         </span>
-        <div style={{ textAlign: "right" }}>
-          <p style={{ ...label, fontSize: 8 }}>Fidélité</p>
-        </div>
       </div>
 
-      {/* Champ primaire */}
+      {/* Compteur — rangée secondaire du pass, seul sur sa ligne.
+          La valeur d'un champ PassKit est du texte brut : pas de tailles
+          mixtes, donc pas de « / 10 » plus petit ni grisé. Une seule chaîne,
+          un seul corps, exactement ce qu'iOS affichera. */}
       <div style={{ padding: "16px 14px 0" }}>
         <p style={label}>{isVisits ? "Passages" : "Points"}</p>
-        <p style={{ ...value, fontSize: 38, fontWeight: 600, letterSpacing: -0.5 }}>
-          {points}
-          {isVisits && threshold ? (
-            <span style={{ fontSize: 20, fontWeight: 400, opacity: 0.55 }}> / {threshold}</span>
-          ) : null}
+        <p style={{ ...value, fontSize: 18, fontWeight: 600, letterSpacing: -0.2 }}>
+          {threshold ? texteCompteur(points, threshold, isVisits) : points}
         </p>
       </div>
 
@@ -175,7 +159,7 @@ function ApplePass(p: WalletPreviewProps) {
           <p style={{ ...value, fontSize: 14 }}>{firstName || "—"}</p>
         </div>
         {rewardLabel ? (
-          <div style={{ flex: 1.4, textAlign: "right" }}>
+          <div style={{ flex: 1.4 }}>
             <p style={label}>Récompense</p>
             <p style={{ ...value, fontSize: 12.5 }}>{rewardLabel}</p>
           </div>

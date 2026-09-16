@@ -4,24 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseBrowser";
 import { Button, Field, Logo, SubscriptionBadge, ProgramBadge } from "@/components/ui";
+import type * as Row from "@/lib/types";
 
-type Merchant = {
-  id: string;
-  name: string;
-  slug: string;
-  program_type: "visits" | "points";
-  subscription_status: string;
-  address: string | null;
-};
-type Customer = {
-  id: string;
-  first_name: string;
-  email: string;
-  points: number;
-  updated_at: string;
-};
-type Reward = { id: string; label: string; cost_points: number; active: boolean };
-type Device = { id: string; label: string; created_at: string };
+// Dérivés du modèle : voir src/lib/types.ts.
+type Customer = Pick<Row.Customer, "id" | "first_name" | "email" | "points" | "updated_at">;
+type Reward = Row.Reward;
+type Device = Pick<Row.Device, "id" | "label" | "created_at">;
 type Stats = {
   totalCards: number;
   cardsThisMonth: number;
@@ -44,7 +32,7 @@ export default function AdminMerchantPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
-  const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [merchant, setMerchant] = useState<Row.Merchant | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [reward, setReward] = useState<Reward | null>(null);
   const [devices, setDevices] = useState<Device[]>([]);

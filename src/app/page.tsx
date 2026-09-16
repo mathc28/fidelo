@@ -103,46 +103,31 @@ const QUESTIONS = [
   },
 ] as const;
 
-/** Aperçu de pass pour une formule, dessiné à l'encre plutôt qu'illustré. */
+/**
+ * Aperçu de pass pour une formule. Tout l'habillage (couleurs, fontes, corps)
+ * vit dans landing.css : la variante se joue sur une classe, pas sur des
+ * attributs calculés ici — sinon les teintes du SVG dérivent des tokens.
+ */
 function ApercuFormule({ visites }: { visites: boolean }) {
-  const fond = visites ? "#1A2E60" : "#3B2A7A";
   return (
-    <svg viewBox="0 0 320 116" className="landing-formule-svg" role="img" aria-hidden="true">
-      <rect width="320" height="116" rx="8" fill={fond} />
-      <text
-        x="20"
-        y="32"
-        fontFamily="var(--font-mono)"
-        fontSize="8"
-        letterSpacing="1.6"
-        fill="#F56C5A"
-        fontWeight="700"
-      >
+    <svg
+      viewBox="0 0 320 116"
+      className={`landing-formule-svg${visites ? "" : " landing-formule-svg--encre"}`}
+      role="img"
+      aria-hidden="true"
+    >
+      <rect className="landing-formule-fond" width="320" height="116" rx="8" />
+      <text className="landing-formule-etiq" x="20" y="32">
         {visites ? "PASSAGES" : "POINTS"}
       </text>
-      <text
-        x="20"
-        y="76"
-        fontFamily="var(--font-display)"
-        fontSize="38"
-        fontWeight="800"
-        fill="#F3EFE3"
-        letterSpacing="-1.5"
-      >
+      <text className="landing-formule-valeur" x="20" y="76">
         {visites ? "7 / 10" : "124"}
       </text>
-      <text
-        x="20"
-        y="98"
-        fontFamily="var(--font-mono)"
-        fontSize="7.5"
-        letterSpacing="1.2"
-        fill="rgba(243,239,227,0.55)"
-      >
+      <text className="landing-formule-note" x="20" y="98">
         {visites ? "PLUS QUE 3 AVANT LE CAFÉ OFFERT" : "250 POINTS = UNE BOUTEILLE"}
       </text>
-      <rect x="244" y="26" width="56" height="56" rx="4" fill="#F3EFE3" />
-      <g transform="translate(254,36)" fill={fond}>
+      <rect className="landing-formule-qr-fond" x="244" y="26" width="56" height="56" rx="4" />
+      <g className="landing-formule-qr" transform="translate(254,36)">
         <rect width="12" height="12" />
         <rect x="24" width="12" height="12" />
         <rect y="24" width="12" height="12" />
@@ -162,13 +147,7 @@ export default function LandingPage() {
     <div className="landing-page">
       {/* Filtre d'encre : irrégularise le bord des impressions pour qu'elles
           ressemblent à un tampon encreur et non à un cercle vectoriel. */}
-      <svg
-        width="0"
-        height="0"
-        aria-hidden="true"
-        focusable="false"
-        style={{ position: "absolute" }}
-      >
+      <svg width="0" height="0" aria-hidden="true" focusable="false" className="landing-filtres">
         <filter id="landing-encre-rugueuse">
           <feTurbulence
             type="fractalNoise"
@@ -190,7 +169,7 @@ export default function LandingPage() {
       {/* ===== En-tête ===== */}
       <header className="landing-header">
         <div className="landing-wrap landing-header-inner">
-          <Logo variant="full" height={34} />
+          <Logo variant="full" height={50} />
           <nav className="landing-nav">
             <a href="#gestes" className="landing-nav-link">
               Comment ça marche
@@ -217,9 +196,10 @@ export default function LandingPage() {
           <div>
             <span className="landing-mono landing-hero-eyebrow">Fidélisez votre quartier</span>
             <h1 className="landing-display landing-h1">
-              Le carton a fait son temps.
-              <br />
-              <span className="landing-hero-title-ink">Le téléphone prend le relais.</span>
+              <span className="landing-hero-titre-bloc">Le carton a fait son temps.</span>
+              <span className="landing-hero-titre-bloc landing-hero-title-ink">
+                Le téléphone prend le relais.
+              </span>
             </h1>
             <p className="landing-lede landing-hero-lede">
               La carte de fidélité de votre commerce vit dans Apple Wallet et Google Wallet. Elle ne
@@ -290,7 +270,7 @@ export default function LandingPage() {
                       firstName="Léa"
                       platform="apple"
                     />
-                    <div style={{ flex: 1 }} />
+                    <div className="landing-cale" />
                     <div className="landing-wallet-note">
                       Présentez l&apos;écran au commerçant pour cumuler
                     </div>
@@ -394,7 +374,7 @@ export default function LandingPage() {
               <br />
               dans leur poche.
             </h2>
-            <p className="landing-lede" style={{ marginTop: 22 }}>
+            <p className="landing-lede landing-proximite-lede">
               Quand un client passe à moins de 300 mètres, sa carte s&apos;affiche seule sur son
               écran verrouillé. Pas de publicité, pas de notification à rallonge — votre nom, au
               moment où il peut encore pousser la porte.
@@ -420,7 +400,7 @@ export default function LandingPage() {
                     <div className="landing-verrou-icone">
                       <Logo variant="symbol" theme="white" height={20} />
                     </div>
-                    <div style={{ flex: 1 }}>
+                    <div className="landing-verrou-corps">
                       <div className="landing-verrou-tete">
                         <span className="landing-verrou-app">Boulangerie Martin</span>
                         <span className="landing-verrou-quand">maintenant</span>
@@ -430,7 +410,7 @@ export default function LandingPage() {
                       </div>
                     </div>
                   </div>
-                  <div style={{ flex: 1 }} />
+                  <div className="landing-cale" />
                   <div className="landing-verrou-distance">
                     <span className="landing-pastille" />à 280 m de vous
                   </div>
@@ -453,10 +433,8 @@ export default function LandingPage() {
           <div className="landing-temoignages">
             {TEMOIGNAGES.map((t, i) => (
               <Reveal key={t.nom} delay={i * 70}>
-                <figure className="landing-temoignage" style={{ margin: 0 }}>
-                  <blockquote className="landing-temoignage-texte" style={{ margin: 0 }}>
-                    {t.citation}
-                  </blockquote>
+                <figure className="landing-temoignage">
+                  <blockquote className="landing-temoignage-texte">{t.citation}</blockquote>
                   <figcaption className="landing-signature">
                     {t.nom}
                     <span className="landing-signature-role">{t.role}</span>

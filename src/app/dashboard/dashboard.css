@@ -1,0 +1,1171 @@
+/* ============================================================
+   Dashboard Fidelo — direction « Le comptoir »
+   ------------------------------------------------------------
+   La landing est faite de la matière qu'elle remplace : carton
+   kraft, encre de tampon, perforations de coupon. Le dashboard
+   reprend cette matière mais en inverse le rapport — ici c'est
+   le papier qui domine (on y lit tous les jours), le kraft n'est
+   plus que le fond sur lequel les feuilles sont posées.
+
+   Deux règles portent tout le reste :
+   1. Tout ce qui se compte est en Space Mono. Un compteur, une
+      date, un seuil, un code d'appairage : c'est la main de la
+      caisse, pas celle de la prose. Le monospace aligne aussi
+      les colonnes chiffrées sans effort.
+   2. Le corail ne sert qu'à ce qui part chez le client. Une
+      seule commande dans toute la page le porte : l'envoi de
+      promo. Enregistrer est marine, le reste est discret.
+
+   Tout est cloisonné sous `.comptoir` : /scan, /admin et /m
+   continuent de vivre sur les classes de globals.css.
+   ============================================================ */
+
+.comptoir {
+  /* — Support : papier de ticket posé sur le carton du comptoir. */
+  --papier: #fbf8f1;
+  /* Kraft éclairci par rapport à la landing (#E0D4BA) : c'est un fond
+     d'outil qu'on regarde tous les jours, pas une affiche. */
+  --kraft: #e7ddc6;
+  /* — Encre : structure, filets, tampons, libellés de registre. */
+  --encre: #3b2a7a;
+  /* Valeur pleine et non rgba : sur le kraft, une encre à 70 % tombe
+     sous le seuil AA. Celle-ci tient 6,9:1 sur kraft, 8,4:1 sur papier. */
+  --encre-texte: #4c3c82;
+  --marine: #1a2e60;
+  /* Le corail de marque : réservé aux aplats et au texte posé sur le
+     marine, où il tient 4,5:1. */
+  --corail: #f56c5a;
+  /* Sur papier, le corail de marque tombe à 2,8:1. Cette version encrée
+     tient 5,4:1 sur papier et 4,3:1 sur kraft : c'est elle qui porte le
+     texte, les bordures d'alerte et les anneaux de mise au point. */
+  --corail-encre: #b8391f;
+
+  /* Tons transparents. Les filets décoratifs peuvent rester légers ; tout
+     ce qui délimite une commande (champ, bouton, jour de la frise) passe
+     par --encre-62, qui tient les 3:1 exigés d'un élément d'interface. */
+  --encre-62: rgba(59, 42, 122, 0.62);
+  --encre-30: rgba(59, 42, 122, 0.3);
+  --encre-16: rgba(59, 42, 122, 0.16);
+  --encre-08: rgba(59, 42, 122, 0.08);
+
+  --succes: #26654a;
+  --alerte: #a8551d;
+
+  min-height: 100vh;
+  background: var(--kraft);
+  color: var(--marine);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+/* Le SVG de définitions (filtre d'encre, découpe) est hors flux. */
+.cpt-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.comptoir *:focus-visible {
+  outline: 2px solid var(--corail-encre);
+  outline-offset: 2px;
+}
+
+.comptoir ::selection {
+  background: var(--encre);
+  color: var(--papier);
+}
+
+.cpt-invisible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- Registres typographiques ---------- */
+
+/* Le titre : la grotesque de la landing, jamais la ronde du produit. */
+.comptoir h1,
+.comptoir h2,
+.comptoir h3 {
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+/* La règle : tout ce qui se compte s'écrit à la machine. */
+.cpt-nombre {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Le vocabulaire du registre : en-têtes de colonne, libellés de champ,
+   mentions de bas de feuille. */
+.cpt-etiquette {
+  display: block;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--encre);
+}
+
+.cpt-note {
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: var(--encre-texte);
+  margin: 0;
+}
+
+/* ---------- Barre de comptoir ---------- */
+
+.cpt-barre {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--papier);
+  border-bottom: 1px solid var(--encre-16);
+}
+
+.cpt-barre-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 3vw, 32px);
+  height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.cpt-filet {
+  width: 1px;
+  height: 22px;
+  background: var(--encre-16);
+  flex: none;
+}
+
+.cpt-enseigne {
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-size: 1.06rem;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Statut d'abonnement : une mention tamponnée, pas une pastille colorée. */
+.cpt-statut {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  white-space: nowrap;
+  flex: none;
+}
+
+.cpt-statut--actif {
+  color: var(--succes);
+}
+
+.cpt-statut--essai {
+  color: var(--encre);
+}
+
+.cpt-statut--retard {
+  color: var(--corail-encre);
+}
+
+.cpt-barre-fin {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.cpt-compte {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--encre-texte);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .cpt-compte {
+    display: none;
+  }
+}
+
+.cpt-sortir {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--encre-texte);
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--encre-30);
+  padding: 0 0 2px;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.cpt-sortir:hover {
+  color: var(--encre);
+  border-bottom-color: var(--encre);
+}
+
+/* ---------- Gabarit ---------- */
+
+.cpt-corps {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 26px clamp(16px, 3vw, 32px) 56px;
+  display: grid;
+  grid-template-columns: 168px minmax(0, 1fr);
+  gap: clamp(20px, 3vw, 40px);
+  align-items: start;
+}
+
+/* ---------- Sommaire : classé par fréquence, pas par importance ---------- */
+
+.cpt-nav {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.cpt-nav-groupe {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.cpt-nav-titre {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--encre-texte);
+  padding: 0 0 8px 10px;
+}
+
+.cpt-nav-lien {
+  font-size: 0.87rem;
+  font-weight: 500;
+  color: var(--encre-texte);
+  text-decoration: none;
+  padding: 7px 10px;
+  border-radius: 2px;
+  border-left: 2px solid transparent;
+  transition:
+    background-color 0.12s,
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.cpt-nav-lien:hover {
+  background: var(--papier);
+  color: var(--encre);
+  border-left-color: var(--encre);
+}
+
+@media (max-width: 900px) {
+  .cpt-corps {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .cpt-nav {
+    position: static;
+    flex-direction: row;
+    gap: 18px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    scrollbar-width: thin;
+  }
+
+  .cpt-nav-groupe {
+    flex-direction: row;
+    gap: 0;
+    flex: none;
+  }
+
+  .cpt-nav-titre {
+    display: none;
+  }
+
+  .cpt-nav-lien {
+    white-space: nowrap;
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+  }
+
+  .cpt-nav-lien:hover {
+    border-left: none;
+    border-bottom-color: var(--encre);
+  }
+}
+
+/* ---------- Séparateur de zone : la perforation du coupon ---------- */
+
+.cpt-zone {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 38px 0 18px;
+}
+
+.cpt-zone:first-child {
+  margin-top: 0;
+}
+
+.cpt-zone::after {
+  content: "";
+  flex: 1;
+  border-top: 1px dashed var(--encre-30);
+}
+
+.cpt-zone-titre {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--encre);
+}
+
+/* ---------- Feuille : le panneau de base ---------- */
+
+.cpt-panneau {
+  background: var(--papier);
+  border: 1px solid var(--encre-16);
+  border-radius: 3px;
+  padding: 22px 24px;
+}
+
+.cpt-panneau-tete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.cpt-panneau-titre {
+  font-size: 1.12rem;
+  font-weight: 600;
+}
+
+.cpt-panneau-note {
+  font-size: 0.83rem;
+  line-height: 1.55;
+  color: var(--encre-texte);
+  margin: 0 0 18px;
+  max-width: 58ch;
+}
+
+.cpt-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+@media (max-width: 820px) {
+  .cpt-duo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cpt-pile {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ---------- LE REGISTRE — l'élément signature ---------- */
+
+.cpt-registre {
+  background: var(--papier);
+  border: 1px solid var(--encre-16);
+  border-radius: 3px;
+  padding: 22px 24px 20px;
+}
+
+.cpt-registre-tete {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  border-bottom: 1px dashed var(--encre-30);
+  padding-bottom: 16px;
+}
+
+.cpt-date {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: clamp(1.3rem, 2.6vw, 1.75rem);
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.cpt-releves {
+  display: flex;
+  gap: clamp(24px, 4vw, 46px);
+  flex-wrap: wrap;
+  padding: 18px 0 22px;
+}
+
+.cpt-releve-val {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.7rem, 3.4vw, 2.3rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--marine);
+}
+
+.cpt-releve-lib {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--encre);
+  margin-bottom: 9px;
+}
+
+.cpt-releve-app {
+  font-size: 0.76rem;
+  color: var(--encre-texte);
+  margin-top: 7px;
+}
+
+/* La frise : quatorze jours, un tampon par jour, rayon proportionnel à
+   la racine du nombre de passages — l'œil compare des aires, pas des
+   rayons. Un jour sans passage garde son empreinte vide, comme une case
+   non tamponnée sur le carton. */
+/* Sur un écran étroit la frise défile, et c'est la dernière case —
+   aujourd'hui — qu'il faut voir en arrivant. `direction: rtl` place le
+   départ du défilement à droite ; la grille repasse en ltr pour garder
+   les jours dans l'ordre. */
+.cpt-frise {
+  margin: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  direction: rtl;
+}
+
+.cpt-frise-grille {
+  direction: ltr;
+  display: grid;
+  grid-template-columns: repeat(14, minmax(0, 1fr));
+  gap: 2px;
+  min-width: 430px;
+}
+
+.cpt-frise-cellule {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.cpt-frise-cellule svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.cpt-tampon {
+  fill: var(--encre);
+  filter: url(#cpt-encre);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cpt-frappe 0.32s cubic-bezier(0.2, 0.85, 0.35, 1) backwards;
+}
+
+@keyframes cpt-frappe {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* Un jour sans passage garde son empreinte vide : la même case non
+   tamponnée que sur le carton qu'on remplace. */
+.cpt-tampon-vide {
+  fill: none;
+  stroke: var(--encre-62);
+  stroke-width: 1.1;
+  stroke-dasharray: 2.5 2.5;
+}
+
+/* Aujourd'hui est en cours : cerclé, pas encore refermé. */
+.cpt-tampon-jour {
+  fill: none;
+  stroke: var(--corail-encre);
+  stroke-width: 1.4;
+}
+
+.cpt-frise-jour {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.04em;
+  color: var(--encre-texte);
+}
+
+.cpt-frise-jour--auj {
+  color: var(--corail-encre);
+  font-weight: 700;
+}
+
+.cpt-frise-pied {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px dashed var(--encre-30);
+  margin-top: 14px;
+  padding-top: 12px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--encre-texte);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpt-tampon {
+    animation: none;
+  }
+}
+
+/* ---------- Champs ---------- */
+
+.cpt-champ {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.comptoir .field {
+  margin-bottom: 0;
+}
+
+.comptoir .field-input,
+.cpt-saisie {
+  font-family: var(--font-body), system-ui, sans-serif;
+  width: 100%;
+  background: #fff;
+  border: 1px solid var(--encre-62);
+  border-radius: 2px;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  color: var(--marine);
+  outline: none;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
+}
+
+.comptoir .field-input::placeholder,
+.cpt-saisie::placeholder {
+  color: var(--encre-texte);
+  opacity: 0.6;
+}
+
+.comptoir .field-input:focus,
+.cpt-saisie:focus {
+  border-color: var(--encre);
+  box-shadow: inset 0 0 0 1px var(--encre);
+}
+
+/* Un seuil est un nombre : il s'écrit comme les autres nombres. Le
+   double sélecteur passe devant `.comptoir .field-input`, qui impose
+   sinon la fonte de labeur aux champs rendus par <Field>. */
+.comptoir .field-input.cpt-saisie--nombre,
+.comptoir .cpt-saisie--nombre {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  max-width: 140px;
+}
+
+.cpt-aide {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: var(--encre-texte);
+}
+
+/* ---------- Commandes ---------- */
+
+.comptoir .btn {
+  font-family: var(--font-body), system-ui, sans-serif;
+  border-radius: 2px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  transition:
+    background-color 0.14s,
+    border-color 0.14s,
+    color 0.14s,
+    transform 0.12s,
+    box-shadow 0.12s;
+}
+
+.comptoir .btn-sm {
+  padding: 7px 13px;
+  font-size: 0.78rem;
+  border-radius: 2px;
+}
+
+.comptoir .btn-md {
+  padding: 10px 18px;
+  font-size: 0.85rem;
+}
+
+.comptoir .btn-primary {
+  background: var(--marine);
+  color: #fff;
+}
+
+.comptoir .btn-primary:hover:not(:disabled) {
+  background: #24407f;
+}
+
+/* Le corail : réservé à ce qui quitte la boutique pour le téléphone du
+   client. Une seule commande de la page le porte, et elle s'enfonce
+   comme une touche de caisse. */
+.comptoir .btn-accent {
+  background: var(--corail-encre);
+  color: #fff;
+  box-shadow: 2px 2px 0 var(--marine);
+}
+
+.comptoir .btn-accent:hover:not(:disabled) {
+  background: #9a2e18;
+  color: #fff;
+  transform: translate(-1px, -1px);
+  box-shadow: 3px 3px 0 var(--marine);
+}
+
+.comptoir .btn-accent:active:not(:disabled) {
+  transform: translate(1px, 1px);
+  box-shadow: 1px 1px 0 var(--marine);
+}
+
+.comptoir .btn-accent:disabled {
+  box-shadow: 2px 2px 0 var(--encre-30);
+}
+
+.comptoir .btn-secondary {
+  background: transparent;
+  color: var(--encre);
+  border: 1px solid var(--encre-62);
+}
+
+.comptoir .btn-secondary:hover:not(:disabled) {
+  border-color: var(--encre);
+  background: var(--encre-08);
+}
+
+/* L'état choisi d'une paire (Apple / Google) : encre pleine. */
+.comptoir .btn-secondary.is-choisi {
+  background: var(--encre);
+  border-color: var(--encre);
+  color: var(--papier);
+}
+
+.comptoir .btn-ghost {
+  padding: 7px 4px;
+  color: var(--encre-texte);
+  text-decoration: none;
+  border-bottom: 1px solid var(--encre-30);
+  border-radius: 0;
+  font-weight: 600;
+}
+
+.comptoir .btn-ghost:hover:not(:disabled) {
+  color: var(--encre);
+  border-bottom-color: var(--encre);
+}
+
+.comptoir .btn-destructive {
+  background: transparent;
+  color: var(--encre-texte);
+  border: 1px solid transparent;
+}
+
+.comptoir .btn-destructive:hover:not(:disabled) {
+  color: var(--corail-encre);
+  border-color: var(--corail-encre);
+  background: transparent;
+}
+
+/* Ajouter une caisse : le contour en pointillé du coupon détachable. */
+.cpt-ajout {
+  width: 100%;
+  background: transparent;
+  border: 1px dashed var(--encre-62);
+  border-radius: 2px;
+  padding: 13px 16px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--encre);
+  cursor: pointer;
+  transition:
+    border-color 0.14s,
+    background-color 0.14s;
+}
+
+.cpt-ajout:hover {
+  border-color: var(--encre);
+  background: var(--encre-08);
+}
+
+/* ---------- Ma carte ---------- */
+
+.cpt-carte-atelier {
+  display: grid;
+  grid-template-columns: auto minmax(220px, 1fr);
+  gap: clamp(20px, 3vw, 34px);
+  align-items: start;
+}
+
+@media (max-width: 760px) {
+  .cpt-carte-atelier {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.cpt-bascules {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.cpt-logo-rang {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.cpt-logo-vignette {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 2px;
+  border: 1px solid var(--encre-16);
+  overflow: hidden;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display), Georgia, serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--encre);
+}
+
+.cpt-logo-vignette img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Nuancier : un carré d'encre, pas une pastille. */
+.cpt-nuancier {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cpt-teinte {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+  transition: box-shadow 0.14s;
+}
+
+.cpt-teinte.is-choisi {
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.12),
+    0 0 0 2px var(--papier),
+    0 0 0 3.5px var(--encre);
+}
+
+/* ---------- La feuille du QR : la seule chose qu'on imprime ---------- */
+
+.cpt-feuille-rang {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.cpt-feuille {
+  width: 168px;
+  height: 168px;
+  flex: none;
+  background: #fff;
+  border: 1px solid var(--encre-16);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* L'ombre portée dure, une seule fois dans la page : cette feuille-là
+     part à l'imprimante et finit posée sur le comptoir. */
+  box-shadow: 4px 4px 0 var(--encre-16);
+}
+
+.cpt-feuille img {
+  width: 146px;
+  height: 146px;
+}
+
+.cpt-feuille-attente {
+  width: 146px;
+  height: 146px;
+  background: var(--encre-08);
+}
+
+.cpt-adresse-qr {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  line-height: 1.6;
+  color: var(--encre-texte);
+  word-break: break-all;
+  margin-bottom: 14px;
+}
+
+/* ---------- Promo ---------- */
+
+.cpt-quota {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--encre);
+  border: 1px solid var(--encre-30);
+  border-radius: 2px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
+.cpt-quota.is-plein {
+  color: var(--corail-encre);
+  border-color: var(--corail-encre);
+}
+
+.cpt-promo-saisie {
+  resize: none;
+  line-height: 1.55;
+  min-height: 84px;
+}
+
+.cpt-promo-pied {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.cpt-compteur {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.68rem;
+  color: var(--encre-texte);
+}
+
+.cpt-avis {
+  margin-top: 12px;
+  font-size: 0.79rem;
+  line-height: 1.55;
+  color: var(--alerte);
+  border-left: 2px solid var(--alerte);
+  padding-left: 12px;
+}
+
+/* ---------- Caisses ---------- */
+
+.cpt-caisse {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--encre-16);
+  padding: 11px 0;
+}
+
+.cpt-caisse:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.cpt-caisse-nom {
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+
+.cpt-caisse-date {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.66rem;
+  color: var(--encre-texte);
+  margin-top: 2px;
+}
+
+/* Le code d'appairage : lu à voix haute d'un téléphone à l'autre. */
+.cpt-code {
+  background: var(--marine);
+  border-radius: 2px;
+  padding: 20px;
+  text-align: center;
+}
+
+.cpt-code-consigne {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: rgba(251, 248, 241, 0.72);
+}
+
+.cpt-code-valeur {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(2.2rem, 7vw, 3rem);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1.25;
+  color: var(--papier);
+  /* La lettre-espacement pousse le bloc à droite : on le recentre. */
+  text-indent: 0.18em;
+}
+
+.cpt-code-reste {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.68rem;
+  color: rgba(251, 248, 241, 0.72);
+}
+
+/* ---------- Clients ---------- */
+
+.cpt-recherche {
+  max-width: 260px;
+}
+
+.cpt-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cpt-table th {
+  text-align: left;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--encre);
+  padding: 0 12px 9px 0;
+  border-bottom: 1px solid var(--encre-30);
+  white-space: nowrap;
+}
+
+.cpt-table td {
+  padding: 11px 12px 11px 0;
+  border-bottom: 1px solid var(--encre-08);
+  font-size: 0.87rem;
+  vertical-align: baseline;
+}
+
+.cpt-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* `.cpt-table th` porte un text-align: left que la seule classe ne peut
+   pas battre : il faut redescendre le sélecteur au même niveau. */
+.cpt-table th.cpt-col-nombre,
+.cpt-table td.cpt-col-nombre {
+  text-align: right;
+  padding-right: 12px;
+}
+
+.cpt-cel-prenom {
+  font-weight: 600;
+}
+
+.cpt-cel-terne {
+  color: var(--encre-texte);
+  font-size: 0.82rem;
+}
+
+.cpt-defile {
+  overflow-x: auto;
+}
+
+/* Une liste vide est une invitation, pas un constat. */
+.cpt-vide {
+  border: 1px dashed var(--encre-30);
+  border-radius: 2px;
+  padding: 26px 24px;
+  text-align: center;
+  color: var(--encre-texte);
+  font-size: 0.86rem;
+  line-height: 1.6;
+}
+
+.cpt-vide a {
+  color: var(--encre);
+  font-weight: 700;
+}
+
+/* ---------- Pied ---------- */
+
+.cpt-pied {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 34px;
+}
+
+/* ---------- Accusé de réception ---------- */
+
+.cpt-recu {
+  position: fixed;
+  bottom: 22px;
+  right: 22px;
+  left: 22px;
+  max-width: 400px;
+  margin-left: auto;
+  z-index: 50;
+  background: var(--marine);
+  color: var(--papier);
+  border-radius: 2px;
+  padding: 13px 16px;
+  font-size: 0.85rem;
+  line-height: 1.45;
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+  box-shadow: 4px 4px 0 var(--encre);
+  animation: cpt-recu-entree 0.22s ease-out;
+}
+
+.cpt-recu--echec {
+  background: #7a1f1f;
+  box-shadow: 4px 4px 0 rgba(59, 42, 122, 0.5);
+}
+
+.cpt-recu-marque {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--corail);
+  flex: none;
+}
+
+@keyframes cpt-recu-entree {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cpt-recu {
+    animation: none;
+  }
+}
+
+/* ---------- Connexion / compte sans commerce ---------- */
+
+.cpt-seuil {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.cpt-seuil-feuille {
+  width: 100%;
+  max-width: 372px;
+  background: var(--papier);
+  border: 1px solid var(--encre-16);
+  border-radius: 3px;
+  padding: 30px 30px 32px;
+  box-shadow: 5px 5px 0 var(--encre-16);
+}
+
+.cpt-seuil-tete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px dashed var(--encre-30);
+  padding-bottom: 18px;
+  margin-bottom: 22px;
+}
+
+.cpt-seuil-titre {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.cpt-seuil-erreur {
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #a01f1f;
+  border-left: 2px solid #a01f1f;
+  padding-left: 11px;
+  margin: 14px 0 0;
+}
+
+.cpt-seuil-lien {
+  display: block;
+  margin-top: 16px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--encre-texte);
+  text-decoration: none;
+  border-bottom: 1px solid var(--encre-30);
+  padding-bottom: 2px;
+  width: fit-content;
+}
+
+.cpt-seuil-lien:hover {
+  color: var(--encre);
+  border-bottom-color: var(--encre);
+}

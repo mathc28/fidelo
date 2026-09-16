@@ -1,59 +1,46 @@
 import { createClient } from "@supabase/supabase-js";
+import type { Merchant, CardTheme } from "./types";
 
-/** Client service_role — API routes uniquement, bypass RLS. Jamais côté navigateur. */
+/**
+ * Client service_role — API routes uniquement, bypass RLS. Jamais côté navigateur.
+ *
+ * Le `fetch` explicite en `no-store` n'est pas décoratif. Next 14 remplace le
+ * `fetch` global et met en cache TOUTE requête GET sur disque, dans
+ * `.next/cache/fetch-cache`, sans expiration par défaut. supabase-js passant
+ * par ce `fetch` global, chaque `select()` devenait éligible au cache : on a
+ * vu un pass Apple servir un `theme_id` et un `logo_url` vieux d'une semaine
+ * alors que la base était à jour. Les écritures (POST/PATCH) n'étaient jamais
+ * concernées — d'où un cache invisible en apparence, qui ne se manifestait
+ * qu'en lecture.
+ *
+ * Un client d'administration ne doit jamais rendre de données périmées : on
+ * sort donc du cache de données pour toutes ses requêtes.
+ */
 export const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  { auth: { persistSession: false } }
+  {
+    auth: { persistSession: false },
+    global: {
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(input, { ...init, cache: "no-store" }),
+    },
+  }
 );
 
-export type Merchant = {
-  id: string;
-  owner_id: string;
-  slug: string;
-  name: string;
-  logo_url: string | null;
-  is_square_logo: boolean;
-  theme_id: string;
-  address: string | null;
-  lat: number | null;
-  lng: number | null;
-  program_type: "visits" | "points";
-  max_scans_per_day: number;
-  google_class_id: string | null;
-  subscription_status: "trialing" | "active" | "past_due" | "canceled";
-};
-
-export type Customer = {
-  id: string;
-  merchant_id: string;
-  serial_number: string;
-  auth_token: string;
-  first_name: string;
-  email: string;
-  phone: string | null;
-  points: number;
-  created_at: string;
-  updated_at: string;
-};
-
-export type Reward = {
-  id: string;
-  merchant_id: string;
-  label: string;
-  cost_points: number;
-  active: boolean;
-};
-
-export type CardTheme = {
-  id: string;
-  label: string;
-  bg_color: string;
-  text_color: string;
-  label_color: string;
-  sort_order: number;
-  is_light: boolean;
-};
+// Les types du modèle vivent dans ./types — un module sans effet de bord, que
+// les composants clients peuvent référer sans risquer d'attirer ce fichier-ci
+// (et sa clé service_role) dans le bundle navigateur. Réexportés ici pour que
+// le code serveur garde un point d'import unique.
+export type {
+  Merchant,
+  Customer,
+  Reward,
+  Device,
+  CardTheme,
+  ProgramType,
+  SubscriptionStatus,
+} from "./types";
 
 export async function getMerchantBySlug(slug: string): Promise<Merchant | null> {
   const { data } = await db.from("merchants").select("*").eq("slug", slug).single();

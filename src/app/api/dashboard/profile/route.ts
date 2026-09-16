@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireMerchant } from "@/lib/dashboardAuth";
 import { db } from "@/lib/supabaseAdmin";
 import { geocodeAddress } from "@/lib/geocode";
+import { touchMerchantPasses } from "@/lib/passAssets";
+import { pushMerchantPasses } from "@/lib/apns";
 
 /** Met à jour le nom, la couleur et l'adresse (géocodée) de la carte du merchant connecté. */
 export async function POST(req: NextRequest) {
@@ -38,6 +40,11 @@ export async function POST(req: NextRequest) {
     if (error.code === "23503") return new NextResponse("Thème invalide", { status: 400 });
     return new NextResponse(error.message, { status: 500 });
   }
+
+  // Nom, couleurs et adresse sont tous rendus sur le pass : mêmes raisons
+  // qu'à l'upload de logo, il faut marquer les pass clients comme modifiés.
+  await touchMerchantPasses(merchant.id);
+  await pushMerchantPasses(merchant.id).catch(() => {});
 
   return NextResponse.json({ ok: true, merchant: data, geocoded: data.lat != null });
 }

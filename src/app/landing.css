@@ -31,12 +31,25 @@
   --encre-18: rgba(59, 42, 122, 0.18);
 
   --gouttiere: clamp(20px, 5vw, 64px);
-  --rythme: clamp(72px, 9vw, 132px);
+  --rythme: clamp(44px, 5.4vw, 78px);
 
   background: var(--carton);
   color: var(--marine);
   font-family: var(--font-body), system-ui, sans-serif;
-  overflow-x: hidden;
+  /* `clip` et non `hidden` : `overflow-x: hidden` fait de ce bloc un
+     conteneur de défilement, ce qui neutralise le `position: sticky` de
+     l'en-tête. `clip` rogne le débordement sans créer ce conteneur. */
+  overflow-x: clip;
+}
+
+/* Le SVG ne porte que des définitions de filtre : hors flux, invisible. */
+.landing-filtres {
+  position: absolute;
+}
+
+/* Cale verticale dans les maquettes de téléphone : pousse ce qui suit en bas. */
+.landing-cale {
+  flex: 1;
 }
 
 .landing-page ::selection {
@@ -55,8 +68,28 @@
   text-wrap: balance;
 }
 
+/* Une seule ligne par bloc, à toute largeur d'écran. La taille est donc
+   proportionnelle à la fenêtre : le nombre de signes par ligne reste constant
+   quand la fenêtre change, ce qu'une taille en rem ne garantit pas.
+   Ici, sous 940px, le hero est en une seule colonne : le titre dispose de tout
+   le conteneur. */
 .landing-h1 {
-  font-size: clamp(2.6rem, 6.4vw, 5.1rem);
+  font-size: clamp(1.15rem, 6vw, 4.5rem);
+}
+
+/* Au-delà, le hero passe en deux colonnes et le titre n'a plus que la gauche
+   (1,33fr sur 1,99, soit ~676px à 1200px de large). Le coefficient tombe donc
+   de 6vw à 3,9vw, sinon la ligne déborde — et `overflow-x: clip` la
+   rognerait sans rien signaler. */
+@media (min-width: 941px) {
+  .landing-h1 {
+    font-size: min(3.9vw, 2.85rem);
+  }
+}
+
+.landing-hero-titre-bloc {
+  display: block;
+  white-space: nowrap;
 }
 
 .landing-h2 {
@@ -241,7 +274,7 @@
 
 .landing-hero {
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
+  grid-template-columns: 1.33fr 0.66fr;
   gap: clamp(32px, 5vw, 72px);
   align-items: center;
 }
@@ -665,6 +698,45 @@
   height: auto;
   display: block;
   border-radius: 6px;
+  /* Teinte du pass, reprise par le fond et par le QR. */
+  --pass-fond: var(--marine);
+}
+
+.landing-formule-svg--encre {
+  --pass-fond: var(--encre);
+}
+
+.landing-formule-fond,
+.landing-formule-qr {
+  fill: var(--pass-fond);
+}
+
+.landing-formule-qr-fond {
+  fill: var(--papier);
+}
+
+.landing-formule-etiq {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 1.6px;
+  fill: var(--corail);
+}
+
+.landing-formule-valeur {
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  fill: var(--papier);
+}
+
+.landing-formule-note {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 7.5px;
+  letter-spacing: 1.2px;
+  fill: var(--papier);
+  opacity: 0.55;
 }
 
 /* ---------- Proximité ---------- */
@@ -680,6 +752,10 @@
   .landing-proximite {
     grid-template-columns: 1fr;
   }
+}
+
+.landing-proximite-lede {
+  margin-top: 22px;
 }
 
 .landing-proximite-chiffres {
@@ -764,6 +840,10 @@
   flex: none;
 }
 
+.landing-verrou-corps {
+  flex: 1;
+}
+
 .landing-verrou-tete {
   display: flex;
   justify-content: space-between;
@@ -842,6 +922,7 @@
 }
 
 .landing-temoignage {
+  margin: 0;
   border-left: 2px solid var(--encre);
   padding-left: 22px;
 }

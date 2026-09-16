@@ -2,53 +2,150 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabaseBrowser";
-import { Button, Field, Logo, SubscriptionBadge, Badge, PoweredByBadge } from "@/components/ui";
+import type * as Row from "@/lib/types";
+import { Button, Field, Logo, PoweredByBadge } from "@/components/ui";
 import WalletPreview from "@/components/WalletPreview";
+import { separerRecompense, texteRecompense } from "@/lib/wallet/rewardText";
+import "./dashboard.css";
 
-type Merchant = {
-  id: string;
-  name: string;
-  slug: string;
-  program_type: "visits" | "points";
-  subscription_status: string;
-  theme_id: string;
-  address: string | null;
-  logo_url: string | null;
-};
-type Customer = {
-  id: string;
-  first_name: string;
-  email: string;
-  points: number;
-  updated_at: string;
-};
-type Reward = { id: string; label: string; cost_points: number; active: boolean };
-type Device = { id: string; label: string; created_at: string };
-type CardTheme = {
-  id: string;
-  label: string;
-  bg_color: string;
-  text_color: string;
-  label_color: string;
-  sort_order: number;
-  is_light: boolean;
+// Dérivés du modèle plutôt que redéclarés : chaque alias dit exactement quelles
+// colonnes la requête ramène, et une colonne renommée en base casse ici à la
+// compilation au lieu de rendre `undefined` à l'exécution.
+type Customer = Pick<Row.Customer, "id" | "first_name" | "email" | "points" | "updated_at">;
+type Reward = Row.Reward;
+type Device = Pick<Row.Device, "id" | "label" | "created_at">;
+
+/** Une journée de la frise : la date et ce qui s'y est compté. */
+type Journee = { date: Date; n: number };
+
+/** Un accusé de réception : ce qui vient de se passer, et si ça a tenu. */
+type Recu = { texte: string; echec?: boolean };
+
+/**
+ * Le sommaire est rangé par fréquence d'usage, pas par importance : ce qu'on
+ * lit tous les matins, ce qu'on fait de temps en temps, ce qu'on règle une
+ * fois. C'est la seule hiérarchie qui soit vraie pour un commerce.
+ */
+const SOMMAIRE = [
+  {
+    zone: "Aujourd'hui",
+    liens: [
+      { href: "#registre", label: "Le registre" },
+      { href: "#clients", label: "Mes clients" },
+    ],
+  },
+  {
+    zone: "Faire",
+    liens: [
+      { href: "#promo", label: "Envoyer une promo" },
+      { href: "#inscription", label: "Le QR du comptoir" },
+    ],
+  },
+  {
+    zone: "Réglages",
+    liens: [
+      { href: "#carte", label: "Ma carte" },
+      { href: "#recompense", label: "La récompense" },
+      { href: "#caisses", label: "Mes caisses" },
+    ],
+  },
+] as const;
+
+const LETTRES_JOUR = ["D", "L", "M", "M", "J", "V", "S"] as const;
+
+const JOURS_FRISE = 14;
+
+const STATUTS: Record<string, { classe: string; label: string }> = {
+  active: { classe: "cpt-statut--actif", label: "Abonnement actif" },
+  trialing: { classe: "cpt-statut--essai", label: "Période d'essai" },
+  past_due: { classe: "cpt-statut--retard", label: "Paiement en retard" },
 };
 
-const NAV = [
-  { href: "#stats", label: "Vue d'ensemble" },
-  { href: "#carte", label: "Ma carte" },
-  { href: "#inscription", label: "QR d'inscription" },
-  { href: "#promo", label: "Promos" },
-  { href: "#caisses", label: "Mes caisses" },
-  { href: "#recompenses", label: "Récompenses" },
-  { href: "#clients", label: "Clients" },
-];
+function Statut({ status }: { status: string }) {
+  const s = STATUTS[status] ?? { classe: "cpt-statut--retard", label: status };
+  return <span className={`cpt-statut ${s.classe}`}>{s.label}</span>;
+}
 
-function initials(name: string): string {
-  const words = name.trim().split(/\s+/);
-  return words.length > 1
-    ? (words[0][0] + words[1][0]).toUpperCase()
-    : name.slice(0, 2).toUpperCase();
+/** Minuit, il y a `recul` jours. Passe par setDate plutôt que par une
+ *  soustraction de millisecondes : aux changements d'heure, un jour ne fait
+ *  pas 24 h et les compteurs déborderaient d'une case. */
+function minuit(recul = 0): Date {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - recul);
+  return d;
+}
+
+/**
+ * La frise : quatorze jours, un tampon par jour, le rayon proportionnel au
+ * nombre. L'aire exagère un peu l'écart — l'encodage par la racine serait
+ * plus juste, mais sur quatorze empreintes de 26 px il écrase tout entre
+ * neuf et vingt-trois passages, et la frise ne sert qu'à faire sentir le
+ * rythme : le compte exact est dans l'infobulle et dans la pointe, en pied.
+ * Un jour creux garde son empreinte vide, comme une case non tamponnée sur
+ * le carton, et aujourd'hui est cerclé parce qu'il n'est pas encore refermé.
+ */
+function Frise({ jours, unite }: { jours: Journee[]; unite: string }) {
+  const max = Math.max(1, ...jours.map((j) => j.n));
+  const dernier = jours.length - 1;
+  const jourCourt = (d: Date) =>
+    d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+
+  return (
+    <figure
+      className="cpt-frise"
+      role="img"
+      aria-label={`${unite} des ${jours.length} derniers jours : ${jours
+        .map((j) => `${jourCourt(j.date)}, ${j.n}`)
+        .join(" ; ")}.`}
+    >
+      <div className="cpt-frise-grille">
+        {jours.map((j, i) => {
+          const estAujourdhui = i === dernier;
+          const r = j.n > 0 ? Math.max(3, 17 * (j.n / max)) : 0;
+          return (
+            <div
+              key={j.date.toISOString()}
+              className="cpt-frise-cellule"
+              title={`${jourCourt(j.date)} — ${j.n} ${unite}`}
+            >
+              <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">
+                {j.n === 0 && !estAujourdhui && (
+                  <circle className="cpt-tampon-vide" cx="20" cy="20" r="6" />
+                )}
+                {j.n > 0 && (
+                  <circle
+                    className="cpt-tampon"
+                    cx="20"
+                    cy="20"
+                    r={r}
+                    style={{ animationDelay: `${i * 24}ms` }}
+                  />
+                )}
+                {estAujourdhui && <circle className="cpt-tampon-jour" cx="20" cy="20" r="18.4" />}
+              </svg>
+              <span
+                className={`cpt-frise-jour${estAujourdhui ? " cpt-frise-jour--auj" : ""}`}
+                aria-hidden="true"
+              >
+                {LETTRES_JOUR[j.date.getDay()]}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </figure>
+  );
+}
+
+function Releve({ label, valeur, appoint }: { label: string; valeur: string; appoint: string }) {
+  return (
+    <div>
+      <div className="cpt-releve-lib">{label}</div>
+      <div className="cpt-releve-val">{valeur}</div>
+      <div className="cpt-releve-app">{appoint}</div>
+    </div>
+  );
 }
 
 /**
@@ -63,20 +160,20 @@ export default function DashboardPage() {
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
 
-  const [merchant, setMerchant] = useState<Merchant | null>(null);
+  const [merchant, setMerchant] = useState<Row.Merchant | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [reward, setReward] = useState<Reward | null>(null);
   const [rewardLabel, setRewardLabel] = useState("");
   const [rewardCost, setRewardCost] = useState("");
   const [savingReward, setSavingReward] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
-  const [themes, setThemes] = useState<CardTheme[]>([]);
+  const [themes, setThemes] = useState<Row.CardTheme[]>([]);
 
   const [totalCards, setTotalCards] = useState(0);
   const [cardsThisMonth, setCardsThisMonth] = useState(0);
   const [txThisMonth, setTxThisMonth] = useState(0);
   const [txToday, setTxToday] = useState(0);
-  const [promosThisMonth, setPromosThisMonth] = useState(0);
+  const [jours, setJours] = useState<Journee[]>([]);
   const [promosThisWeek, setPromosThisWeek] = useState(0);
 
   const [name, setName] = useState("");
@@ -93,8 +190,8 @@ export default function DashboardPage() {
   const [codeLeft, setCodeLeft] = useState(600);
 
   const [search, setSearch] = useState("");
-  const [toast, setToast] = useState<string | null>(null);
-  const toastTimer = useRef<any>(null);
+  const [recu, setRecu] = useState<Recu | null>(null);
+  const recuTimer = useRef<any>(null);
   const [previewPlatform, setPreviewPlatform] = useState<"apple" | "google">("apple");
   const [framed, setFramed] = useState(false);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
@@ -118,12 +215,14 @@ export default function DashboardPage() {
       setThemeId(m.theme_id);
       setAddress(m.address ?? "");
 
-      const startOfMonth = new Date(
-        new Date().getFullYear(),
-        new Date().getMonth(),
-        1
-      ).toISOString();
+      const debutJour = minuit();
+      const debutFrise = minuit(JOURS_FRISE - 1);
+      const debutMois = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
       const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+      // Une seule lecture des transactions couvre le mois ET la frise : au
+      // début d'un mois c'est la frise qui remonte le plus loin, à la fin
+      // c'est le mois. On prend la borne la plus ancienne des deux.
+      const depuis = new Date(Math.min(debutFrise.getTime(), debutMois.getTime())).toISOString();
 
       const [
         { data: c },
@@ -133,7 +232,6 @@ export default function DashboardPage() {
         { count: total },
         { count: newThisMonth },
         { data: earnRows },
-        { count: promoMonth },
         { count: promoWeek },
       ] = await Promise.all([
         supabase
@@ -152,16 +250,12 @@ export default function DashboardPage() {
         supabase
           .from("customers")
           .select("*", { count: "exact", head: true })
-          .gte("created_at", startOfMonth),
+          .gte("created_at", debutMois.toISOString()),
         supabase
           .from("transactions")
           .select("delta, created_at")
           .eq("type", "earn")
-          .gte("created_at", startOfMonth),
-        supabase
-          .from("promos")
-          .select("*", { count: "exact", head: true })
-          .gte("sent_at", startOfMonth),
+          .gte("created_at", depuis),
         supabase.from("promos").select("*", { count: "exact", head: true }).gte("sent_at", weekAgo),
       ]);
 
@@ -173,17 +267,27 @@ export default function DashboardPage() {
       setThemes(th ?? []);
       setTotalCards(total ?? 0);
       setCardsThisMonth(newThisMonth ?? 0);
+
       // Un « passage » se compte à la ligne, un point se somme.
-      const countEarn = (rows: { delta: number }[]) =>
-        m.program_type === "points" ? rows.reduce((sum, row) => sum + row.delta, 0) : rows.length;
-      const startOfDay = new Date().setHours(0, 0, 0, 0);
-      setTxThisMonth(countEarn(earnRows ?? []));
-      setTxToday(
-        countEarn(
-          (earnRows ?? []).filter((row) => new Date(row.created_at).getTime() >= startOfDay)
-        )
+      const rows = earnRows ?? [];
+      const countEarn = (list: { delta: number }[]) =>
+        m.program_type === "points" ? list.reduce((sum, row) => sum + row.delta, 0) : list.length;
+      const entre = (debut: number, fin: number) =>
+        rows.filter((row) => {
+          const t = new Date(row.created_at).getTime();
+          return t >= debut && t < fin;
+        });
+
+      const demain = Date.now() + 24 * 3600 * 1000;
+      setTxThisMonth(countEarn(entre(debutMois.getTime(), demain)));
+      setTxToday(countEarn(entre(debutJour.getTime(), demain)));
+      setJours(
+        Array.from({ length: JOURS_FRISE }, (_, i) => {
+          const debut = minuit(JOURS_FRISE - 1 - i);
+          const fin = minuit(JOURS_FRISE - 2 - i);
+          return { date: debut, n: countEarn(entre(debut.getTime(), fin.getTime())) };
+        })
       );
-      setPromosThisMonth(promoMonth ?? 0);
       setPromosThisWeek(promoWeek ?? 0);
     })();
   }, [session]);
@@ -225,10 +329,10 @@ export default function DashboardPage() {
     a.click();
   }
 
-  function showToast(msg: string) {
-    clearTimeout(toastTimer.current);
-    setToast(msg);
-    toastTimer.current = setTimeout(() => setToast(null), 2600);
+  function accuser(texte: string, echec = false) {
+    clearTimeout(recuTimer.current);
+    setRecu({ texte, echec });
+    recuTimer.current = setTimeout(() => setRecu(null), echec ? 5000 : 2800);
   }
 
   async function login() {
@@ -250,12 +354,12 @@ export default function DashboardPage() {
     });
     setSavingCard(false);
     if (!res.ok) {
-      showToast(`❌ ${await res.text()}`);
+      accuser(await res.text(), true);
       return;
     }
     const data = await res.json();
     setMerchant(data.merchant);
-    showToast("Carte enregistrée — vos clients la verront à leur prochain passage");
+    accuser("Carte enregistrée — vos clients la verront à leur prochain passage");
   }
 
   async function uploadLogo(file: File) {
@@ -273,7 +377,7 @@ export default function DashboardPage() {
     });
     setUploadingLogo(false);
     if (!res.ok) {
-      showToast(`❌ ${await res.text()}`);
+      accuser(await res.text(), true);
       return;
     }
     const data = await res.json();
@@ -282,10 +386,9 @@ export default function DashboardPage() {
       if (url) URL.revokeObjectURL(url);
       return null;
     });
-    showToast(
-      data.warning
-        ? `⚠️ ${data.warning}`
-        : "Logo mis à jour — vos clients le verront à leur prochain passage"
+    accuser(
+      data.warning ?? "Logo mis à jour — vos clients le verront à leur prochain passage",
+      Boolean(data.warning)
     );
   }
 
@@ -305,13 +408,12 @@ export default function DashboardPage() {
     });
     setSendingPromo(false);
     if (!res.ok) {
-      showToast(`❌ ${await res.text()}`);
+      accuser(await res.text(), true);
       return;
     }
     setPromoText("");
     setPromosThisWeek((n) => n + 1);
-    setPromosThisMonth((n) => n + 1);
-    showToast(`Promo envoyée à ${totalCards} clients 🎉`);
+    accuser(`Promo envoyée à ${totalCards} clients`);
   }
 
   async function genCode() {
@@ -320,7 +422,10 @@ export default function DashboardPage() {
       method: "POST",
       headers: { Authorization: `Bearer ${session.access_token}` },
     });
-    if (!res.ok) return;
+    if (!res.ok) {
+      accuser("Impossible de générer un code — réessayez dans un instant", true);
+      return;
+    }
     const data = await res.json();
     setPairingCode(data.code);
     setCodeLeft(600);
@@ -329,7 +434,7 @@ export default function DashboardPage() {
   async function revokeDevice(d: Device) {
     await supabase.from("devices").update({ revoked_at: new Date().toISOString() }).eq("id", d.id);
     setDevices((list) => list.filter((x) => x.id !== d.id));
-    showToast(`${d.label} révoqué`);
+    accuser(`${d.label} ne peut plus scanner vos cartes`);
   }
 
   /**
@@ -342,7 +447,7 @@ export default function DashboardPage() {
     const label = rewardLabel.trim();
     const cost = Number(rewardCost);
     if (!label || !Number.isInteger(cost) || cost <= 0) {
-      showToast("Indiquez un seuil entier positif et un libellé");
+      accuser("Indiquez un seuil entier positif et un libellé", true);
       return;
     }
 
@@ -362,11 +467,11 @@ export default function DashboardPage() {
     setSavingReward(false);
 
     if (error || !data) {
-      showToast("Enregistrement impossible");
+      accuser("Enregistrement impossible — réessayez dans un instant", true);
       return;
     }
     setReward(data);
-    showToast("Récompense enregistrée");
+    accuser("Récompense enregistrée");
   }
 
   const filteredClients = useMemo(() => {
@@ -377,61 +482,80 @@ export default function DashboardPage() {
     );
   }, [customers, search]);
 
+  /* Le filtre d'encre de la landing : il déforme le bord des tampons pour
+     qu'ils gardent la trace du caoutchouc, et non celle du vecteur. */
+  const encrier = (
+    <svg className="cpt-defs" aria-hidden="true" focusable="false">
+      <filter id="cpt-encre">
+        <feTurbulence type="fractalNoise" baseFrequency="0.55" numOctaves="2" seed="7" result="b" />
+        <feDisplacementMap
+          in="SourceGraphic"
+          in2="b"
+          scale="2.6"
+          xChannelSelector="R"
+          yChannelSelector="G"
+        />
+      </filter>
+    </svg>
+  );
+
   if (!session) {
     return (
-      <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <Logo height={34} />
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--color-coral-hover)",
-              background: "var(--color-cream)",
-              borderRadius: 999,
-              padding: "4px 10px",
-              letterSpacing: ".05em",
-            }}
-          >
-            ESPACE COMMERÇANT
-          </span>
-        </div>
-        <h1 style={{ fontSize: 22, margin: "0 0 18px" }}>Connexion</h1>
-        <Field
-          type="email"
-          placeholder="Votre email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <Field
-          type="password"
-          placeholder="Mot de passe"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && login()}
-        />
-        {authError && <p style={{ color: "var(--color-error)", fontSize: 14 }}>{authError}</p>}
-        <Button block onClick={login}>
-          Connexion
-        </Button>
-        <p style={{ color: "var(--color-text-secondary)", fontSize: 13, marginTop: 12 }}>
-          <a href="/mot-de-passe-oublie" style={{ color: "var(--color-marine)", fontWeight: 600 }}>
-            Mot de passe oublié ?
+      <div className="comptoir cpt-seuil">
+        <main className="cpt-seuil-feuille">
+          <div className="cpt-seuil-tete">
+            <Logo height={30} />
+            <span className="cpt-etiquette">Espace commerçant</span>
+          </div>
+          <h1 className="cpt-seuil-titre">Connexion</h1>
+          <div className="cpt-pile">
+            <Field
+              type="email"
+              label="Votre email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Field
+              type="password"
+              label="Mot de passe"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && login()}
+            />
+            <Button block onClick={login}>
+              Se connecter
+            </Button>
+          </div>
+          {authError && <p className="cpt-seuil-erreur">{authError}</p>}
+          <a className="cpt-seuil-lien" href="/mot-de-passe-oublie">
+            Mot de passe oublié
           </a>
-        </p>
-      </main>
+        </main>
+      </div>
     );
   }
 
   if (!merchant) {
     return (
-      <main style={{ maxWidth: 560, margin: "0 auto", padding: "80px 20px" }}>
-        <p style={{ color: "var(--color-text-secondary)" }}>
-          Aucun commerce associé à ce compte. Les comptes commerçants sont créés par l’équipe de la
-          plateforme (back-office /admin) — si vous venez de recevoir votre invitation, contactez
-          votre interlocuteur.
-        </p>
-      </main>
+      <div className="comptoir cpt-seuil">
+        <main className="cpt-seuil-feuille">
+          <div className="cpt-seuil-tete">
+            <Logo height={30} />
+            <span className="cpt-etiquette">Espace commerçant</span>
+          </div>
+          <h1 className="cpt-seuil-titre">Aucun commerce sur ce compte</h1>
+          <p className="cpt-note">
+            Les comptes commerçants sont créés par l&apos;équipe Fidelo. Si vous venez de recevoir
+            votre invitation, contactez votre interlocuteur — il rattachera votre boutique à cette
+            adresse.
+          </p>
+          <button className="cpt-seuil-lien" onClick={() => supabase.auth.signOut()}>
+            Changer de compte
+          </button>
+        </main>
+      </div>
     );
   }
 
@@ -444,468 +568,191 @@ export default function DashboardPage() {
     label_color: "#F56C5A",
   };
   const previewPoints = isVisits ? Math.min(7, reward?.cost_points ?? 7) : 182;
-  const previewThreshold = isVisits ? (reward?.cost_points ?? 10) : null;
-  const previewReward = reward ? `${reward.label} au ${reward.cost_points}e ${unit}` : undefined;
+  const previewThreshold = reward?.cost_points ?? (isVisits ? 10 : null);
+  // Le texte vient du module partagé avec le générateur de pass : l'aperçu
+  // affiche mot pour mot ce que le client lira sur sa carte.
+  const previewSplit = separerRecompense(reward, previewPoints);
+  const previewReward = texteRecompense(
+    previewSplit.reachedReward,
+    previewSplit.nextReward,
+    previewPoints
+  );
   const mm = Math.floor(codeLeft / 60),
     ss = String(codeLeft % 60).padStart(2, "0");
-  const greeting = (session.user.email as string).split("@")[0];
+  const aujourdhui = new Date().toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+  const pointe = jours.reduce<Journee | null>(
+    (best, j) => (best === null || j.n > best.n ? j : best),
+    null
+  );
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <header
-        style={{
-          background: "#fff",
-          borderBottom: "1px solid var(--color-border)",
-          padding: "0 32px",
-          height: 64,
-          display: "flex",
-          alignItems: "center",
-          gap: 16,
-          position: "sticky",
-          top: 0,
-          zIndex: 20,
-        }}
-      >
-        <Logo variant="symbol" height={28} />
-        <div style={{ width: 1, height: 24, background: "var(--color-border)" }} />
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
-          <span style={{ fontFamily: "var(--font-heading)", fontWeight: 600, fontSize: 19 }}>
-            {merchant.name}
-          </span>
-          <SubscriptionBadge status={merchant.subscription_status} />
-        </div>
-        <div style={{ flex: 1 }} />
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-            Bonjour, {greeting.charAt(0).toUpperCase() + greeting.slice(1)}
-          </span>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: "50%",
-              background: "var(--color-cream)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontWeight: 700,
-              fontSize: 13,
-            }}
-          >
-            {initials(merchant.name)}
+    <div className="comptoir">
+      {encrier}
+
+      <header className="cpt-barre">
+        <div className="cpt-barre-inner">
+          <Logo variant="symbol" height={26} />
+          <span className="cpt-filet" />
+          <span className="cpt-enseigne">{merchant.name}</span>
+          <Statut status={merchant.subscription_status} />
+          <div className="cpt-barre-fin">
+            <span className="cpt-compte">{session.user.email}</span>
+            <button className="cpt-sortir" onClick={() => supabase.auth.signOut()}>
+              Se déconnecter
+            </button>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => supabase.auth.signOut()}>
-            Se déconnecter
-          </Button>
         </div>
       </header>
 
-      <div
-        style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px", display: "flex", gap: 24 }}
-      >
-        <nav
-          style={{
-            width: 200,
-            flex: "none",
-            padding: "24px 0",
-            display: "flex",
-            flexDirection: "column",
-            gap: 2,
-            position: "sticky",
-            top: 88,
-            alignSelf: "flex-start",
-          }}
-        >
-          {NAV.map((n, i) => (
-            <a key={n.href} href={n.href} className={`sidebar-link ${i === 0 ? "is-active" : ""}`}>
-              {n.label}
-            </a>
+      <div className="cpt-corps">
+        <nav className="cpt-nav" aria-label="Sections du tableau de bord">
+          {SOMMAIRE.map((groupe) => (
+            <div key={groupe.zone} className="cpt-nav-groupe">
+              <span className="cpt-nav-titre">{groupe.zone}</span>
+              {groupe.liens.map((l) => (
+                <a key={l.href} href={l.href} className="cpt-nav-lien">
+                  {l.label}
+                </a>
+              ))}
+            </div>
           ))}
         </nav>
 
-        <main style={{ flex: 1, minWidth: 0 }}>
-          {/* ===== Stats ===== */}
-          <div
-            id="stats"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, 1fr)",
-              gap: 16,
-              marginBottom: 20,
-            }}
-          >
-            <div className="card">
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--color-text-secondary)",
-                  marginBottom: 8,
-                }}
-              >
-                Cartes actives
-              </div>
-              <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
-                {totalCards.toLocaleString("fr-FR")}
-              </div>
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "var(--color-success)",
-                  fontWeight: 700,
-                  marginTop: 8,
-                }}
-              >
-                +{cardsThisMonth} ce mois
-              </div>
+        <main>
+          <section id="registre" className="cpt-registre">
+            <div className="cpt-registre-tete">
+              <h2 className="cpt-date">{aujourdhui}</h2>
             </div>
-            <div className="card">
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--color-text-secondary)",
-                  marginBottom: 8,
-                }}
-              >
-                {isVisits ? "Passages ce mois" : "Points crédités ce mois"}
-              </div>
-              <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
-                {txThisMonth.toLocaleString("fr-FR")}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 8 }}>
-                ce mois-ci
-              </div>
+
+            <div className="cpt-releves">
+              <Releve
+                label="Aujourd'hui"
+                valeur={txToday.toLocaleString("fr-FR")}
+                appoint={isVisits ? "passages depuis minuit" : "points crédités depuis minuit"}
+              />
+              <Releve
+                label="Ce mois-ci"
+                valeur={txThisMonth.toLocaleString("fr-FR")}
+                appoint={isVisits ? "passages depuis le 1er" : "points depuis le 1er"}
+              />
+              <Releve
+                label="Cartes"
+                valeur={totalCards.toLocaleString("fr-FR")}
+                appoint={
+                  cardsThisMonth > 0
+                    ? `dont ${cardsThisMonth} créées ce mois`
+                    : "aucune nouvelle ce mois"
+                }
+              />
             </div>
-            <div className="card">
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--color-text-secondary)",
-                  marginBottom: 8,
-                }}
-              >
-                Promos envoyées
-              </div>
-              <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
-                {promosThisMonth}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 8 }}>
-                ce mois-ci
-              </div>
+
+            <Frise jours={jours} unite={unit} />
+
+            <div className="cpt-frise-pied">
+              <span>Quatorze derniers jours</span>
+              <span>
+                {pointe && pointe.n > 0
+                  ? `Pointe : ${pointe.n} le ${pointe.date.toLocaleDateString("fr-FR", {
+                      weekday: "long",
+                      day: "numeric",
+                    })}`
+                  : "Aucun passage sur la période"}
+              </span>
             </div>
-            <div className="card">
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: "var(--color-text-secondary)",
-                  marginBottom: 8,
-                }}
-              >
-                {isVisits ? "Passages aujourd'hui" : "Points crédités aujourd'hui"}
-              </div>
-              <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
-                {txToday.toLocaleString("fr-FR")}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 8 }}>
-                depuis minuit
-              </div>
+          </section>
+
+          {/* ===== Clients ===== */}
+          <section id="clients" className="cpt-panneau" style={{ marginTop: 18 }}>
+            <div className="cpt-panneau-tete">
+              <h2 className="cpt-panneau-titre">Mes clients</h2>
+              {customers.length > 0 && (
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Chercher un prénom, un email…"
+                  aria-label="Chercher un client"
+                  className="cpt-saisie cpt-recherche"
+                />
+              )}
             </div>
+            <p className="cpt-panneau-note">Les vingt clients passés le plus récemment.</p>
+
+            {customers.length === 0 ? (
+              <div className="cpt-vide">
+                Personne n&apos;a encore scanné votre QR.
+                <br />
+                <a href="#inscription">Téléchargez-le</a> et posez-le près de la caisse.
+              </div>
+            ) : filteredClients.length === 0 ? (
+              <div className="cpt-vide">Aucun client ne correspond à « {search} ».</div>
+            ) : (
+              <div className="cpt-defile">
+                <table className="cpt-table">
+                  <thead>
+                    <tr>
+                      <th>Client</th>
+                      <th>Email</th>
+                      <th className="cpt-col-nombre">{isVisits ? "Passages" : "Points"}</th>
+                      <th className="cpt-col-nombre">Dernier passage</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredClients.map((c) => (
+                      <tr key={c.id}>
+                        <td className="cpt-cel-prenom">{c.first_name}</td>
+                        <td className="cpt-cel-terne">{c.email}</td>
+                        <td className="cpt-col-nombre cpt-nombre">{c.points}</td>
+                        <td className="cpt-col-nombre cpt-nombre cpt-cel-terne">
+                          {new Date(c.updated_at).toLocaleString("fr-FR", {
+                            day: "2-digit",
+                            month: "2-digit",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
+
+          {/* ===== FAIRE ===== */}
+          <div className="cpt-zone">
+            <span className="cpt-zone-titre">Faire</span>
           </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 20,
-              alignItems: "start",
-            }}
-          >
-            {/* ===== Ma carte ===== */}
-            <section id="carte" className="card" style={{ padding: "24px 26px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  justifyContent: "space-between",
-                  marginBottom: 4,
-                }}
-              >
-                <h2 style={{ fontSize: 20 }}>Ma carte</h2>
-                <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                  aperçu en direct
+          <div className="cpt-duo">
+            {/* ----- Promo ----- */}
+            <section id="promo" className="cpt-panneau">
+              <div className="cpt-panneau-tete">
+                <h2 className="cpt-panneau-titre">Envoyer une promo</h2>
+                <span className={`cpt-quota${promoMaxed ? " is-plein" : ""}`}>
+                  {promosThisWeek}/3 cette semaine
                 </span>
               </div>
-              <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 18px" }}>
-                C’est la carte que vos clients voient dans leur téléphone.
+              <p className="cpt-panneau-note">
+                Le message s&apos;affiche sur la carte de vos {totalCards} clients, dans leur
+                téléphone.
               </p>
-              <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
-                <div style={{ flex: "none" }}>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 8 }}>
-                    <Button
-                      size="sm"
-                      variant={previewPlatform === "apple" ? "primary" : "secondary"}
-                      onClick={() => setPreviewPlatform("apple")}
-                    >
-                      Apple Wallet
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant={previewPlatform === "google" ? "primary" : "secondary"}
-                      onClick={() => setPreviewPlatform("google")}
-                    >
-                      Google Wallet
-                    </Button>
-                  </div>
-                  <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
-                    <Button size="sm" variant="ghost" onClick={() => setFramed((f) => !f)}>
-                      {framed ? "Voir la carte seule" : "Voir sur l’écran verrouillé"}
-                    </Button>
-                  </div>
-                  <WalletPreview
-                    platform={previewPlatform}
-                    framed={framed}
-                    theme={activeTheme}
-                    merchantName={name || merchant.name}
-                    logoUrl={logoPreviewUrl ?? merchant.logo_url}
-                    programType={merchant.program_type}
-                    points={previewPoints}
-                    threshold={previewThreshold}
-                    rewardLabel={previewReward}
-                    firstName="Léa"
-                  />
-                </div>
-
-                <div
-                  style={{
-                    flex: 1,
-                    minWidth: 220,
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: 18,
-                  }}
-                >
-                  <div>
-                    <label className="field-label">Nom de l’établissement</label>
-                    <input
-                      className="field-input"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Logo</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div
-                        style={{
-                          width: 44,
-                          height: 44,
-                          flex: "none",
-                          borderRadius: "var(--radius-md)",
-                          overflow: "hidden",
-                          background: "var(--color-cream)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontWeight: 700,
-                          fontSize: 14,
-                        }}
-                      >
-                        {merchant.logo_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={merchant.logo_url}
-                            alt=""
-                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                          />
-                        ) : (
-                          (name || merchant.name).charAt(0).toUpperCase()
-                        )}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="sm"
-                        disabled={uploadingLogo}
-                        onClick={() => logoInputRef.current?.click()}
-                      >
-                        {uploadingLogo ? "Envoi…" : "Changer le logo"}
-                      </Button>
-                      <input
-                        ref={logoInputRef}
-                        type="file"
-                        accept="image/*"
-                        style={{ display: "none" }}
-                        onChange={(e) => {
-                          const f = e.target.files?.[0];
-                          if (f) uploadLogo(f);
-                          e.target.value = "";
-                        }}
-                      />
-                    </div>
-                    <div
-                      style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 6 }}
-                    >
-                      PNG ou JPG, 5 Mo max. Utilisé sur la carte wallet et vos pages publiques.
-                    </div>
-                  </div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
-                      Thème de la carte
-                    </div>
-                    <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                      {themes.map((t) => (
-                        <button
-                          key={t.id}
-                          className="color-swatch"
-                          title={t.label}
-                          onClick={() => setThemeId(t.id)}
-                          style={{
-                            background: t.bg_color,
-                            boxShadow:
-                              t.id === themeId
-                                ? `0 0 0 3px #fff, 0 0 0 6px ${t.bg_color}`
-                                : "0 0 0 1px rgba(0,0,0,.08)",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="field-label">Adresse du commerce</label>
-                    <input
-                      className="field-input"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                    />
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        fontSize: 12,
-                        color: "var(--color-success)",
-                        fontWeight: 600,
-                        marginTop: 6,
-                      }}
-                    >
-                      <span>✓</span>
-                      <span style={{ color: "var(--color-text-secondary)", fontWeight: 500 }}>
-                        Géocodée automatiquement — la carte s’affiche à moins de 300 m
-                      </span>
-                    </div>
-                  </div>
-                  <Button
-                    onClick={saveCard}
-                    disabled={savingCard}
-                    style={{ alignSelf: "flex-start" }}
-                  >
-                    {savingCard ? "Enregistrement…" : "Enregistrer ma carte"}
-                  </Button>
-                </div>
-              </div>
-            </section>
-
-            {/* ===== QR d'inscription ===== */}
-            <section id="inscription" className="card" style={{ padding: "24px 26px" }}>
-              <h2 style={{ fontSize: 20, marginBottom: 4 }}>Mon QR code d’inscription</h2>
-              <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 16px" }}>
-                À poser sur le comptoir : vos clients le scannent pour recevoir leur carte de
-                fidélité.
-              </p>
-              <div style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
-                <div
-                  style={{
-                    width: 180,
-                    height: 180,
-                    flex: "none",
-                    borderRadius: "var(--radius-md)",
-                    background: "#fff",
-                    border: "1px solid var(--color-border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {qrDataUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={qrDataUrl}
-                      alt="QR code d’inscription"
-                      style={{ width: 160, height: 160 }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        width: 160,
-                        height: 160,
-                        borderRadius: 8,
-                        background: "var(--color-surface)",
-                      }}
-                    />
-                  )}
-                </div>
-                <div style={{ flex: 1, minWidth: 220 }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: "var(--color-text-secondary)",
-                      marginBottom: 14,
-                      wordBreak: "break-all",
-                    }}
-                  >
-                    {inscriptionUrl ?? "…"}
-                  </div>
-                  <Button onClick={downloadQr} disabled={!qrDataUrl}>
-                    Télécharger le QR
-                  </Button>
-                </div>
-              </div>
-            </section>
-
-            {/* ===== Promo ===== */}
-            <section
-              id="promo"
-              className="card"
-              style={{ padding: "24px 26px", display: "flex", flexDirection: "column" }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "baseline",
-                  justifyContent: "space-between",
-                  marginBottom: 4,
-                }}
-              >
-                <h2 style={{ fontSize: 20 }}>Envoyer une promo</h2>
-                <Badge variant={promoMaxed ? "error" : "warning"}>
-                  {promosThisWeek}/3 cette semaine
-                </Badge>
-              </div>
-              <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 14px" }}>
-                Notification envoyée sur la carte de vos {totalCards} clients.
-              </p>
+              <label className="cpt-invisible" htmlFor="cpt-promo">
+                Message de la promo
+              </label>
               <textarea
+                id="cpt-promo"
                 rows={3}
                 value={promoText}
                 onChange={(e) => setPromoText(e.target.value.slice(0, 140))}
-                placeholder="Ex : Ce samedi, la brioche est à −20 % dès 16 h !"
-                className="field-input"
-                style={{ resize: "none", lineHeight: 1.5 }}
+                placeholder="Ce samedi, la brioche est à −20 % dès 16 h."
+                className="cpt-saisie cpt-promo-saisie"
               />
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginTop: 12,
-                }}
-              >
-                <span style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                  {promoText.length}/140 caractères
-                </span>
+              <div className="cpt-promo-pied">
+                <span className="cpt-compteur">{promoText.length}/140</span>
                 <Button
                   variant="accent"
                   onClick={sendPromo}
@@ -915,312 +762,303 @@ export default function DashboardPage() {
                 </Button>
               </div>
               {promoMaxed && (
-                <div
-                  style={{
-                    marginTop: 10,
-                    fontSize: 12,
-                    color: "var(--color-warning-text)",
-                    background: "var(--color-warning-bg)",
-                    borderRadius: 10,
-                    padding: "9px 12px",
-                  }}
-                >
-                  Limite atteinte — vos clients vous remercient de ne pas trop les solliciter.
-                  Prochain envoi possible la semaine prochaine.
-                </div>
+                <p className="cpt-avis">
+                  Trois envois par semaine, c&apos;est la limite. Le compteur repart lundi.
+                </p>
               )}
             </section>
 
-            {/* ===== Caisses ===== */}
-            <section id="caisses" className="card" style={{ padding: "24px 26px" }}>
-              <h2 style={{ fontSize: 20, marginBottom: 4 }}>Mes caisses</h2>
-              <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 16px" }}>
-                Les téléphones autorisés à scanner les cartes de vos clients.
+            {/* ----- QR d'inscription ----- */}
+            <section id="inscription" className="cpt-panneau">
+              <h2 className="cpt-panneau-titre">Le QR du comptoir</h2>
+              <p className="cpt-panneau-note">
+                Imprimez-le et posez-le près de la caisse. Vos clients le scannent, leur carte
+                arrive dans leur téléphone.
               </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16 }}>
-                {devices.map((d) => (
-                  <div
-                    key={d.id}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      background: "var(--color-surface)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "12px 16px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 10,
-                        background: "#fff",
-                        border: "1px solid var(--color-border)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 15,
-                      }}
-                    >
-                      📱
-                    </div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14 }}>{d.label}</div>
-                      <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                        Appairé le {new Date(d.created_at).toLocaleDateString("fr-FR")}
-                      </div>
-                    </div>
-                    <Button variant="destructive" size="sm" onClick={() => revokeDevice(d)}>
-                      Révoquer
-                    </Button>
-                  </div>
-                ))}
+              <div className="cpt-feuille-rang">
+                <div className="cpt-feuille">
+                  {qrDataUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={qrDataUrl} alt="QR code d’inscription de votre boutique" />
+                  ) : (
+                    <div className="cpt-feuille-attente" />
+                  )}
+                </div>
+                <div style={{ flex: 1, minWidth: 190 }}>
+                  <span className="cpt-etiquette" style={{ marginBottom: 8 }}>
+                    Adresse encodée
+                  </span>
+                  <div className="cpt-adresse-qr">{inscriptionUrl ?? "…"}</div>
+                  <Button onClick={downloadQr} disabled={!qrDataUrl}>
+                    Télécharger le QR
+                  </Button>
+                </div>
               </div>
-              {!pairingCode ? (
-                <button className="btn-dashed" onClick={genCode}>
-                  + Appairer une nouvelle caisse
-                </button>
-              ) : (
-                <div
-                  style={{
-                    background: "var(--color-marine)",
-                    borderRadius: "var(--radius-lg)",
-                    padding: 20,
-                    textAlign: "center",
-                  }}
-                >
-                  <div style={{ fontSize: 12, fontWeight: 600, color: "#B9C2DC", marginBottom: 6 }}>
-                    Saisissez ce code sur le téléphone de caisse
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: "ui-monospace, monospace",
-                      fontSize: 52,
-                      fontWeight: 700,
-                      color: "#fff",
-                      letterSpacing: ".18em",
-                    }}
+            </section>
+          </div>
+
+          {/* ===== RÉGLAGES ===== */}
+          <div className="cpt-zone">
+            <span className="cpt-zone-titre">Réglages</span>
+          </div>
+
+          {/* ----- Ma carte ----- */}
+          <section id="carte" className="cpt-panneau">
+            <div className="cpt-panneau-tete">
+              <h2 className="cpt-panneau-titre">Ma carte</h2>
+              <span className="cpt-etiquette">Aperçu en direct</span>
+            </div>
+            <p className="cpt-panneau-note">
+              C&apos;est exactement ce que vos clients voient dans leur téléphone.
+            </p>
+
+            <div className="cpt-carte-atelier">
+              <div>
+                <div className="cpt-bascules">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className={previewPlatform === "apple" ? "is-choisi" : undefined}
+                    aria-pressed={previewPlatform === "apple"}
+                    onClick={() => setPreviewPlatform("apple")}
                   >
-                    {pairingCode}
+                    Apple Wallet
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className={previewPlatform === "google" ? "is-choisi" : undefined}
+                    aria-pressed={previewPlatform === "google"}
+                    onClick={() => setPreviewPlatform("google")}
+                  >
+                    Google Wallet
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setFramed((f) => !f)}>
+                    {framed ? "Voir la carte seule" : "Voir sur l’écran verrouillé"}
+                  </Button>
+                </div>
+                <WalletPreview
+                  platform={previewPlatform}
+                  framed={framed}
+                  theme={activeTheme}
+                  merchantName={name || merchant.name}
+                  logoUrl={logoPreviewUrl ?? merchant.logo_url}
+                  programType={merchant.program_type}
+                  points={previewPoints}
+                  threshold={previewThreshold}
+                  rewardLabel={previewReward}
+                  firstName="Léa"
+                />
+              </div>
+
+              <div className="cpt-pile">
+                <div className="cpt-champ">
+                  <label className="cpt-etiquette" htmlFor="cpt-nom">
+                    Nom de l&apos;établissement
+                  </label>
+                  <input
+                    id="cpt-nom"
+                    className="cpt-saisie"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+
+                <div className="cpt-champ">
+                  <span className="cpt-etiquette">Logo</span>
+                  <div className="cpt-logo-rang">
+                    <div className="cpt-logo-vignette">
+                      {merchant.logo_url ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={merchant.logo_url} alt="" />
+                      ) : (
+                        (name || merchant.name).charAt(0).toUpperCase()
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={uploadingLogo}
+                      onClick={() => logoInputRef.current?.click()}
+                    >
+                      {uploadingLogo ? "Envoi…" : "Changer le logo"}
+                    </Button>
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadLogo(f);
+                        e.target.value = "";
+                      }}
+                    />
                   </div>
-                  <div style={{ fontSize: 12, color: "var(--color-cream)", marginTop: 6 }}>
-                    Valable encore{" "}
-                    <strong style={{ fontWeight: 800 }}>
-                      {mm} min {ss} s
-                    </strong>
+                  <span className="cpt-aide">
+                    PNG ou JPG, 5 Mo au plus. Sert sur la carte et sur vos pages publiques.
+                  </span>
+                </div>
+
+                <div className="cpt-champ">
+                  <span className="cpt-etiquette">Couleur de la carte</span>
+                  <div className="cpt-nuancier">
+                    {themes.map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        className={`cpt-teinte${t.id === themeId ? " is-choisi" : ""}`}
+                        aria-label={t.label}
+                        aria-pressed={t.id === themeId}
+                        onClick={() => setThemeId(t.id)}
+                        style={{ background: t.bg_color }}
+                      />
+                    ))}
                   </div>
                 </div>
-              )}
-              <p
-                style={{
-                  fontSize: 12,
-                  color: "var(--color-text-secondary)",
-                  marginTop: 12,
-                  textAlign: "center",
-                }}
-              >
-                Sur le téléphone de caisse, rendez-vous sur{" "}
-                <a href="/scan" target="_blank" rel="noopener noreferrer">
-                  fidelo.app/scan
-                </a>{" "}
-                pour saisir le code.
-              </p>
-            </section>
 
-            {/* ===== Récompense ===== */}
-            <section id="recompenses" className="card" style={{ padding: "24px 26px" }}>
-              <h2 style={{ fontSize: 20, marginBottom: 4 }}>Récompense</h2>
-              <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 16px" }}>
-                {isVisits
-                  ? "Vos clients gagnent 1 tampon par visite. Au seuil atteint, la caisse propose la récompense et remet le compteur à zéro."
-                  : "Vos clients gagnent 1 point par euro dépensé. Au seuil atteint, la caisse propose la récompense et remet le compteur à zéro."}
-              </p>
-
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      marginBottom: 6,
-                      color: "var(--color-text-secondary)",
-                    }}
-                  >
-                    Seuil ({unit})
+                <div className="cpt-champ">
+                  <label className="cpt-etiquette" htmlFor="cpt-adresse">
+                    Adresse du commerce
                   </label>
-                  <Field
+                  <input
+                    id="cpt-adresse"
+                    className="cpt-saisie"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                  />
+                  <span className="cpt-aide">
+                    Géocodée automatiquement. C&apos;est elle qui déclenche le rappel sur
+                    l&apos;écran verrouillé, à moins de 300 m.
+                  </span>
+                </div>
+
+                <div>
+                  <Button onClick={saveCard} disabled={savingCard}>
+                    {savingCard ? "Enregistrement…" : "Enregistrer ma carte"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div className="cpt-duo" style={{ marginTop: 18 }}>
+            {/* ----- Récompense ----- */}
+            <section id="recompense" className="cpt-panneau">
+              <h2 className="cpt-panneau-titre">La récompense</h2>
+              <p className="cpt-panneau-note">
+                {isVisits
+                  ? "Vos clients gagnent un tampon par visite. Au seuil atteint, la caisse propose la récompense et le compteur repart à zéro."
+                  : "Vos clients gagnent un point par euro dépensé. Au seuil atteint, la caisse propose la récompense et le compteur repart à zéro."}
+              </p>
+
+              <div className="cpt-pile">
+                <div className="cpt-champ">
+                  <label className="cpt-etiquette" htmlFor="cpt-seuil">
+                    Seuil en {unit}
+                  </label>
+                  <input
+                    id="cpt-seuil"
                     type="number"
                     min={1}
                     step={1}
                     inputMode="numeric"
+                    className="cpt-saisie cpt-saisie--nombre"
                     value={rewardCost}
                     onChange={(e) => setRewardCost(e.target.value)}
                     placeholder={isVisits ? "10" : "250"}
                   />
                 </div>
 
-                <div>
-                  <label
-                    style={{
-                      display: "block",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      marginBottom: 6,
-                      color: "var(--color-text-secondary)",
-                    }}
-                  >
-                    Libellé de la récompense
+                <div className="cpt-champ">
+                  <label className="cpt-etiquette" htmlFor="cpt-libelle">
+                    Ce que le client gagne
                   </label>
-                  <Field
+                  <input
+                    id="cpt-libelle"
+                    className="cpt-saisie"
                     value={rewardLabel}
                     onChange={(e) => setRewardLabel(e.target.value)}
-                    placeholder="-10 % sur votre achat"
+                    placeholder="Un café offert"
                     maxLength={60}
                   />
+                  <span className="cpt-aide">
+                    {rewardLabel.trim() && Number(rewardCost) > 0
+                      ? isVisits
+                        ? `Sur la carte : « ${rewardLabel.trim()} » au ${rewardCost}e passage.`
+                        : `Sur la carte : « ${rewardLabel.trim()} » à ${rewardCost} points.`
+                      : "Renseignez un seuil et un libellé pour activer la récompense."}
+                  </span>
                 </div>
 
-                <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: 0 }}>
-                  {rewardLabel.trim() && Number(rewardCost) > 0
-                    ? isVisits
-                      ? `Aperçu : « ${rewardLabel.trim()} » au ${rewardCost}e passage.`
-                      : `Aperçu : « ${rewardLabel.trim()} » à ${rewardCost} points.`
-                    : "Renseignez un seuil et un libellé pour activer la récompense."}
-                </p>
-
-                <Button onClick={saveReward} disabled={savingReward}>
-                  {savingReward ? "Enregistrement…" : "Enregistrer la récompense"}
-                </Button>
+                <div>
+                  <Button onClick={saveReward} disabled={savingReward}>
+                    {savingReward ? "Enregistrement…" : "Enregistrer la récompense"}
+                  </Button>
+                </div>
               </div>
             </section>
 
-            {/* ===== Clients ===== */}
-            <section
-              id="clients"
-              className="card"
-              style={{ padding: "24px 26px", gridColumn: "1 / -1" }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 16,
-                  marginBottom: 16,
-                  flexWrap: "wrap",
-                }}
-              >
-                <h2 style={{ fontSize: 20 }}>Derniers clients</h2>
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher un prénom ou un email…"
-                  className="field-input"
-                  style={{ width: 280, padding: "10px 14px", fontSize: 13 }}
-                />
-              </div>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1.4fr 1.8fr 1fr 1fr",
-                  padding: "8px 16px",
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--color-text-secondary)",
-                  textTransform: "uppercase",
-                  letterSpacing: ".06em",
-                }}
-              >
-                <div>Client</div>
-                <div>Email</div>
-                <div>{isVisits ? "Passages" : "Points"}</div>
-                <div style={{ textAlign: "right" }}>Dernier passage</div>
-              </div>
-              {filteredClients.map((c) => (
-                <div
-                  key={c.id}
-                  className="table-row"
-                  style={{ gridTemplateColumns: "1.4fr 1.8fr 1fr 1fr" }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                    <div
-                      style={{
-                        width: 30,
-                        height: 30,
-                        flex: "none",
-                        borderRadius: "50%",
-                        background: "var(--color-cream)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontWeight: 700,
-                        fontSize: 12,
-                      }}
-                    >
-                      {c.first_name.charAt(0).toUpperCase()}
+            {/* ----- Caisses ----- */}
+            <section id="caisses" className="cpt-panneau">
+              <h2 className="cpt-panneau-titre">Mes caisses</h2>
+              <p className="cpt-panneau-note">
+                Les téléphones autorisés à scanner les cartes de vos clients.
+              </p>
+
+              {devices.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  {devices.map((d) => (
+                    <div key={d.id} className="cpt-caisse">
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div className="cpt-caisse-nom">{d.label}</div>
+                        <div className="cpt-caisse-date">
+                          Appairé le {new Date(d.created_at).toLocaleDateString("fr-FR")}
+                        </div>
+                      </div>
+                      <Button variant="destructive" size="sm" onClick={() => revokeDevice(d)}>
+                        Retirer
+                      </Button>
                     </div>
-                    <span style={{ fontWeight: 700 }}>{c.first_name}</span>
-                  </div>
-                  <div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>
-                    {c.email}
-                  </div>
-                  <div style={{ fontWeight: 700 }}>{c.points}</div>
-                  <div
-                    style={{
-                      textAlign: "right",
-                      color: "var(--color-text-secondary)",
-                      fontSize: 13,
-                    }}
-                  >
-                    {new Date(c.updated_at).toLocaleString("fr-FR", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </div>
-                </div>
-              ))}
-              {filteredClients.length === 0 && (
-                <div
-                  style={{
-                    padding: 24,
-                    textAlign: "center",
-                    color: "var(--color-text-secondary)",
-                    fontSize: 13,
-                  }}
-                >
-                  Aucun client ne correspond à « {search} »
+                  ))}
                 </div>
               )}
+
+              {!pairingCode ? (
+                <button className="cpt-ajout" onClick={genCode}>
+                  Appairer une caisse
+                </button>
+              ) : (
+                <div className="cpt-code">
+                  <div className="cpt-code-consigne">Saisissez ce code sur le téléphone</div>
+                  <div className="cpt-code-valeur">{pairingCode}</div>
+                  <div className="cpt-code-reste">
+                    valable {mm} min {ss} s
+                  </div>
+                </div>
+              )}
+
+              <p className="cpt-aide" style={{ marginTop: 12, display: "block" }}>
+                Sur le téléphone de caisse, ouvrez{" "}
+                <a href="/scan" target="_blank" rel="noopener noreferrer">
+                  fidelo.app/scan
+                </a>{" "}
+                et entrez le code.
+              </p>
             </section>
+          </div>
+
+          <div className="cpt-pied">
+            <PoweredByBadge />
           </div>
         </main>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", padding: "12px 0 32px" }}>
-        <PoweredByBadge />
-      </div>
-
-      {toast && (
-        <div className="toast">
-          <span
-            style={{
-              width: 22,
-              height: 22,
-              flex: "none",
-              borderRadius: "50%",
-              background: "var(--color-success)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 12,
-            }}
-          >
-            ✓
-          </span>
-          {toast}
+      {recu && (
+        <div className={`cpt-recu${recu.echec ? " cpt-recu--echec" : ""}`} role="status">
+          <span className="cpt-recu-marque">{recu.echec ? "Échec" : "OK"}</span>
+          <span>{recu.texte}</span>
         </div>
       )}
     </div>

@@ -1,0 +1,9 @@
+{
+  // Aligne l'éditeur sur la version de TypeScript du projet (5.9.3) plutôt que
+  // sur celle fournie avec VS Code. Sans ça, l'éditeur signale des erreurs que
+  // `npm run typecheck` ne voit pas — et inversement.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  // VS Code demande confirmation avant d'utiliser un TypeScript du projet :
+  // sans cette invite, le réglage ci-dessus reste sans effet.
+  "typescript.enablePromptUseWorkspaceTsdk": true
+}

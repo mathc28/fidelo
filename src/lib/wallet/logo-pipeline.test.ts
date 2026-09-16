@@ -125,13 +125,22 @@ describe("generateAppleLogos", () => {
     expect(Buffer.compare(logo2x, logo3x)).not.toBe(0);
   });
 
-  it("never widens a landscape logo beyond its natural aspect ratio", async () => {
+  it("contains a wide landscape logo inside Apple's box instead of overflowing it", async () => {
     const raw = await fixture({ canvasW: 2000, canvasH: 600, markW: 1800, markH: 300 });
     const source = await normalizeSource(raw);
-    const { logo3x } = await generateAppleLogos(source);
+    const { logo, logo3x } = await generateAppleLogos(source);
+
+    // Source en 6:1 : c'est la largeur qui borne, pas la hauteur. Avant, on ne
+    // contraignait que la hauteur et le @3x sortait en 900x150 — largement
+    // au-delà des 480 pt qu'iOS accepte, qui le réduisait ensuite lui-même.
+    const d1 = await dims(logo);
     const d3 = await dims(logo3x);
-    expect(d3.height).toBe(150);
-    expect(d3.width).toBeCloseTo(900, -1); // 1800/300 * 150
+    expect(d1.width).toBe(160);
+    expect(d1.height).toBeCloseTo(27, -1); // 160 / 6
+    expect(d3.width).toBe(480);
+    expect(d3.height).toBeCloseTo(80, -1); // 480 / 6
+    // Le ratio d'origine est préservé : jamais de déformation.
+    expect(d3.width / d3.height).toBeCloseTo(6, 0);
   });
 });
 

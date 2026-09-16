@@ -4,13 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseBrowser";
 import { Button, Field, Logo, SubscriptionBadge, ProgramBadge } from "@/components/ui";
+import type * as Row from "@/lib/types";
 
-type Merchant = {
-  id: string;
-  slug: string;
-  name: string;
-  program_type: "visits" | "points";
-  subscription_status: string;
+// `cards` est calculé par l'API, pas une colonne : d'où l'intersection.
+type Merchant = Pick<
+  Row.Merchant,
+  "id" | "slug" | "name" | "program_type" | "subscription_status"
+> & {
   cards: number;
 };
 

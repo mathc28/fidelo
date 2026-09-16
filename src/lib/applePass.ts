@@ -2,6 +2,7 @@ import { PKPass } from "passkit-generator";
 import { config } from "./config";
 import { Customer, Merchant, Reward, getCardTheme } from "./supabaseAdmin";
 import { getPassImages } from "./passAssets";
+import { separerRecompense, texteCompteur, texteRecompense } from "./wallet/rewardText";
 
 /**
  * Génère le .pkpass d'un client, entièrement paramétré par son merchant :
@@ -17,10 +18,8 @@ export async function buildApplePass(
   const theme = await getCardTheme(merchant.theme_id);
   const isVisits = merchant.program_type === "visits";
 
-  // Une seule récompense : soit le seuil est atteint et elle est à retirer,
-  // soit elle reste l'objectif à afficher.
-  const reachedReward = reward && customer.points >= reward.cost_points ? reward : undefined;
-  const nextReward = reachedReward ? undefined : (reward ?? undefined);
+  // Même découpe que l'aperçu du dashboard : source unique dans wallet/rewardText.
+  const { reachedReward, nextReward } = separerRecompense(reward, customer.points);
 
   const pass = new PKPass(
     images,
@@ -28,7 +27,14 @@ export async function buildApplePass(
       wwdr: config.apple.wwdrCert(),
       signerCert: config.apple.signerCert(),
       signerKey: config.apple.signerKey(),
-      signerKeyPassphrase: config.apple.signerKeyPassphrase,
+      // Le schéma de passkit-generator déclare `signerKeyPassphrase` en
+      // `Joi.string()` sans `.allow("")` : une chaîne vide est refusée, alors
+      // que la propriété absente passe (elle n'est pas `.required()`). Une clé
+      // non chiffrée n'a pas de passphrase — on omet donc la clé au lieu
+      // d'envoyer "", que node-forge ignorerait de toute façon.
+      ...(config.apple.signerKeyPassphrase
+        ? { signerKeyPassphrase: config.apple.signerKeyPassphrase }
+        : {}),
     },
     {
       formatVersion: 1,
@@ -41,9 +47,12 @@ export async function buildApplePass(
       webServiceURL: `${config.baseUrl}/api/apple`,
       authenticationToken: customer.auth_token,
 
-      // Un logo carré ou portrait devient trop étroit une fois contraint par
-      // la hauteur : sans le nom à côté, la marque est invisible sur le pass.
-      ...(merchant.is_square_logo ? { logoText: merchant.name } : {}),
+      // Pas de `logoText` : c'est le seul texte qu'Apple rende à côté du logo,
+      // et il faisait doublon avec le logo du commerce, qui porte déjà son nom.
+      // Il grignotait en plus la largeur de l'en-tête, d'où la troncature en
+      // « Boulangerie M… ». `organizationName` ci-dessus reste défini et suffit
+      // à l'identification : Apple ne l'affiche jamais sur la face avant, il ne
+      // sert qu'aux notifications, aux réglages et au dos de la carte.
 
       ...(merchant.lat != null && merchant.lng != null
         ? {
@@ -66,30 +75,42 @@ export async function buildApplePass(
 
   pass.type = "storeCard";
 
-  pass.primaryFields.push({
-    key: "balance",
-    label: isVisits ? "PASSAGES" : "POINTS",
-    value:
-      isVisits && nextReward ? `${customer.points} / ${nextReward.cost_points}` : customer.points,
-    changeMessage: isVisits ? "Passage enregistré ! %@" : "Vous avez maintenant %@ points !",
-  });
-
-  pass.secondaryFields.push({
+  // En-tête — le prénom à droite du logo et du nom du commerce. Ce champ
+  // prend sur la largeur de `logoText` : sur un nom long, c'est lui qui
+  // reviendra tronquer « Boulangerie Michel ».
+  pass.headerFields.push({
     key: "member",
     label: "MEMBRE",
     value: customer.first_name,
   });
 
-  pass.auxiliaryFields.push({
-    key: "reward",
-    label: "RÉCOMPENSE",
-    value: reachedReward
-      ? `🎁 ${reachedReward.label} — disponible !`
-      : nextReward
-        ? `Plus que ${nextReward.cost_points - customer.points} ${isVisits ? "passage(s)" : "point(s)"} avant : ${nextReward.label}`
-        : "Programme en cours",
-    changeMessage: "%@",
-  });
+  // `primaryFields` volontairement vide : disposition à l'essai, la zone
+  // principale reste libre et les deux informations descendent d'une rangée.
+
+  // Rangée secondaire — le compteur et la récompense côte à côte. Le libellé
+  // y est au-dessus de la valeur et prend la `labelColor` du thème, ce que la
+  // rangée principale ne permet pas.
+  pass.secondaryFields.push(
+    {
+      key: "balance",
+      label: isVisits ? "VOS PASSAGES" : "VOS POINTS",
+      // Sans objectif, la valeur reste un nombre et non une chaîne : Apple lui
+      // applique alors le formatage local, donc l'espace des milliers.
+      value: nextReward
+        ? texteCompteur(customer.points, nextReward.cost_points, isVisits)
+        : customer.points,
+      changeMessage: isVisits ? "Passage enregistré ! %@" : "Vous avez maintenant %@ points !",
+    },
+    {
+      key: "reward",
+      label: "RÉCOMPENSE",
+      value: texteRecompense(reachedReward, nextReward, customer.points),
+      // Calé à droite pour fermer la rangée : le compteur garde l'alignement
+      // à gauche par défaut, les deux champs s'appuient sur les bords.
+      textAlignment: "PKTextAlignmentRight",
+      changeMessage: "%@",
+    }
+  );
 
   pass.backFields.push(
     { key: "email", label: "Compte", value: customer.email },
