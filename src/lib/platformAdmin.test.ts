@@ -10,22 +10,22 @@ describe("isPlatformAdminEmail", () => {
 
   it("returns false when the list is empty", () => {
     process.env.PLATFORM_ADMIN_EMAILS = "";
-    expect(isPlatformAdminEmail("owner@fidelo.app")).toBe(false);
+    expect(isPlatformAdminEmail("owner@fiduo.app")).toBe(false);
   });
 
   it("returns false for an undefined email", () => {
-    process.env.PLATFORM_ADMIN_EMAILS = "owner@fidelo.app";
+    process.env.PLATFORM_ADMIN_EMAILS = "owner@fiduo.app";
     expect(isPlatformAdminEmail(undefined)).toBe(false);
   });
 
   it("matches case-insensitively", () => {
-    process.env.PLATFORM_ADMIN_EMAILS = "Owner@Fidelo.app, other@fidelo.app";
-    expect(isPlatformAdminEmail("owner@fidelo.app")).toBe(true);
-    expect(isPlatformAdminEmail("OTHER@FIDELO.APP")).toBe(true);
+    process.env.PLATFORM_ADMIN_EMAILS = "Owner@Fiduo.app, other@fiduo.app";
+    expect(isPlatformAdminEmail("owner@fiduo.app")).toBe(true);
+    expect(isPlatformAdminEmail("OTHER@FIDUO.APP")).toBe(true);
   });
 
   it("rejects emails not in the list", () => {
-    process.env.PLATFORM_ADMIN_EMAILS = "owner@fidelo.app";
-    expect(isPlatformAdminEmail("intrus@fidelo.app")).toBe(false);
+    process.env.PLATFORM_ADMIN_EMAILS = "owner@fiduo.app";
+    expect(isPlatformAdminEmail("intrus@fiduo.app")).toBe(false);
   });
 });

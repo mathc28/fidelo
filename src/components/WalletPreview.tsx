@@ -96,7 +96,7 @@ function ApplePass(p: WalletPreviewProps) {
     serial,
   } = p;
   const isVisits = programType === "visits";
-  const qr = useQrDataUrl(serial || "FIDELO-DEMO", "#111111");
+  const qr = useQrDataUrl(serial || "FIDUO-DEMO", "#111111");
 
   const label: React.CSSProperties = {
     fontSize: 10,
@@ -205,7 +205,7 @@ function ApplePass(p: WalletPreviewProps) {
               color: "#3c3c43",
             }}
           >
-            {(serial || "FIDELO").slice(0, 8).toUpperCase()}
+            {(serial || "FIDUO").slice(0, 8).toUpperCase()}
           </span>
         </div>
       </div>
@@ -217,7 +217,7 @@ function ApplePass(p: WalletPreviewProps) {
 function GooglePass(p: WalletPreviewProps) {
   const { theme, merchantName, logoUrl, programType, points, threshold, firstName, serial } = p;
   const isVisits = programType === "visits";
-  const qr = useQrDataUrl(serial || "FIDELO-DEMO", "#202124");
+  const qr = useQrDataUrl(serial || "FIDUO-DEMO", "#202124");
 
   // Google calcule lui-même la couleur du texte (clair sur fond sombre)
   const fg = "#FFFFFF";
@@ -316,7 +316,7 @@ function GooglePass(p: WalletPreviewProps) {
           )}
         </div>
         <span style={{ marginTop: 8, fontSize: 11, color: "#5f6368", letterSpacing: 1 }}>
-          {(serial || "FIDELO").slice(0, 8).toUpperCase()}
+          {(serial || "FIDUO").slice(0, 8).toUpperCase()}
         </span>
       </div>
     </div>

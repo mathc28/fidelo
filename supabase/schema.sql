@@ -297,7 +297,7 @@ create table card_themes (
 );
 
 insert into card_themes (id, label, bg_color, text_color, label_color, sort_order, is_light) values
-  ('marine',     'Marine Fidelo', '#1A2E60', '#F3EFE3', '#F56C5A', 1,  false),
+  ('marine',     'Marine Fiduo', '#1A2E60', '#F3EFE3', '#F56C5A', 1,  false),
   ('nuit',       'Bleu nuit',     '#141B2E', '#F3EFE3', '#F2C14E', 2,  false),
   ('bordeaux',   'Bordeaux',      '#5C1F2E', '#F3EFE3', '#E8A87C', 3,  false),
   ('foret',      'Forêt',         '#1E3D34', '#F3EFE3', '#E8B44A', 4,  false),

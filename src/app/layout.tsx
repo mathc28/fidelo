@@ -28,14 +28,14 @@ const spaceMono = Space_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Fidelo — la carte de fidélité dans le téléphone de vos clients",
-    template: "%s · Fidelo",
+    default: "Fiduo — la carte de fidélité dans le téléphone de vos clients",
+    template: "%s · Fiduo",
   },
   description:
     "Une carte de fidélité dans Apple Wallet et Google Wallet pour les commerces de quartier. Rien à installer pour vos clients, aucun matériel pour vous.",
   manifest: "/manifest.json",
   openGraph: {
-    title: "Fidelo",
+    title: "Fiduo",
     description:
       "Une carte de fidélité dans Apple Wallet et Google Wallet pour les commerces de quartier.",
     locale: "fr_FR",

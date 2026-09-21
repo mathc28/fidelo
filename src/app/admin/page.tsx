@@ -178,7 +178,7 @@ export default function AdminPage() {
     <div>
       <header className="admin-barre on-dark">
         <Logo variant="symbol" theme="white" height={24} />
-        <span className="admin-barre-nom">Fidelo</span>
+        <span className="admin-barre-nom">Fiduo</span>
         <span className="pill-on-dark">Back-office</span>
         <div className="admin-barre-fin">
           <span className="admin-barre-compte">{session.user.email}</span>

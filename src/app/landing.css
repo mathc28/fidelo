@@ -1,7 +1,7 @@
 /* ============================================================
-   Landing Fidelo — direction « Le comptoir »
+   Landing Fiduo — direction « Le comptoir »
    ------------------------------------------------------------
-   Fidelo remplace la carte en carton tamponnée : la page est donc
+   Fiduo remplace la carte en carton tamponnée : la page est donc
    faite de sa matière. Fond kraft, papier de ticket, et des
    séparations en pointillés de coupon détachable plutôt qu'en
    aplats alternés.
@@ -656,7 +656,7 @@
 }
 
 /* Un autre thème du nuancier (« Forêt ») : la carte prend les couleurs du
-   commerce, pas celles de Fidelo. */
+   commerce, pas celles de Fiduo. */
 .landing-formule-svg--foret {
   --pass-fond: var(--color-kraft);
 }

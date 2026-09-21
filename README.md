@@ -90,4 +90,4 @@ transaction, `lib/loyalty.ts` pousse la mise à jour vers les deux wallets.
 - PDF chevalet de comptoir (QR vers /m/[slug]/inscription)
 - Page /dashboard : gestion des récompenses et liste des devices avec révocation
 
-# fidelo
+# fiduo

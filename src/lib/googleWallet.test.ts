@@ -26,7 +26,7 @@ vi.mock("google-auth-library", () => ({
 
 vi.mock("./config", () => ({
   config: {
-    baseUrl: "https://fidelo.test",
+    baseUrl: "https://fiduo.test",
     google: { issuerId: "3388000000000000000", saEmail: "sa@test", saKey: () => "key" },
   },
 }));

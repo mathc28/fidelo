@@ -66,7 +66,7 @@ const LETTRES_JOUR = ["D", "L", "M", "M", "J", "V", "S"] as const;
 const JOURS_FRISE = 14;
 const DUREE_CODE = 600;
 
-/** Le thème « Marine Fidelo » de card_themes, tant que la liste n'est pas chargée. */
+/** Le thème « Marine Fiduo » de card_themes, tant que la liste n'est pas chargée. */
 const THEME_PAR_DEFAUT = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
 
 const STATUT_CLASSE = {
@@ -407,7 +407,7 @@ export default function DashboardPage() {
     if (!qrDataUrl || !merchant) return;
     const a = document.createElement("a");
     a.href = qrDataUrl;
-    a.download = `fidelo-${merchant.slug}-qr.png`;
+    a.download = `fiduo-${merchant.slug}-qr.png`;
     a.click();
   }
 
@@ -718,7 +718,7 @@ export default function DashboardPage() {
           {seuilTete}
           <h1 className="cpt-seuil-titre">Aucun commerce sur ce compte</h1>
           <p className="cpt-note">
-            Les comptes commerçants sont créés par l&apos;équipe Fidelo. Si vous venez de recevoir
+            Les comptes commerçants sont créés par l&apos;équipe Fiduo. Si vous venez de recevoir
             votre invitation, contactez votre interlocuteur : il rattachera votre boutique à cette
             adresse.
           </p>
@@ -775,7 +775,7 @@ export default function DashboardPage() {
           {statut.variant === "error" && (
             <a
               className="cpt-regulariser"
-              href="mailto:bonjour@fidelo.app?subject=Mon%20abonnement"
+              href="mailto:bonjour@fiduo.app?subject=Mon%20abonnement"
             >
               Régulariser le paiement
             </a>
@@ -1253,7 +1253,7 @@ export default function DashboardPage() {
               <p className="field-hint cpt-caisses-aide">
                 Sur le téléphone de caisse, ouvrez{" "}
                 <a href="/scan" target="_blank" rel="noopener noreferrer">
-                  fidelo.app/scan
+                  fiduo.app/scan
                 </a>{" "}
                 et entrez le code.
               </p>

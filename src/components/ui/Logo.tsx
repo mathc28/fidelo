@@ -17,13 +17,13 @@ export function Logo({ variant = "full", theme = "color", height = 40 }: LogoPro
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
-      alt="Fidelo"
+      alt="Fiduo"
       style={{ height, width: "auto", filter: whiteSymbol ? "brightness(0) invert(1)" : undefined }}
     />
   );
 }
 
-/** Signature "Propulsé par Fidelo" — clair sur fonds neutres, pastille marine sur fonds variables. */
+/** Signature "Propulsé par Fiduo" — clair sur fonds neutres, pastille marine sur fonds variables. */
 export function PoweredByBadge({ variant = "plain" }: { variant?: "plain" | "pill" }) {
   if (variant === "pill") {
     return (
@@ -39,7 +39,7 @@ export function PoweredByBadge({ variant = "plain" }: { variant?: "plain" | "pil
       >
         <Logo variant="symbol" theme="white" height={14} />
         <span style={{ fontSize: 11, color: "var(--color-paper)", fontWeight: 600 }}>
-          Propulsé par <span style={{ fontFamily: "var(--font-display)" }}>Fidelo</span>
+          Propulsé par <span style={{ fontFamily: "var(--font-display)" }}>Fiduo</span>
         </span>
       </div>
     );
@@ -48,7 +48,7 @@ export function PoweredByBadge({ variant = "plain" }: { variant?: "plain" | "pil
     <div style={{ display: "inline-flex", alignItems: "center", gap: 7, opacity: 0.75 }}>
       <Logo variant="symbol" height={16} />
       <span style={{ fontSize: 12, color: "var(--color-text)", fontWeight: 600 }}>
-        Propulsé par <span style={{ fontFamily: "var(--font-display)" }}>Fidelo</span>
+        Propulsé par <span style={{ fontFamily: "var(--font-display)" }}>Fiduo</span>
       </span>
     </div>
   );

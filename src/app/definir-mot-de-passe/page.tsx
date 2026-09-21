@@ -100,7 +100,7 @@ export default function DefinirMotDePassePage() {
   return (
     <main className="auth-shell">
       <Logo height={36} />
-      <h1 className="auth-title">{isRecovery ? "Nouveau mot de passe" : "Bienvenue sur Fidelo"}</h1>
+      <h1 className="auth-title">{isRecovery ? "Nouveau mot de passe" : "Bienvenue sur Fiduo"}</h1>
       <p className="auth-lede">
         {isRecovery
           ? "Choisissez un nouveau mot de passe pour votre espace commerçant."

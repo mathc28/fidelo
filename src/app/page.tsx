@@ -11,7 +11,7 @@ import "./landing.css";
 const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
 
 /** Tant qu'il n'y a pas d'inscription en libre-service, l'action est honnête : on écrit. */
-const CONTACT = "mailto:bonjour@fidelo.app?subject=D%C3%A9marrer%20avec%20Fidelo";
+const CONTACT = "mailto:bonjour@fiduo.app?subject=D%C3%A9marrer%20avec%20Fiduo";
 const CTA = "Écrire pour démarrer";
 
 /** Le carton d'aujourd'hui, tenu en registre : trois constats, pas trois tuiles. */
@@ -67,7 +67,7 @@ const QUESTIONS = [
   },
   {
     q: "Ça marche sur iPhone et sur Android ?",
-    a: "Les deux, sans que vous ayez à y penser. Fidelo reconnaît le téléphone du client et lui propose Apple Wallet ou Google Wallet automatiquement.",
+    a: "Les deux, sans que vous ayez à y penser. Fiduo reconnaît le téléphone du client et lui propose Apple Wallet ou Google Wallet automatiquement.",
   },
   {
     q: "Combien de temps pour démarrer ?",
@@ -79,7 +79,7 @@ const QUESTIONS = [
   },
   {
     q: "Et si je n'y connais rien en informatique ?",
-    a: "C'est pour vous que Fidelo a été fait. On vous accompagne à la mise en route, et au quotidien il n'y a qu'un geste : scanner la carte du client. Si vous savez encaisser, vous savez utiliser Fidelo.",
+    a: "C'est pour vous que Fiduo a été fait. On vous accompagne à la mise en route, et au quotidien il n'y a qu'un geste : scanner la carte du client. Si vous savez encaisser, vous savez utiliser Fiduo.",
   },
 ] as const;
 
@@ -395,7 +395,7 @@ export default function LandingPage() {
           </div>
           <div className="landing-ticket">
             <div className="landing-ticket-tete">
-              <div className="landing-ticket-enseigne">Fidelo</div>
+              <div className="landing-ticket-enseigne">Fiduo</div>
               <div className="landing-ticket-mention">Abonnement mensuel · sans engagement</div>
             </div>
             {TICKET.map((l) => (
@@ -485,7 +485,7 @@ export default function LandingPage() {
       <footer className="landing-pied">
         <div className="landing-wrap landing-pied-inner">
           <Logo variant="symbol" theme="white" height={22} />
-          <span className="landing-pied-mention">© 2026 Fidelo · Fabriqué à Lyon</span>
+          <span className="landing-pied-mention">© 2026 Fiduo · Fabriqué à Lyon</span>
           <div className="landing-pied-liens">
             {/* TODO : pages Mentions légales et Confidentialité (obligatoires, LCEN / RGPD). */}
             <a href="#" className="landing-pied-lien">
@@ -494,8 +494,8 @@ export default function LandingPage() {
             <a href="#" className="landing-pied-lien">
               Confidentialité
             </a>
-            <a href="mailto:bonjour@fidelo.app" className="landing-pied-lien">
-              bonjour@fidelo.app
+            <a href="mailto:bonjour@fiduo.app" className="landing-pied-lien">
+              bonjour@fiduo.app
             </a>
           </div>
         </div>

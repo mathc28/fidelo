@@ -10,7 +10,7 @@ export async function geocodeAddress(
 ): Promise<{ lat: number; lng: number } | null> {
   const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(address)}`;
   const res = await fetch(url, {
-    headers: { "User-Agent": `Fidelo/1.0 (${config.baseUrl})` },
+    headers: { "User-Agent": `Fiduo/1.0 (${config.baseUrl})` },
   });
   if (!res.ok) return null;
 
