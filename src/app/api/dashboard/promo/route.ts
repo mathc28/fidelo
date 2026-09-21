@@ -3,8 +3,7 @@ import { requireMerchant } from "@/lib/dashboardAuth";
 import { db, merchantActive } from "@/lib/supabaseAdmin";
 import { pushMerchantPasses } from "@/lib/apns";
 import { broadcastMerchantPromo } from "@/lib/googleWallet";
-
-const MAX_PROMOS_PER_WEEK = 3;
+import { MAX_PROMOS, PROMO_WINDOW_MS } from "@/lib/promo";
 
 /** Giga promo du merchant connecté : push Apple + Google, avec anti-spam. */
 export async function POST(req: NextRequest) {
@@ -16,15 +15,15 @@ export async function POST(req: NextRequest) {
   if (!message) return new NextResponse("Message requis", { status: 400 });
 
   // Anti-spam : protège la valeur du canal pour tout le monde
-  const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+  const weekAgo = new Date(Date.now() - PROMO_WINDOW_MS).toISOString();
   const { count } = await db
     .from("promos")
     .select("*", { count: "exact", head: true })
     .eq("merchant_id", merchant.id)
     .gte("sent_at", weekAgo);
 
-  if ((count ?? 0) >= MAX_PROMOS_PER_WEEK) {
-    return new NextResponse(`Limite de ${MAX_PROMOS_PER_WEEK} promos par semaine atteinte`, {
+  if ((count ?? 0) >= MAX_PROMOS) {
+    return new NextResponse(`Limite atteinte : ${MAX_PROMOS} promos sur 7 jours glissants`, {
       status: 429,
     });
   }

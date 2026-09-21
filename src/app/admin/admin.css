@@ -1,0 +1,339 @@
+/* Back-office plateforme — même matière que le dashboard, densité d'outil. */
+
+.admin-login-tete {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-barre {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  height: 56px;
+  padding: 0 clamp(16px, 3vw, 28px);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-marine);
+  color: var(--color-paper);
+}
+
+.admin-barre-nom {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: var(--text-lg);
+}
+
+.admin-barre-fin {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-barre-compte {
+  font-size: var(--text-sm);
+  color: var(--color-on-marine-muted);
+}
+
+.admin-barre-lien {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-on-marine-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.admin-barre-lien:hover {
+  color: var(--color-paper);
+}
+
+@media (max-width: 640px) {
+  .admin-barre-compte {
+    display: none;
+  }
+}
+
+.admin-corps {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 26px clamp(16px, 3vw, 28px) 48px;
+}
+
+.admin-grille {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 22px;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .admin-grille {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.admin-titre {
+  font-size: var(--text-xl);
+}
+
+.admin-sous-titre {
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+  margin: 4px 0 0;
+}
+
+.admin-note {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+  margin: 0 0 18px;
+}
+
+/* ---------- Tableau des commerçants ---------- */
+
+.admin-table {
+  padding: 0;
+  overflow: hidden;
+}
+
+.admin-table-tete {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 18px 22px 14px;
+}
+
+.admin-recherche {
+  width: 260px;
+  max-width: 100%;
+}
+
+.admin-defile {
+  overflow-x: auto;
+}
+
+.admin-defile > .table-head,
+.admin-defile > .table-row {
+  min-width: 640px;
+}
+
+.admin-cols-commercants {
+  grid-template-columns: 2fr 1.1fr 1.2fr 0.8fr 0.7fr;
+}
+
+.admin-cols-clients {
+  grid-template-columns: 1.4fr 1.8fr 1fr 1fr;
+}
+
+.admin-droite {
+  text-align: right;
+}
+
+.admin-nom {
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-slug {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-vide {
+  padding: 28px;
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+/* ---------- Création ---------- */
+
+.admin-creation {
+  position: sticky;
+  top: 82px;
+}
+
+@media (max-width: 1000px) {
+  .admin-creation {
+    position: static;
+  }
+}
+
+.admin-titre-2 {
+  font-size: var(--text-lg);
+  margin-bottom: 4px;
+}
+
+.admin-slug-apercu {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.admin-slug-apercu strong {
+  background: var(--color-cream);
+  border-radius: var(--radius-xs);
+  padding: 1px 6px;
+  color: var(--color-text);
+}
+
+.admin-options {
+  display: flex;
+  gap: 8px;
+  border: none;
+  padding: 0;
+  margin: 0 0 14px;
+  min-width: 0;
+}
+
+.admin-options legend {
+  padding: 0;
+}
+
+.admin-option-titre {
+  display: block;
+  font-weight: 700;
+  font-size: var(--text-sm);
+  margin-bottom: 3px;
+}
+
+.admin-option-desc {
+  display: block;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: var(--color-text-secondary);
+}
+
+.admin-recompense {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px;
+  gap: 10px;
+  align-items: start;
+}
+
+.admin-cree p {
+  margin: 0 0 16px;
+}
+
+.admin-url {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  background: var(--color-cream);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 16px;
+}
+
+.admin-url code {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--text-xs);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Fiche commerçant ---------- */
+
+.admin-fiche-tete {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 900px) {
+  .admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.admin-duo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 820px) {
+  .admin-duo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.admin-pleine {
+  grid-column: 1 / -1;
+}
+
+.admin-ligne {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--color-border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+}
+
+.admin-ligne + .admin-ligne {
+  margin-top: 8px;
+}
+
+.admin-ligne-titre {
+  font-weight: 700;
+  font-size: var(--text-md);
+}
+
+.admin-ligne-meta {
+  font-size: var(--text-xs);
+  color: var(--color-text-secondary);
+}
+
+.admin-seuil {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  min-width: 44px;
+  text-align: center;
+}
+
+.admin-chargement {
+  padding: 80px 20px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.admin-sans-marge {
+  margin-bottom: 0;
+}

@@ -19,18 +19,23 @@ export function Badge({
   );
 }
 
-const SUBSCRIPTION_LABELS: Record<string, { variant: BadgeVariant; label: string }> = {
-  active: { variant: "success", label: "Actif" },
-  trialing: { variant: "warning", label: "Essai" },
+export const SUBSCRIPTION_LABELS: Record<string, { variant: BadgeVariant; label: string }> = {
+  active: { variant: "success", label: "Abonnement actif" },
+  trialing: { variant: "warning", label: "Période d'essai" },
   past_due: { variant: "error", label: "Paiement en retard" },
+  canceled: { variant: "error", label: "Abonnement résilié" },
+  unpaid: { variant: "error", label: "Abonnement impayé" },
+  incomplete: { variant: "warning", label: "Abonnement incomplet" },
 };
+
+/** Libellé et variante d'un statut d'abonnement ; jamais l'enum brut à l'écran. */
+export function subscriptionStatus(status: string) {
+  return SUBSCRIPTION_LABELS[status] ?? { variant: "error" as const, label: "Abonnement inactif" };
+}
 
 /** Mappe le statut d'abonnement Supabase (active/trialing/past_due…) sur un badge. */
 export function SubscriptionBadge({ status }: { status: string }) {
-  const { variant, label } = SUBSCRIPTION_LABELS[status] ?? {
-    variant: "error" as const,
-    label: status,
-  };
+  const { variant, label } = subscriptionStatus(status);
   return (
     <Badge variant={variant} dot>
       {label}

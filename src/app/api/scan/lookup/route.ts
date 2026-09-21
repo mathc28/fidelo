@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
       .eq("merchant_id", auth.merchant.id)
       .or(`first_name.ilike.%${q}%,email.ilike.%${q}%`)
       .limit(5);
-    return NextResponse.json({ results: data ?? [] });
+    return NextResponse.json({ results: data ?? [], programType: auth.merchant.program_type });
   }
 
   const { data: customer } = await db
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
       auth.merchant.program_type === "visits" &&
       (scansToday ?? 0) >= auth.merchant.max_scans_per_day,
     reward: reward ? { label: reward.label, cost_points: reward.cost_points } : null,
-    // Seuil atteint : la caisse propose « Récompense utilisée », qui remet à zéro.
+    // Seuil atteint : la caisse propose « Offrir la récompense », qui remet à zéro.
     rewardAvailable: reward != null && customer.points >= reward.cost_points,
   });
 }

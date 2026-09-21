@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
+import { emailValide, unite } from "@/lib/uiText";
 
 type Account = {
   firstName: string;
@@ -13,194 +14,144 @@ type Account = {
 
 export default function AccountLookup({
   slug,
-  labelColor,
   programType,
 }: {
   slug: string;
-  labelColor: string;
   programType: string;
 }) {
   const [email, setEmail] = useState("");
   const [account, setAccount] = useState<Account | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const isVisits = programType === "visits";
 
-  async function lookup() {
-    if (!email) return;
-    setLoading(true);
+  async function lookup(e: FormEvent) {
+    e.preventDefault();
     setError("");
+    if (!emailValide(email)) {
+      setError("Cette adresse email semble incomplète.");
+      return;
+    }
+    setLoading(true);
     try {
       const res = await fetch(`/api/m/${slug}/lookup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       });
       if (res.status === 404) {
         setError("Aucune carte pour cet email.");
         return;
       }
+      if (res.status >= 400 && res.status < 500) {
+        setError((await res.text()) || "Vérifiez votre adresse email.");
+        return;
+      }
       if (!res.ok) throw new Error();
       setAccount(await res.json());
     } catch {
-      setError("Impossible de récupérer votre carte.");
+      setError("Connexion impossible. Vérifiez votre réseau et réessayez.");
     } finally {
       setLoading(false);
     }
   }
 
-  const input: React.CSSProperties = {
-    width: "100%",
-    padding: "14px 16px",
-    borderRadius: "var(--radius-md)",
-    border: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(255,255,255,0.08)",
-    color: "#fff",
-    fontSize: 16,
-    marginBottom: 12,
-    boxSizing: "border-box",
-  };
-
   if (account) {
-    const progress = account.nextReward
-      ? Math.min(100, Math.round((account.points / account.nextReward.cost) * 100))
-      : 100;
+    const reward = account.nextReward;
+    const ready = reward ? account.points >= reward.cost : false;
+    const restant = reward ? reward.cost - account.points : 0;
     return (
       <div>
-        <div
-          style={{
-            background: "rgba(255,255,255,0.07)",
-            borderRadius: "var(--radius-lg)",
-            padding: 22,
-            textAlign: "center",
-            marginBottom: 16,
-          }}
-        >
-          <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 12, margin: 0, letterSpacing: 1 }}>
-            BONJOUR {account.firstName.toUpperCase()}
-          </p>
-          <p
-            style={{
-              fontSize: 46,
-              fontWeight: 800,
-              letterSpacing: -1,
-              margin: "4px 0",
-              color: labelColor,
-            }}
-          >
+        <div className="m-card">
+          <p className="m-hello m-muted">Bonjour {account.firstName}</p>
+          <p className="m-count">
             {account.points}
-            {account.nextReward && programType === "visits" && (
-              <span style={{ fontSize: 20, color: "rgba(255,255,255,0.4)" }}>
-                {" "}
-                / {account.nextReward.cost}
-              </span>
-            )}
+            {reward && isVisits && <span className="m-count-total"> / {reward.cost}</span>}
           </p>
-          {account.nextReward && (
+          {reward && (
             <>
               <div
-                style={{
-                  background: "rgba(255,255,255,0.12)",
-                  borderRadius: 99,
-                  height: 6,
-                  overflow: "hidden",
-                  marginBottom: 8,
-                }}
+                className="m-progress"
+                role="progressbar"
+                aria-label={`Progression vers : ${reward.label}`}
+                aria-valuemin={0}
+                aria-valuemax={reward.cost}
+                aria-valuenow={Math.min(account.points, reward.cost)}
               >
-                <div style={{ width: `${progress}%`, height: "100%", background: labelColor }} />
+                <div
+                  className="m-progress-fill"
+                  style={{ width: `${Math.min(100, (account.points / reward.cost) * 100)}%` }}
+                />
               </div>
-              <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 13, margin: 0 }}>
-                Plus que {account.nextReward.cost - account.points}{" "}
-                {programType === "visits" ? "passage(s)" : "point(s)"} avant :{" "}
-                {account.nextReward.label}
-              </p>
+              {ready ? (
+                <p className="m-reward-ready">
+                  Récompense disponible : {reward.label}. Demandez-la en caisse.
+                </p>
+              ) : (
+                <p className="m-muted" style={{ fontSize: "var(--text-sm)", margin: 0 }}>
+                  Plus que {unite(restant, isVisits)} avant : {reward.label}
+                </p>
+              )}
             </>
           )}
         </div>
-        <a
-          href={account.appleUrl}
-          style={{
-            display: "block",
-            textAlign: "center",
-            padding: 14,
-            borderRadius: "var(--radius-md)",
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            color: "#fff",
-            textDecoration: "none",
-            fontWeight: 600,
-            marginBottom: 10,
-            fontSize: 14,
-          }}
-        >
-          Ré-ajouter à Apple Wallet
+        <a href={account.appleUrl} className="m-wallet m-wallet--apple">
+          Ajouter à nouveau à Apple Wallet
         </a>
-        <a
-          href={account.googleUrl}
-          style={{
-            display: "block",
-            textAlign: "center",
-            padding: 14,
-            borderRadius: "var(--radius-md)",
-            background: "rgba(255,255,255,0.08)",
-            border: "1px solid rgba(255,255,255,0.2)",
-            color: "#fff",
-            textDecoration: "none",
-            fontWeight: 600,
-            fontSize: 14,
-          }}
-        >
-          Ré-ajouter à Google Wallet
+        <a href={account.googleUrl} className="m-wallet m-wallet--google">
+          Ajouter à nouveau à Google Wallet
         </a>
-        <p
-          style={{
-            color: "rgba(255,255,255,0.3)",
-            fontSize: 12,
-            textAlign: "center",
-            marginTop: 14,
-          }}
-        >
+        <p className="m-muted" style={{ fontSize: "var(--text-xs)", textAlign: "center" }}>
           Membre depuis le {new Date(account.memberSince).toLocaleDateString("fr-FR")}
         </p>
+        <button
+          type="button"
+          className="m-link m-muted"
+          onClick={() => {
+            setAccount(null);
+            setEmail("");
+          }}
+        >
+          Ce n&apos;est pas vous ? Chercher une autre carte
+        </button>
       </div>
     );
   }
 
   return (
-    <>
-      <input
-        style={input}
-        type="email"
-        placeholder="Votre email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && lookup()}
-      />
-      {error && <p style={{ color: "#ff8a8a", fontSize: 14 }}>{error}</p>}
-      <button
-        onClick={lookup}
-        disabled={loading}
-        style={{
-          width: "100%",
-          padding: 16,
-          borderRadius: "var(--radius-md)",
-          border: "none",
-          background: labelColor,
-          color: "#111",
-          fontSize: 16,
-          fontWeight: 700,
-          cursor: "pointer",
-          opacity: loading ? 0.6 : 1,
-        }}
-      >
+    <form onSubmit={lookup} noValidate>
+      <div className="m-field">
+        <label className="m-label" htmlFor="compte-email">
+          Votre email
+        </label>
+        <input
+          id="compte-email"
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="go"
+          className={`field-input field-input--on-theme${error ? " has-error" : ""}`}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "compte-erreur" : undefined}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
+      {error && (
+        <p id="compte-erreur" className="m-error" role="alert">
+          {error}
+        </p>
+      )}
+      <button type="submit" className="m-action" disabled={loading}>
         {loading ? "Recherche…" : "Voir ma carte"}
       </button>
-      <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 13, marginTop: 14 }}>
-        Pas encore de carte ?{" "}
-        <a href={`/m/${slug}/inscription`} style={{ color: labelColor }}>
-          Créez-la en 30 secondes
-        </a>
-        .
-      </p>
-    </>
+      <a href={`/m/${slug}/inscription`} className="m-link m-muted" style={{ marginTop: 8 }}>
+        Pas encore de carte ? Créez-la en 30 secondes
+      </a>
+    </form>
   );
 }

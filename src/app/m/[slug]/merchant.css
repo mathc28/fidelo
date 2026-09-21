@@ -1,0 +1,227 @@
+/* ============================================================
+   Pages client /m/[slug] — aux couleurs du commerce
+   ------------------------------------------------------------
+   Le fond, le texte et l'accent viennent du thème de carte choisi
+   par le commerçant (card_themes) : --theme-bg, --theme-text,
+   --accent. Tout le reste s'en déduit, pour qu'un thème clair ou
+   sombre reste lisible sans règle particulière.
+
+   Contrastes vérifiés sur les 10 thèmes : texte atténué à 72 %
+   ≥ 4,7:1, texte #1a1a1a sur l'accent ≥ 5,9:1.
+   ============================================================ */
+
+.m-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--theme-bg);
+  color: var(--theme-text);
+}
+
+.m-col {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 40px 20px 32px;
+  display: flex;
+  flex-direction: column;
+  min-height: inherit;
+}
+
+.m-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+  font-weight: 600;
+}
+
+.m-brand img {
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.m-title {
+  font-size: 1.7rem;
+  line-height: 1.2;
+  margin-bottom: 10px;
+  text-wrap: balance;
+}
+
+.m-muted {
+  opacity: 0.72;
+}
+
+.m-lede {
+  line-height: 1.55;
+  margin: 0 0 28px;
+}
+
+.m-foot {
+  display: flex;
+  justify-content: center;
+  margin-top: auto;
+  padding-top: 40px;
+}
+
+/* Libellé de champ : l'accent du thème, lisible sur son fond (≥ 4,4:1). */
+.m-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--accent);
+}
+
+.m-field {
+  margin-bottom: 14px;
+}
+
+.m-error {
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-error-text);
+  margin: 0 0 14px;
+}
+
+.on-dark .m-error {
+  color: var(--color-error-on-dark);
+}
+
+/* L'action principale : l'aplat d'accent du thème, texte quasi noir. */
+.m-action {
+  display: block;
+  width: 100%;
+  min-height: 52px;
+  padding: 15px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #1a1a1a;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.m-action:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.m-action:hover {
+  color: #1a1a1a;
+}
+
+/* Boutons wallet. TODO : remplacer par les badges officiels français
+   « Ajouter à Apple Wallet » / « Ajouter à Google Wallet » (SVG fournis
+   par Apple et Google, obligatoires selon leurs chartes). */
+.m-wallet {
+  display: block;
+  text-align: center;
+  padding: 15px;
+  min-height: 52px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 10px;
+}
+
+.m-wallet--apple {
+  background: #000;
+  color: #fff;
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+}
+
+.m-wallet--google {
+  background: #fff;
+  color: #1f1f1f;
+}
+
+.m-wallet--apple:hover {
+  color: #fff;
+}
+
+.m-wallet--google:hover {
+  color: #1f1f1f;
+}
+
+/* Lien secondaire : une vraie cible au doigt (44px), pas un texte de 13px. */
+.m-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 10px;
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: var(--text-md);
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.m-link:hover {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.m-success {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 6px;
+}
+
+/* Relevé de compte */
+.m-card {
+  background: color-mix(in srgb, var(--theme-text) 8%, transparent);
+  border-radius: var(--radius-md);
+  padding: 22px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.m-hello {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--mono-m);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.m-count {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 2.8rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 6px 0;
+  color: var(--accent);
+}
+
+.m-count-total {
+  font-size: 1.2rem;
+  color: var(--theme-text);
+  opacity: 0.72;
+}
+
+.m-progress {
+  background: color-mix(in srgb, var(--theme-text) 16%, transparent);
+  border-radius: var(--radius-xs);
+  height: 6px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.m-progress-fill {
+  height: 100%;
+  background: var(--accent);
+}
+
+.m-reward-ready {
+  font-weight: 600;
+  margin: 8px 0 0;
+}

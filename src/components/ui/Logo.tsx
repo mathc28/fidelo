@@ -33,13 +33,13 @@ export function PoweredByBadge({ variant = "plain" }: { variant?: "plain" | "pil
           alignItems: "center",
           gap: 7,
           background: "var(--color-marine)",
-          borderRadius: 999,
+          borderRadius: "var(--radius-xs)",
           padding: "7px 14px",
         }}
       >
         <Logo variant="symbol" theme="white" height={14} />
-        <span style={{ fontSize: 11, color: "#fff", fontWeight: 600 }}>
-          Propulsé par <span style={{ fontFamily: "var(--font-heading)" }}>Fidelo</span>
+        <span style={{ fontSize: 11, color: "var(--color-paper)", fontWeight: 600 }}>
+          Propulsé par <span style={{ fontFamily: "var(--font-display)" }}>Fidelo</span>
         </span>
       </div>
     );
@@ -48,7 +48,7 @@ export function PoweredByBadge({ variant = "plain" }: { variant?: "plain" | "pil
     <div style={{ display: "inline-flex", alignItems: "center", gap: 7, opacity: 0.75 }}>
       <Logo variant="symbol" height={16} />
       <span style={{ fontSize: 12, color: "var(--color-text)", fontWeight: 600 }}>
-        Propulsé par <span style={{ fontFamily: "var(--font-heading)" }}>Fidelo</span>
+        Propulsé par <span style={{ fontFamily: "var(--font-display)" }}>Fidelo</span>
       </span>
     </div>
   );

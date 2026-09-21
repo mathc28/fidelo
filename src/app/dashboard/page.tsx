@@ -1,11 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseBrowser";
 import type * as Row from "@/lib/types";
-import { Button, Field, Logo, PoweredByBadge } from "@/components/ui";
+import {
+  Button,
+  ConfirmButton,
+  Field,
+  Logo,
+  PoweredByBadge,
+  subscriptionStatus,
+} from "@/components/ui";
 import WalletPreview from "@/components/WalletPreview";
 import { separerRecompense, texteRecompense } from "@/lib/wallet/rewardText";
+import { MAX_PROMOS, PROMO_WINDOW_MS, prochainEnvoiPossible } from "@/lib/promo";
+import { authErrorFr, pluriel } from "@/lib/uiText";
 import "./dashboard.css";
 
 // Dérivés du modèle plutôt que redéclarés : chaque alias dit exactement quelles
@@ -30,23 +40,23 @@ const SOMMAIRE = [
   {
     zone: "Aujourd'hui",
     liens: [
-      { href: "#registre", label: "Le registre" },
-      { href: "#clients", label: "Mes clients" },
+      { id: "registre", label: "Relevé du jour" },
+      { id: "clients", label: "Mes clients" },
     ],
   },
   {
     zone: "Faire",
     liens: [
-      { href: "#promo", label: "Envoyer une promo" },
-      { href: "#inscription", label: "Le QR du comptoir" },
+      { id: "promo", label: "Envoyer une promo" },
+      { id: "inscription", label: "QR d'inscription" },
     ],
   },
   {
     zone: "Réglages",
     liens: [
-      { href: "#carte", label: "Ma carte" },
-      { href: "#recompense", label: "La récompense" },
-      { href: "#caisses", label: "Mes caisses" },
+      { id: "carte", label: "Ma carte" },
+      { id: "recompense", label: "Récompense" },
+      { id: "caisses", label: "Mes caisses" },
     ],
   },
 ] as const;
@@ -54,16 +64,20 @@ const SOMMAIRE = [
 const LETTRES_JOUR = ["D", "L", "M", "M", "J", "V", "S"] as const;
 
 const JOURS_FRISE = 14;
+const DUREE_CODE = 600;
 
-const STATUTS: Record<string, { classe: string; label: string }> = {
-  active: { classe: "cpt-statut--actif", label: "Abonnement actif" },
-  trialing: { classe: "cpt-statut--essai", label: "Période d'essai" },
-  past_due: { classe: "cpt-statut--retard", label: "Paiement en retard" },
-};
+/** Le thème « Marine Fidelo » de card_themes, tant que la liste n'est pas chargée. */
+const THEME_PAR_DEFAUT = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
+
+const STATUT_CLASSE = {
+  success: "cpt-statut--actif",
+  warning: "cpt-statut--essai",
+  error: "cpt-statut--retard",
+} as Record<string, string>;
 
 function Statut({ status }: { status: string }) {
-  const s = STATUTS[status] ?? { classe: "cpt-statut--retard", label: status };
-  return <span className={`cpt-statut ${s.classe}`}>{s.label}</span>;
+  const { variant, label } = subscriptionStatus(status);
+  return <span className={`cpt-statut ${STATUT_CLASSE[variant] ?? ""}`}>{label}</span>;
 }
 
 /** Minuit, il y a `recul` jours. Passe par setDate plutôt que par une
@@ -107,7 +121,7 @@ function Frise({ jours, unite }: { jours: Journee[]; unite: string }) {
             <div
               key={j.date.toISOString()}
               className="cpt-frise-cellule"
-              title={`${jourCourt(j.date)} — ${j.n} ${unite}`}
+              title={`${jourCourt(j.date)} : ${j.n} ${unite}`}
             >
               <svg viewBox="0 0 40 40" aria-hidden="true" focusable="false">
                 {j.n === 0 && !estAujourdhui && (
@@ -141,11 +155,19 @@ function Frise({ jours, unite }: { jours: Journee[]; unite: string }) {
 function Releve({ label, valeur, appoint }: { label: string; valeur: string; appoint: string }) {
   return (
     <div>
-      <div className="cpt-releve-lib">{label}</div>
-      <div className="cpt-releve-val">{valeur}</div>
-      <div className="cpt-releve-app">{appoint}</div>
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{valeur}</div>
+      <div className="stat-delta">{appoint}</div>
     </div>
   );
+}
+
+/** « +12 % par rapport aux 7 jours d'avant » : un chiffre seul ne dit pas s'il est bon. */
+function ecart(recent: number, avant: number): string {
+  if (avant === 0) return recent === 0 ? "rien sur quatorze jours" : "rien les 7 jours d'avant";
+  const pct = Math.round(((recent - avant) / avant) * 100);
+  if (pct === 0) return "autant que les 7 jours d'avant";
+  return `${pct > 0 ? "+" : "−"}${Math.abs(pct)} % par rapport aux 7 jours d'avant`;
 }
 
 /**
@@ -155,26 +177,31 @@ function Releve({ label, valeur, appoint }: { label: string; valeur: string; app
  * les API routes qui portent la logique métier (push, anti-spam).
  */
 export default function DashboardPage() {
-  const [session, setSession] = useState<any>(null);
+  // undefined = en cours de lecture ; null = pas de session / pas de commerce.
+  // Sans ce troisième état, l'écran de connexion puis « Aucun commerce »
+  // clignotaient à chaque chargement.
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [loggingIn, setLoggingIn] = useState(false);
 
-  const [merchant, setMerchant] = useState<Row.Merchant | null>(null);
+  const [merchant, setMerchant] = useState<Row.Merchant | null | undefined>(undefined);
+  const [loadError, setLoadError] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [reward, setReward] = useState<Reward | null>(null);
   const [rewardLabel, setRewardLabel] = useState("");
   const [rewardCost, setRewardCost] = useState("");
+  const [rewardError, setRewardError] = useState("");
   const [savingReward, setSavingReward] = useState(false);
   const [devices, setDevices] = useState<Device[]>([]);
   const [themes, setThemes] = useState<Row.CardTheme[]>([]);
 
   const [totalCards, setTotalCards] = useState(0);
   const [cardsThisMonth, setCardsThisMonth] = useState(0);
-  const [txThisMonth, setTxThisMonth] = useState(0);
   const [txToday, setTxToday] = useState(0);
   const [jours, setJours] = useState<Journee[]>([]);
-  const [promosThisWeek, setPromosThisWeek] = useState(0);
+  const [promoDates, setPromoDates] = useState<string[]>([]);
 
   const [name, setName] = useState("");
   const [themeId, setThemeId] = useState("marine");
@@ -187,17 +214,23 @@ export default function DashboardPage() {
   const [sendingPromo, setSendingPromo] = useState(false);
 
   const [pairingCode, setPairingCode] = useState<string | null>(null);
-  const [codeLeft, setCodeLeft] = useState(600);
+  const [codeLeft, setCodeLeft] = useState(DUREE_CODE);
+  const [codeExpired, setCodeExpired] = useState(false);
+  const [genPending, setGenPending] = useState(false);
+  const devicesAtCode = useRef(0);
 
   const [search, setSearch] = useState("");
   const [recu, setRecu] = useState<Recu | null>(null);
-  const recuTimer = useRef<any>(null);
+  const recuTimer = useRef<ReturnType<typeof setTimeout>>();
   const [previewPlatform, setPreviewPlatform] = useState<"apple" | "google">("apple");
   const [framed, setFramed] = useState(false);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);
 
   const [inscriptionUrl, setInscriptionUrl] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [qrFailed, setQrFailed] = useState(false);
+
+  const [activeSection, setActiveSection] = useState<string>("registre");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -205,100 +238,111 @@ export default function DashboardPage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const charger = useCallback(async () => {
+    setLoadError(false);
+    const { data: m, error: mErr } = await supabase.from("merchants").select("*").maybeSingle();
+    if (mErr) {
+      setLoadError(true);
+      return;
+    }
+    setMerchant(m);
+    if (!m) return;
+    setName(m.name);
+    setThemeId(m.theme_id);
+    setAddress(m.address ?? "");
+
+    const debutJour = minuit();
+    const debutFrise = minuit(JOURS_FRISE - 1);
+    const debutMois = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const fenetrePromo = new Date(Date.now() - PROMO_WINDOW_MS).toISOString();
+
+    const resultats = await Promise.all([
+      supabase
+        .from("customers")
+        .select("id,first_name,email,points,updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(20),
+      supabase.from("rewards").select("*").eq("active", true).maybeSingle(),
+      supabase
+        .from("devices")
+        .select("id,label,created_at")
+        .is("revoked_at", null)
+        .order("created_at"),
+      supabase.from("card_themes").select("*").order("sort_order"),
+      supabase.from("customers").select("*", { count: "exact", head: true }),
+      supabase
+        .from("customers")
+        .select("*", { count: "exact", head: true })
+        .gte("created_at", debutMois.toISOString()),
+      supabase
+        .from("transactions")
+        .select("delta, created_at")
+        .eq("type", "earn")
+        .gte("created_at", debutFrise.toISOString()),
+      supabase.from("promos").select("sent_at").gte("sent_at", fenetrePromo),
+    ] as const);
+
+    // Une lecture en échec ne doit pas se déguiser en état vide (« personne
+    // n'a encore scanné ») : on le dit, et on propose de recommencer.
+    if (resultats.some((r) => r.error)) {
+      setLoadError(true);
+      return;
+    }
+    const [
+      { data: c },
+      { data: r },
+      { data: d },
+      { data: th },
+      { count: total },
+      { count: newThisMonth },
+      { data: earnRows },
+      { data: promos },
+    ] = resultats;
+
+    setCustomers(c ?? []);
+    setReward(r);
+    setRewardLabel(r?.label ?? "");
+    setRewardCost(r ? String(r.cost_points) : "");
+    setDevices(d ?? []);
+    setThemes(th ?? []);
+    setTotalCards(total ?? 0);
+    setCardsThisMonth(newThisMonth ?? 0);
+    setPromoDates((promos ?? []).map((p) => p.sent_at));
+
+    // Un « passage » se compte à la ligne, un point se somme.
+    const rows = earnRows ?? [];
+    const countEarn = (list: { delta: number }[]) =>
+      m.program_type === "points" ? list.reduce((sum, row) => sum + row.delta, 0) : list.length;
+    const entre = (debut: number, fin: number) =>
+      rows.filter((row) => {
+        const t = new Date(row.created_at).getTime();
+        return t >= debut && t < fin;
+      });
+
+    const demain = Date.now() + 24 * 3600 * 1000;
+    setTxToday(countEarn(entre(debutJour.getTime(), demain)));
+    setJours(
+      Array.from({ length: JOURS_FRISE }, (_, i) => {
+        const debut = minuit(JOURS_FRISE - 1 - i);
+        const fin = minuit(JOURS_FRISE - 2 - i);
+        return { date: debut, n: countEarn(entre(debut.getTime(), fin.getTime())) };
+      })
+    );
+  }, []);
+
   useEffect(() => {
-    if (!session) return;
-    (async () => {
-      const { data: m } = await supabase.from("merchants").select("*").single();
-      setMerchant(m);
-      if (!m) return;
-      setName(m.name);
-      setThemeId(m.theme_id);
-      setAddress(m.address ?? "");
+    if (session) charger();
+  }, [session, charger]);
 
-      const debutJour = minuit();
-      const debutFrise = minuit(JOURS_FRISE - 1);
-      const debutMois = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-      const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
-      // Une seule lecture des transactions couvre le mois ET la frise : au
-      // début d'un mois c'est la frise qui remonte le plus loin, à la fin
-      // c'est le mois. On prend la borne la plus ancienne des deux.
-      const depuis = new Date(Math.min(debutFrise.getTime(), debutMois.getTime())).toISOString();
-
-      const [
-        { data: c },
-        { data: r },
-        { data: d },
-        { data: th },
-        { count: total },
-        { count: newThisMonth },
-        { data: earnRows },
-        { count: promoWeek },
-      ] = await Promise.all([
-        supabase
-          .from("customers")
-          .select("id,first_name,email,points,updated_at")
-          .order("updated_at", { ascending: false })
-          .limit(20),
-        supabase.from("rewards").select("*").eq("active", true).maybeSingle(),
-        supabase
-          .from("devices")
-          .select("id,label,created_at")
-          .is("revoked_at", null)
-          .order("created_at"),
-        supabase.from("card_themes").select("*").order("sort_order"),
-        supabase.from("customers").select("*", { count: "exact", head: true }),
-        supabase
-          .from("customers")
-          .select("*", { count: "exact", head: true })
-          .gte("created_at", debutMois.toISOString()),
-        supabase
-          .from("transactions")
-          .select("delta, created_at")
-          .eq("type", "earn")
-          .gte("created_at", depuis),
-        supabase.from("promos").select("*", { count: "exact", head: true }).gte("sent_at", weekAgo),
-      ]);
-
-      setCustomers(c ?? []);
-      setReward(r);
-      setRewardLabel(r?.label ?? "");
-      setRewardCost(r ? String(r.cost_points) : "");
-      setDevices(d ?? []);
-      setThemes(th ?? []);
-      setTotalCards(total ?? 0);
-      setCardsThisMonth(newThisMonth ?? 0);
-
-      // Un « passage » se compte à la ligne, un point se somme.
-      const rows = earnRows ?? [];
-      const countEarn = (list: { delta: number }[]) =>
-        m.program_type === "points" ? list.reduce((sum, row) => sum + row.delta, 0) : list.length;
-      const entre = (debut: number, fin: number) =>
-        rows.filter((row) => {
-          const t = new Date(row.created_at).getTime();
-          return t >= debut && t < fin;
-        });
-
-      const demain = Date.now() + 24 * 3600 * 1000;
-      setTxThisMonth(countEarn(entre(debutMois.getTime(), demain)));
-      setTxToday(countEarn(entre(debutJour.getTime(), demain)));
-      setJours(
-        Array.from({ length: JOURS_FRISE }, (_, i) => {
-          const debut = minuit(JOURS_FRISE - 1 - i);
-          const fin = minuit(JOURS_FRISE - 2 - i);
-          return { date: debut, n: countEarn(entre(debut.getTime(), fin.getTime())) };
-        })
-      );
-      setPromosThisWeek(promoWeek ?? 0);
-    })();
-  }, [session]);
-
+  // Compte à rebours du code d'appairage ; à l'échéance, on le dit.
   useEffect(() => {
     if (!pairingCode) return;
     const timer = setInterval(() => {
       setCodeLeft((left) => {
         if (left <= 1) {
           setPairingCode(null);
-          return 600;
+          setCodeExpired(true);
+          return DUREE_CODE;
         }
         return left - 1;
       });
@@ -306,20 +350,58 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, [pairingCode]);
 
+  // Tant qu'un code est affiché, on guette l'arrivée de la nouvelle caisse
+  // pour confirmer l'appairage sans que le commerçant recharge la page.
+  useEffect(() => {
+    if (!pairingCode) return;
+    const poll = setInterval(async () => {
+      const { data } = await supabase
+        .from("devices")
+        .select("id,label,created_at")
+        .is("revoked_at", null)
+        .order("created_at");
+      if (data && data.length > devicesAtCode.current) {
+        setDevices(data);
+        setPairingCode(null);
+        accuser("Caisse appairée : elle peut scanner les cartes.");
+      }
+    }, 4000);
+    return () => clearInterval(poll);
+  }, [pairingCode]);
+
   useEffect(() => {
     if (!merchant) return;
     let cancelled = false;
     const url = `${window.location.origin}/m/${merchant.slug}/inscription`;
     setInscriptionUrl(url);
+    setQrFailed(false);
     import("qrcode")
       .then((QR) => QR.toDataURL(url, { width: 1200 }))
       .then((d) => !cancelled && setQrDataUrl(d))
-      .catch(() => {});
+      .catch(() => !cancelled && setQrFailed(true));
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [merchant?.slug]);
+
+  // Sommaire : la section lue est signalée (aria-current).
+  useEffect(() => {
+    if (!merchant) return;
+    const ids = SOMMAIRE.flatMap((g) => g.liens.map((l) => l.id));
+    const obs = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length > 0) setActiveSection(visible[0].target.id);
+      },
+      { rootMargin: "-90px 0px -60% 0px" }
+    );
+    ids.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) obs.observe(el);
+    });
+    return () => obs.disconnect();
+  }, [merchant]);
 
   function downloadQr() {
     if (!qrDataUrl || !merchant) return;
@@ -329,112 +411,160 @@ export default function DashboardPage() {
     a.click();
   }
 
+  /** Une confirmation s'efface seule ; un échec reste jusqu'à ce qu'on le ferme. */
   function accuser(texte: string, echec = false) {
     clearTimeout(recuTimer.current);
     setRecu({ texte, echec });
-    recuTimer.current = setTimeout(() => setRecu(null), echec ? 5000 : 2800);
+    if (!echec) recuTimer.current = setTimeout(() => setRecu(null), 3500);
   }
 
-  async function login() {
+  async function login(e: FormEvent) {
+    e.preventDefault();
     setAuthError("");
+    setLoggingIn(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setAuthError(error.message);
+    setLoggingIn(false);
+    if (error) setAuthError(authErrorFr(error));
   }
 
   async function saveCard() {
     if (!session || !merchant) return;
     setSavingCard(true);
-    const res = await fetch("/api/dashboard/profile", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ name, themeId, address }),
-    });
-    setSavingCard(false);
-    if (!res.ok) {
-      accuser(await res.text(), true);
-      return;
+    try {
+      const res = await fetch("/api/dashboard/profile", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ name, themeId, address }),
+      });
+      if (!res.ok) {
+        accuser(await res.text(), true);
+        return;
+      }
+      const data = await res.json();
+      setMerchant(data.merchant);
+      accuser("Carte enregistrée. Vos clients la verront à leur prochain passage.");
+    } catch {
+      accuser("Pas de connexion : la carte n'a pas été enregistrée.", true);
+    } finally {
+      setSavingCard(false);
     }
-    const data = await res.json();
-    setMerchant(data.merchant);
-    accuser("Carte enregistrée — vos clients la verront à leur prochain passage");
+  }
+
+  function clearLogoPreview() {
+    setLogoPreviewUrl((url) => {
+      if (url) URL.revokeObjectURL(url);
+      return null;
+    });
   }
 
   async function uploadLogo(file: File) {
     if (!session) return;
     // Aperçu instantané du fichier choisi, avant même la fin de l'upload —
     // l'aperçu de carte ne doit pas attendre l'aller-retour serveur.
+    clearLogoPreview();
     setLogoPreviewUrl(URL.createObjectURL(file));
     setUploadingLogo(true);
     const form = new FormData();
     form.append("logo", file);
-    const res = await fetch("/api/dashboard/logo", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${session.access_token}` },
-      body: form,
-    });
-    setUploadingLogo(false);
-    if (!res.ok) {
-      accuser(await res.text(), true);
-      return;
+    try {
+      const res = await fetch("/api/dashboard/logo", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+        body: form,
+      });
+      if (!res.ok) {
+        // Le logo refusé ne doit pas rester affiché sur l'aperçu.
+        clearLogoPreview();
+        accuser(await res.text(), true);
+        return;
+      }
+      const data = await res.json();
+      setMerchant((m) => (m ? { ...m, logo_url: data.logoUrl } : m));
+      clearLogoPreview();
+      accuser(
+        data.warning ?? "Logo mis à jour. Vos clients le verront à leur prochain passage.",
+        Boolean(data.warning)
+      );
+    } catch {
+      clearLogoPreview();
+      accuser("Pas de connexion : le logo n'a pas été envoyé.", true);
+    } finally {
+      setUploadingLogo(false);
     }
-    const data = await res.json();
-    setMerchant((m) => (m ? { ...m, logo_url: data.logoUrl } : m));
-    setLogoPreviewUrl((url) => {
-      if (url) URL.revokeObjectURL(url);
-      return null;
-    });
-    accuser(
-      data.warning ?? "Logo mis à jour — vos clients le verront à leur prochain passage",
-      Boolean(data.warning)
-    );
   }
 
-  const promoMaxed = promosThisWeek >= 3;
+  const prochainEnvoi = prochainEnvoiPossible(promoDates);
+  const promosRecentes = promoDates.filter(
+    (d) => Date.now() - new Date(d).getTime() < PROMO_WINDOW_MS
+  ).length;
+  const promoMaxed = prochainEnvoi !== null;
   const promoEmpty = promoText.trim().length === 0;
+  const sansClients = totalCards === 0;
 
   async function sendPromo() {
-    if (!session || promoMaxed || promoEmpty) return;
+    if (!session || promoMaxed || promoEmpty || sansClients) return;
     setSendingPromo(true);
-    const res = await fetch("/api/dashboard/promo", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ title: null, message: promoText.trim() }),
-    });
-    setSendingPromo(false);
-    if (!res.ok) {
-      accuser(await res.text(), true);
-      return;
+    try {
+      const res = await fetch("/api/dashboard/promo", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ title: null, message: promoText.trim() }),
+      });
+      if (!res.ok) {
+        accuser(await res.text(), true);
+        return;
+      }
+      const data: { apple_devices_notified: number } = await res.json();
+      setPromoText("");
+      setPromoDates((list) => [...list, new Date().toISOString()]);
+      accuser(
+        `Promo envoyée. ${pluriel(data.apple_devices_notified, "iPhone prévenu", "iPhone prévenus")} ; les cartes Google Wallet se mettent à jour d'elles-mêmes.`
+      );
+    } catch {
+      accuser("Pas de connexion : la promo n'est pas partie.", true);
+    } finally {
+      setSendingPromo(false);
     }
-    setPromoText("");
-    setPromosThisWeek((n) => n + 1);
-    accuser(`Promo envoyée à ${totalCards} clients`);
   }
 
   async function genCode() {
     if (!session) return;
-    const res = await fetch("/api/dashboard/pairing-code", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    });
-    if (!res.ok) {
-      accuser("Impossible de générer un code — réessayez dans un instant", true);
-      return;
+    setGenPending(true);
+    setCodeExpired(false);
+    try {
+      const res = await fetch("/api/dashboard/pairing-code", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      devicesAtCode.current = devices.length;
+      setPairingCode(data.code);
+      setCodeLeft(DUREE_CODE);
+    } catch {
+      accuser("Impossible de générer un code. Réessayez dans un instant.", true);
+    } finally {
+      setGenPending(false);
     }
-    const data = await res.json();
-    setPairingCode(data.code);
-    setCodeLeft(600);
   }
 
   async function revokeDevice(d: Device) {
-    await supabase.from("devices").update({ revoked_at: new Date().toISOString() }).eq("id", d.id);
+    const { error } = await supabase
+      .from("devices")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("id", d.id);
+    if (error) {
+      accuser(`${d.label} n'a pas pu être retirée. Réessayez.`, true);
+      return;
+    }
     setDevices((list) => list.filter((x) => x.id !== d.id));
-    accuser(`${d.label} ne peut plus scanner vos cartes`);
+    accuser(`${d.label} ne peut plus scanner vos cartes.`);
   }
 
   /**
@@ -442,12 +572,18 @@ export default function DashboardPage() {
    * la crée à la première sauvegarde. L'index unique partiel en base garantit
    * qu'il ne peut jamais y en avoir deux actives.
    */
-  async function saveReward() {
+  async function saveReward(e: FormEvent) {
+    e.preventDefault();
     if (!merchant) return;
+    setRewardError("");
     const label = rewardLabel.trim();
     const cost = Number(rewardCost);
-    if (!label || !Number.isInteger(cost) || cost <= 0) {
-      accuser("Indiquez un seuil entier positif et un libellé", true);
+    if (!Number.isInteger(cost) || cost <= 0) {
+      setRewardError("Le seuil doit être un nombre entier, 1 ou plus.");
+      return;
+    }
+    if (!label) {
+      setRewardError("Indiquez ce que le client gagne.");
       return;
     }
 
@@ -467,11 +603,11 @@ export default function DashboardPage() {
     setSavingReward(false);
 
     if (error || !data) {
-      accuser("Enregistrement impossible — réessayez dans un instant", true);
+      accuser("Enregistrement impossible. Réessayez dans un instant.", true);
       return;
     }
     setReward(data);
-    accuser("Récompense enregistrée");
+    accuser("Récompense enregistrée.");
   }
 
   const filteredClients = useMemo(() => {
@@ -499,20 +635,38 @@ export default function DashboardPage() {
     </svg>
   );
 
+  const seuilTete = (
+    <div className="cpt-seuil-tete">
+      <Logo height={30} />
+      <span className="cpt-etiquette">Espace commerçant</span>
+    </div>
+  );
+
+  // Lecture de session ou du commerce en cours : une feuille neutre, pas un
+  // écran de connexion ni un faux état vide.
+  if (session === undefined || (session && merchant === undefined && !loadError)) {
+    return (
+      <div className="comptoir cpt-seuil" aria-busy="true">
+        <main className="cpt-seuil-feuille cpt-attente">
+          {seuilTete}
+          <p className="cpt-note">Ouverture du registre…</p>
+        </main>
+      </div>
+    );
+  }
+
   if (!session) {
     return (
       <div className="comptoir cpt-seuil">
         <main className="cpt-seuil-feuille">
-          <div className="cpt-seuil-tete">
-            <Logo height={30} />
-            <span className="cpt-etiquette">Espace commerçant</span>
-          </div>
+          {seuilTete}
           <h1 className="cpt-seuil-titre">Connexion</h1>
-          <div className="cpt-pile">
+          <form onSubmit={login}>
             <Field
               type="email"
               label="Votre email"
               autoComplete="email"
+              inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -522,16 +676,36 @@ export default function DashboardPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && login()}
             />
-            <Button block onClick={login}>
-              Se connecter
+            <Button type="submit" block disabled={loggingIn || !email || !password}>
+              {loggingIn ? "Connexion…" : "Se connecter"}
             </Button>
-          </div>
-          {authError && <p className="cpt-seuil-erreur">{authError}</p>}
+          </form>
+          {authError && (
+            <p className="cpt-seuil-erreur" role="alert">
+              {authError}
+            </p>
+          )}
           <a className="cpt-seuil-lien" href="/mot-de-passe-oublie">
             Mot de passe oublié
           </a>
+        </main>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="comptoir cpt-seuil">
+        <main className="cpt-seuil-feuille">
+          {seuilTete}
+          <h1 className="cpt-seuil-titre">Le registre n&apos;a pas pu être lu</h1>
+          <p className="cpt-note" role="alert">
+            La connexion avec nos serveurs a échoué. Vos données sont intactes.
+          </p>
+          <div style={{ marginTop: 18 }}>
+            <Button onClick={() => charger()}>Réessayer</Button>
+          </div>
         </main>
       </div>
     );
@@ -541,14 +715,11 @@ export default function DashboardPage() {
     return (
       <div className="comptoir cpt-seuil">
         <main className="cpt-seuil-feuille">
-          <div className="cpt-seuil-tete">
-            <Logo height={30} />
-            <span className="cpt-etiquette">Espace commerçant</span>
-          </div>
+          {seuilTete}
           <h1 className="cpt-seuil-titre">Aucun commerce sur ce compte</h1>
           <p className="cpt-note">
             Les comptes commerçants sont créés par l&apos;équipe Fidelo. Si vous venez de recevoir
-            votre invitation, contactez votre interlocuteur — il rattachera votre boutique à cette
+            votre invitation, contactez votre interlocuteur : il rattachera votre boutique à cette
             adresse.
           </p>
           <button className="cpt-seuil-lien" onClick={() => supabase.auth.signOut()}>
@@ -562,11 +733,10 @@ export default function DashboardPage() {
   const isVisits = merchant.program_type === "visits";
   const unit = isVisits ? "passages" : "points";
   const theme = themes.find((t) => t.id === themeId);
-  const activeTheme = theme ?? {
-    bg_color: "#1A2E60",
-    text_color: "#F3EFE3",
-    label_color: "#F56C5A",
-  };
+  const activeTheme = theme ?? THEME_PAR_DEFAUT;
+  const cardDirty =
+    name !== merchant.name || themeId !== merchant.theme_id || address !== (merchant.address ?? "");
+  const logoAffiche = logoPreviewUrl ?? merchant.logo_url;
   const previewPoints = isVisits ? Math.min(7, reward?.cost_points ?? 7) : 182;
   const previewThreshold = reward?.cost_points ?? (isVisits ? 10 : null);
   // Le texte vient du module partagé avec le générateur de pass : l'aperçu
@@ -588,6 +758,9 @@ export default function DashboardPage() {
     (best, j) => (best === null || j.n > best.n ? j : best),
     null
   );
+  const septDerniers = jours.slice(-7).reduce((s, j) => s + j.n, 0);
+  const septAvant = jours.slice(0, 7).reduce((s, j) => s + j.n, 0);
+  const statut = subscriptionStatus(merchant.subscription_status);
 
   return (
     <div className="comptoir">
@@ -599,6 +772,14 @@ export default function DashboardPage() {
           <span className="cpt-filet" />
           <span className="cpt-enseigne">{merchant.name}</span>
           <Statut status={merchant.subscription_status} />
+          {statut.variant === "error" && (
+            <a
+              className="cpt-regulariser"
+              href="mailto:bonjour@fidelo.app?subject=Mon%20abonnement"
+            >
+              Régulariser le paiement
+            </a>
+          )}
           <div className="cpt-barre-fin">
             <span className="cpt-compte">{session.user.email}</span>
             <button className="cpt-sortir" onClick={() => supabase.auth.signOut()}>
@@ -614,7 +795,12 @@ export default function DashboardPage() {
             <div key={groupe.zone} className="cpt-nav-groupe">
               <span className="cpt-nav-titre">{groupe.zone}</span>
               {groupe.liens.map((l) => (
-                <a key={l.href} href={l.href} className="cpt-nav-lien">
+                <a
+                  key={l.id}
+                  href={`#${l.id}`}
+                  className="cpt-nav-lien"
+                  aria-current={activeSection === l.id ? "location" : undefined}
+                >
                   {l.label}
                 </a>
               ))}
@@ -623,9 +809,11 @@ export default function DashboardPage() {
         </nav>
 
         <main>
-          <section id="registre" className="cpt-registre">
+          <section id="registre" className="cpt-registre" aria-labelledby="registre-titre">
             <div className="cpt-registre-tete">
-              <h2 className="cpt-date">{aujourdhui}</h2>
+              <h2 id="registre-titre" className="cpt-date">
+                {aujourdhui}
+              </h2>
             </div>
 
             <div className="cpt-releves">
@@ -635,16 +823,16 @@ export default function DashboardPage() {
                 appoint={isVisits ? "passages depuis minuit" : "points crédités depuis minuit"}
               />
               <Releve
-                label="Ce mois-ci"
-                valeur={txThisMonth.toLocaleString("fr-FR")}
-                appoint={isVisits ? "passages depuis le 1er" : "points depuis le 1er"}
+                label="7 derniers jours"
+                valeur={septDerniers.toLocaleString("fr-FR")}
+                appoint={ecart(septDerniers, septAvant)}
               />
               <Releve
                 label="Cartes"
                 valeur={totalCards.toLocaleString("fr-FR")}
                 appoint={
                   cardsThisMonth > 0
-                    ? `dont ${cardsThisMonth} créées ce mois`
+                    ? `dont ${pluriel(cardsThisMonth, "créée", "créées")} ce mois`
                     : "aucune nouvelle ce mois"
                 }
               />
@@ -660,26 +848,29 @@ export default function DashboardPage() {
                       weekday: "long",
                       day: "numeric",
                     })}`
-                  : "Aucun passage sur la période"}
+                  : `Aucun ${isVisits ? "passage" : "point"} sur la période`}
               </span>
             </div>
           </section>
 
           {/* ===== Clients ===== */}
-          <section id="clients" className="cpt-panneau" style={{ marginTop: 18 }}>
+          <section id="clients" className="cpt-panneau cpt-suite">
             <div className="cpt-panneau-tete">
               <h2 className="cpt-panneau-titre">Mes clients</h2>
               {customers.length > 0 && (
                 <input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Chercher un prénom, un email…"
-                  aria-label="Chercher un client"
-                  className="cpt-saisie cpt-recherche"
+                  placeholder={`Filtrer ces ${customers.length} clients`}
+                  aria-label="Filtrer les clients affichés"
+                  className="field-input field-input--sm cpt-recherche"
                 />
               )}
             </div>
-            <p className="cpt-panneau-note">Les vingt clients passés le plus récemment.</p>
+            <p className="cpt-panneau-note">
+              Les {customers.length > 1 ? `${customers.length} clients` : "clients"} dont la carte a
+              bougé le plus récemment.
+            </p>
 
             {customers.length === 0 ? (
               <div className="cpt-vide">
@@ -697,7 +888,7 @@ export default function DashboardPage() {
                       <th>Client</th>
                       <th>Email</th>
                       <th className="cpt-col-nombre">{isVisits ? "Passages" : "Points"}</th>
-                      <th className="cpt-col-nombre">Dernier passage</th>
+                      <th className="cpt-col-nombre">Dernière activité</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -705,8 +896,8 @@ export default function DashboardPage() {
                       <tr key={c.id}>
                         <td className="cpt-cel-prenom">{c.first_name}</td>
                         <td className="cpt-cel-terne">{c.email}</td>
-                        <td className="cpt-col-nombre cpt-nombre">{c.points}</td>
-                        <td className="cpt-col-nombre cpt-nombre cpt-cel-terne">
+                        <td className="cpt-col-nombre mono">{c.points}</td>
+                        <td className="cpt-col-nombre mono cpt-cel-terne">
                           {new Date(c.updated_at).toLocaleString("fr-FR", {
                             day: "2-digit",
                             month: "2-digit",
@@ -732,16 +923,20 @@ export default function DashboardPage() {
             <section id="promo" className="cpt-panneau">
               <div className="cpt-panneau-tete">
                 <h2 className="cpt-panneau-titre">Envoyer une promo</h2>
-                <span className={`cpt-quota${promoMaxed ? " is-plein" : ""}`}>
-                  {promosThisWeek}/3 cette semaine
+                <span
+                  className={`cpt-quota${promoMaxed ? " is-plein" : ""}`}
+                  title="Sur les 7 derniers jours"
+                >
+                  {promosRecentes}/{MAX_PROMOS} sur 7 jours
                 </span>
               </div>
               <p className="cpt-panneau-note">
-                Le message s&apos;affiche sur la carte de vos {totalCards} clients, dans leur
-                téléphone.
+                {sansClients
+                  ? "Dès qu'un client aura sa carte, le message s'affichera dessus, dans son téléphone."
+                  : `Le message s'affiche sur la carte de vos ${pluriel(totalCards, "client")}, dans leur téléphone.`}
               </p>
-              <label className="cpt-invisible" htmlFor="cpt-promo">
-                Message de la promo
+              <label className="field-label" htmlFor="cpt-promo">
+                Message
               </label>
               <textarea
                 id="cpt-promo"
@@ -749,28 +944,46 @@ export default function DashboardPage() {
                 value={promoText}
                 onChange={(e) => setPromoText(e.target.value.slice(0, 140))}
                 placeholder="Ce samedi, la brioche est à −20 % dès 16 h."
-                className="cpt-saisie cpt-promo-saisie"
+                className="field-input cpt-promo-saisie"
+                aria-describedby="cpt-promo-compteur"
               />
               <div className="cpt-promo-pied">
-                <span className="cpt-compteur">{promoText.length}/140</span>
-                <Button
+                <span id="cpt-promo-compteur" className="cpt-compteur">
+                  {promoText.length}/140
+                </span>
+                <ConfirmButton
                   variant="accent"
-                  onClick={sendPromo}
-                  disabled={promoMaxed || promoEmpty || sendingPromo}
+                  size="md"
+                  disabled={promoMaxed || promoEmpty || sansClients || sendingPromo}
+                  question={`Envoyer à ${pluriel(totalCards, "client")} ?`}
+                  confirmLabel={sendingPromo ? "Envoi…" : "Envoyer"}
+                  onConfirm={sendPromo}
                 >
-                  {sendingPromo ? "Envoi…" : "Envoyer à mes clients"}
-                </Button>
+                  Envoyer à mes clients
+                </ConfirmButton>
               </div>
-              {promoMaxed && (
+              {promoMaxed && prochainEnvoi && (
                 <p className="cpt-avis">
-                  Trois envois par semaine, c&apos;est la limite. Le compteur repart lundi.
+                  {MAX_PROMOS} envois sur 7 jours glissants, c&apos;est la limite. Prochain envoi
+                  possible le{" "}
+                  {prochainEnvoi.toLocaleDateString("fr-FR", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                  })}{" "}
+                  à{" "}
+                  {prochainEnvoi.toLocaleTimeString("fr-FR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                  .
                 </p>
               )}
             </section>
 
             {/* ----- QR d'inscription ----- */}
             <section id="inscription" className="cpt-panneau">
-              <h2 className="cpt-panneau-titre">Le QR du comptoir</h2>
+              <h2 className="cpt-panneau-titre">QR d&apos;inscription</h2>
               <p className="cpt-panneau-note">
                 Imprimez-le et posez-le près de la caisse. Vos clients le scannent, leur carte
                 arrive dans leur téléphone.
@@ -780,14 +993,14 @@ export default function DashboardPage() {
                   {qrDataUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={qrDataUrl} alt="QR code d’inscription de votre boutique" />
+                  ) : qrFailed ? (
+                    <p className="cpt-feuille-echec">QR indisponible. Rechargez la page.</p>
                   ) : (
                     <div className="cpt-feuille-attente" />
                   )}
                 </div>
-                <div style={{ flex: 1, minWidth: 190 }}>
-                  <span className="cpt-etiquette" style={{ marginBottom: 8 }}>
-                    Adresse encodée
-                  </span>
+                <div className="cpt-feuille-infos">
+                  <span className="cpt-etiquette">Adresse encodée</span>
                   <div className="cpt-adresse-qr">{inscriptionUrl ?? "…"}</div>
                   <Button onClick={downloadQr} disabled={!qrDataUrl}>
                     Télécharger le QR
@@ -818,7 +1031,7 @@ export default function DashboardPage() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className={previewPlatform === "apple" ? "is-choisi" : undefined}
+                    className={previewPlatform === "apple" ? "is-selected" : undefined}
                     aria-pressed={previewPlatform === "apple"}
                     onClick={() => setPreviewPlatform("apple")}
                   >
@@ -827,7 +1040,7 @@ export default function DashboardPage() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className={previewPlatform === "google" ? "is-choisi" : undefined}
+                    className={previewPlatform === "google" ? "is-selected" : undefined}
                     aria-pressed={previewPlatform === "google"}
                     onClick={() => setPreviewPlatform("google")}
                   >
@@ -842,7 +1055,7 @@ export default function DashboardPage() {
                   framed={framed}
                   theme={activeTheme}
                   merchantName={name || merchant.name}
-                  logoUrl={logoPreviewUrl ?? merchant.logo_url}
+                  logoUrl={logoAffiche}
                   programType={merchant.program_type}
                   points={previewPoints}
                   threshold={previewThreshold}
@@ -851,26 +1064,22 @@ export default function DashboardPage() {
                 />
               </div>
 
-              <div className="cpt-pile">
-                <div className="cpt-champ">
-                  <label className="cpt-etiquette" htmlFor="cpt-nom">
-                    Nom de l&apos;établissement
-                  </label>
-                  <input
-                    id="cpt-nom"
-                    className="cpt-saisie"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                  />
-                </div>
+              <div>
+                <Field
+                  label="Nom de l'établissement"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
 
-                <div className="cpt-champ">
-                  <span className="cpt-etiquette">Logo</span>
+                <div className="field">
+                  <span className="field-label" id="cpt-logo-label">
+                    Logo
+                  </span>
                   <div className="cpt-logo-rang">
                     <div className="cpt-logo-vignette">
-                      {merchant.logo_url ? (
+                      {logoAffiche ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={merchant.logo_url} alt="" />
+                        <img src={logoAffiche} alt="" />
                       ) : (
                         (name || merchant.name).charAt(0).toUpperCase()
                       )}
@@ -880,6 +1089,7 @@ export default function DashboardPage() {
                       variant="secondary"
                       size="sm"
                       disabled={uploadingLogo}
+                      aria-describedby="cpt-logo-label cpt-logo-aide"
                       onClick={() => logoInputRef.current?.click()}
                     >
                       {uploadingLogo ? "Envoi…" : "Changer le logo"}
@@ -887,8 +1097,8 @@ export default function DashboardPage() {
                     <input
                       ref={logoInputRef}
                       type="file"
-                      accept="image/*"
-                      style={{ display: "none" }}
+                      accept="image/png,image/jpeg"
+                      hidden
                       onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f) uploadLogo(f);
@@ -896,108 +1106,94 @@ export default function DashboardPage() {
                       }}
                     />
                   </div>
-                  <span className="cpt-aide">
+                  <div className="field-hint" id="cpt-logo-aide">
                     PNG ou JPG, 5 Mo au plus. Sert sur la carte et sur vos pages publiques.
-                  </span>
+                  </div>
                 </div>
 
-                <div className="cpt-champ">
-                  <span className="cpt-etiquette">Couleur de la carte</span>
-                  <div className="cpt-nuancier">
+                <fieldset className="field cpt-nuancier-groupe">
+                  <legend className="field-label">
+                    Couleur de la carte
+                    {theme && <span className="cpt-nuancier-nom"> : {theme.label}</span>}
+                  </legend>
+                  <div className="cpt-nuancier" role="radiogroup" aria-label="Couleur de la carte">
                     {themes.map((t) => (
                       <button
                         key={t.id}
                         type="button"
+                        role="radio"
                         className={`cpt-teinte${t.id === themeId ? " is-choisi" : ""}`}
                         aria-label={t.label}
-                        aria-pressed={t.id === themeId}
+                        aria-checked={t.id === themeId}
+                        title={t.label}
                         onClick={() => setThemeId(t.id)}
                         style={{ background: t.bg_color }}
                       />
                     ))}
                   </div>
-                </div>
+                </fieldset>
 
-                <div className="cpt-champ">
-                  <label className="cpt-etiquette" htmlFor="cpt-adresse">
-                    Adresse du commerce
-                  </label>
-                  <input
-                    id="cpt-adresse"
-                    className="cpt-saisie"
-                    value={address}
-                    onChange={(e) => setAddress(e.target.value)}
-                  />
-                  <span className="cpt-aide">
-                    Géocodée automatiquement. C&apos;est elle qui déclenche le rappel sur
-                    l&apos;écran verrouillé, à moins de 300 m.
-                  </span>
-                </div>
+                <Field
+                  label="Adresse du commerce"
+                  autoComplete="street-address"
+                  hint="Géocodée automatiquement. C'est elle qui déclenche le rappel sur l'écran verrouillé quand un client passe à proximité."
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
 
-                <div>
-                  <Button onClick={saveCard} disabled={savingCard}>
+                <div className="cpt-enregistrer">
+                  <Button onClick={saveCard} disabled={savingCard || !cardDirty}>
                     {savingCard ? "Enregistrement…" : "Enregistrer ma carte"}
                   </Button>
+                  {cardDirty && !savingCard && (
+                    <span className="cpt-modifie">Modifications non enregistrées</span>
+                  )}
                 </div>
               </div>
             </div>
           </section>
 
-          <div className="cpt-duo" style={{ marginTop: 18 }}>
+          <div className="cpt-duo cpt-suite">
             {/* ----- Récompense ----- */}
             <section id="recompense" className="cpt-panneau">
-              <h2 className="cpt-panneau-titre">La récompense</h2>
+              <h2 className="cpt-panneau-titre">Récompense</h2>
               <p className="cpt-panneau-note">
                 {isVisits
                   ? "Vos clients gagnent un tampon par visite. Au seuil atteint, la caisse propose la récompense et le compteur repart à zéro."
                   : "Vos clients gagnent un point par euro dépensé. Au seuil atteint, la caisse propose la récompense et le compteur repart à zéro."}
               </p>
 
-              <div className="cpt-pile">
-                <div className="cpt-champ">
-                  <label className="cpt-etiquette" htmlFor="cpt-seuil">
-                    Seuil en {unit}
-                  </label>
-                  <input
-                    id="cpt-seuil"
-                    type="number"
-                    min={1}
-                    step={1}
-                    inputMode="numeric"
-                    className="cpt-saisie cpt-saisie--nombre"
-                    value={rewardCost}
-                    onChange={(e) => setRewardCost(e.target.value)}
-                    placeholder={isVisits ? "10" : "250"}
-                  />
-                </div>
-
-                <div className="cpt-champ">
-                  <label className="cpt-etiquette" htmlFor="cpt-libelle">
-                    Ce que le client gagne
-                  </label>
-                  <input
-                    id="cpt-libelle"
-                    className="cpt-saisie"
-                    value={rewardLabel}
-                    onChange={(e) => setRewardLabel(e.target.value)}
-                    placeholder="Un café offert"
-                    maxLength={60}
-                  />
-                  <span className="cpt-aide">
-                    {rewardLabel.trim() && Number(rewardCost) > 0
+              <form onSubmit={saveReward} noValidate>
+                <Field
+                  label={`Seuil en ${unit}`}
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  className="field-input--number"
+                  value={rewardCost}
+                  onChange={(e) => setRewardCost(e.target.value)}
+                  placeholder={isVisits ? "10" : "250"}
+                />
+                <Field
+                  label="Ce que le client gagne"
+                  value={rewardLabel}
+                  onChange={(e) => setRewardLabel(e.target.value)}
+                  placeholder="Un café offert"
+                  maxLength={60}
+                  error={rewardError || undefined}
+                  hint={
+                    rewardLabel.trim() && Number(rewardCost) > 0
                       ? isVisits
                         ? `Sur la carte : « ${rewardLabel.trim()} » au ${rewardCost}e passage.`
                         : `Sur la carte : « ${rewardLabel.trim()} » à ${rewardCost} points.`
-                      : "Renseignez un seuil et un libellé pour activer la récompense."}
-                  </span>
-                </div>
-
-                <div>
-                  <Button onClick={saveReward} disabled={savingReward}>
-                    {savingReward ? "Enregistrement…" : "Enregistrer la récompense"}
-                  </Button>
-                </div>
-              </div>
+                      : "Renseignez un seuil et un libellé pour activer la récompense."
+                  }
+                />
+                <Button type="submit" disabled={savingReward}>
+                  {savingReward ? "Enregistrement…" : "Enregistrer la récompense"}
+                </Button>
+              </form>
             </section>
 
             {/* ----- Caisses ----- */}
@@ -1008,38 +1204,53 @@ export default function DashboardPage() {
               </p>
 
               {devices.length > 0 && (
-                <div style={{ marginBottom: 16 }}>
+                <div className="cpt-caisses">
                   {devices.map((d) => (
                     <div key={d.id} className="cpt-caisse">
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="cpt-caisse-infos">
                         <div className="cpt-caisse-nom">{d.label}</div>
                         <div className="cpt-caisse-date">
-                          Appairé le {new Date(d.created_at).toLocaleDateString("fr-FR")}
+                          Appairée le {new Date(d.created_at).toLocaleDateString("fr-FR")}
                         </div>
                       </div>
-                      <Button variant="destructive" size="sm" onClick={() => revokeDevice(d)}>
+                      <ConfirmButton
+                        question={`Retirer « ${d.label} » ?`}
+                        confirmLabel="Retirer"
+                        onConfirm={() => revokeDevice(d)}
+                      >
                         Retirer
-                      </Button>
+                      </ConfirmButton>
                     </div>
                   ))}
                 </div>
               )}
 
-              {!pairingCode ? (
-                <button className="cpt-ajout" onClick={genCode}>
-                  Appairer une caisse
-                </button>
-              ) : (
-                <div className="cpt-code">
+              {pairingCode ? (
+                <div className="cpt-code" aria-live="polite">
                   <div className="cpt-code-consigne">Saisissez ce code sur le téléphone</div>
                   <div className="cpt-code-valeur">{pairingCode}</div>
                   <div className="cpt-code-reste">
-                    valable {mm} min {ss} s
+                    valable {mm} min {ss} s · en attente de la caisse
                   </div>
                 </div>
+              ) : (
+                <>
+                  {codeExpired && (
+                    <p className="cpt-avis" role="status">
+                      Code expiré sans être utilisé. Générez-en un nouveau.
+                    </p>
+                  )}
+                  <button className="cpt-ajout" onClick={genCode} disabled={genPending}>
+                    {genPending
+                      ? "Génération du code…"
+                      : codeExpired
+                        ? "Nouveau code"
+                        : "Appairer une caisse"}
+                  </button>
+                </>
               )}
 
-              <p className="cpt-aide" style={{ marginTop: 12, display: "block" }}>
+              <p className="field-hint cpt-caisses-aide">
                 Sur le téléphone de caisse, ouvrez{" "}
                 <a href="/scan" target="_blank" rel="noopener noreferrer">
                   fidelo.app/scan
@@ -1056,9 +1267,17 @@ export default function DashboardPage() {
       </div>
 
       {recu && (
-        <div className={`cpt-recu${recu.echec ? " cpt-recu--echec" : ""}`} role="status">
+        <div
+          className={`cpt-recu${recu.echec ? " cpt-recu--echec" : ""}`}
+          role={recu.echec ? "alert" : "status"}
+        >
           <span className="cpt-recu-marque">{recu.echec ? "Échec" : "OK"}</span>
-          <span>{recu.texte}</span>
+          <span className="cpt-recu-texte">{recu.texte}</span>
+          {recu.echec && (
+            <button className="cpt-recu-fermer" onClick={() => setRecu(null)}>
+              Fermer
+            </button>
+          )}
         </div>
       )}
     </div>

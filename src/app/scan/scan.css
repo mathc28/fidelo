@@ -1,0 +1,146 @@
+/* Caisse /scan — un écran tenu d'une main, lu d'un coup d'œil. */
+
+.scan {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+.scan-barre {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px dashed var(--color-rule);
+}
+
+.scan-enseigne {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-weight: 600;
+  font-size: var(--text-lg);
+  letter-spacing: -0.02em;
+}
+
+.scan-flash {
+  margin-bottom: 14px;
+}
+
+.scan-camera {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.scan-recherche {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  margin-top: 16px;
+}
+
+.scan-recherche .field {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.scan-attente {
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--text-md);
+  padding: 18px 0;
+}
+
+.scan-resultat {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule-soft);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 8px;
+  min-height: 56px;
+  font-family: inherit;
+  font-size: var(--text-md);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.scan-resultat:hover {
+  border-color: var(--color-marine);
+}
+
+.scan-resultat-meta {
+  color: var(--color-text-secondary);
+}
+
+/* La fiche client : prénom, puis le compteur en grand, à la machine. */
+.scan-fiche {
+  background: var(--color-paper);
+  border: 1px solid var(--color-rule-soft);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.scan-prenom {
+  margin: 0;
+  font-weight: 700;
+  font-size: var(--text-lg);
+}
+
+.scan-compteur {
+  margin: 6px 0 0;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.scan-unite {
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: var(--text-md);
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--color-text-secondary);
+}
+
+.scan-objectif {
+  margin: 6px 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-secondary);
+}
+
+.scan-recompense {
+  margin-bottom: 12px;
+}
+
+.scan-recompense p {
+  margin: 0 0 12px;
+}
+
+.scan-credit {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.scan-credit .field {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.scan-bas {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.scan-avis {
+  margin-bottom: 12px;
+}

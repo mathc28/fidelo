@@ -5,16 +5,21 @@ import { Logo } from "@/components/ui";
 import { IOSDevice } from "@/components/IOSFrame";
 import { Reveal } from "@/components/Reveal";
 import WalletPreview, { type Theme } from "@/components/WalletPreview";
+import { MAX_PROMOS } from "@/lib/promo";
 import "./landing.css";
 
 const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
+
+/** Tant qu'il n'y a pas d'inscription en libre-service, l'action est honnête : on écrit. */
+const CONTACT = "mailto:bonjour@fidelo.app?subject=D%C3%A9marrer%20avec%20Fidelo";
+const CTA = "Écrire pour démarrer";
 
 /** Le carton d'aujourd'hui, tenu en registre : trois constats, pas trois tuiles. */
 const CONSTATS = [
   {
     ref: "01",
     titre: "Il se perd",
-    desc: "Oublié dans une poche, déchiré au fond d'un sac, jamais là au moment de payer. La moitié des cartes distribuées ne reviennent jamais au comptoir.",
+    desc: "Oublié dans une poche, déchiré au fond d'un sac, jamais là au moment de payer. Combien de vos cartons sont revenus complets l'an dernier ?",
   },
   {
     ref: "02",
@@ -28,42 +33,17 @@ const CONSTATS = [
   },
 ] as const;
 
+/** Deux gestes seulement : le troisième (le rappel) a sa propre section. */
 const GESTES = [
   {
     num: "1",
     titre: "Le client scanne au comptoir",
-    desc: "Un QR posé près de la caisse. Deux informations, un bouton, et sa carte est dans son téléphone. Dix secondes.",
+    desc: "Un QR posé près de la caisse. Son prénom, son email, un bouton : sa carte est dans son téléphone. Dix secondes.",
   },
   {
     num: "2",
     titre: "Vous scannez sa carte",
     desc: "À chaque passage, vous scannez son téléphone avec le vôtre. Le compteur monte, la récompense se rapproche.",
-  },
-  {
-    num: "3",
-    titre: "Sa carte lui fait signe",
-    desc: "Quand il passe dans le quartier, sa carte s'affiche sur son écran verrouillé. Un rappel, et il pousse la porte.",
-  },
-] as const;
-
-const TEMOIGNAGES = [
-  {
-    citation:
-      "Mes habitués ont adopté ça tout de suite, et je vois enfin qui revient vraiment. Installé un mardi matin entre deux fournées.",
-    nom: "Claire",
-    role: "Boulangère · Annecy",
-  },
-  {
-    citation:
-      "On a doublé les inscriptions en un mois. Zéro carton à commander, zéro discussion au comptoir.",
-    nom: "Marco",
-    role: "Restaurateur · Lyon",
-  },
-  {
-    citation:
-      "Le rappel quand le client passe devant, c'est ce qui a tout changé. Ils reviennent pour le café sans qu'on demande rien.",
-    nom: "Sofia",
-    role: "Caviste · Genève",
   },
 ] as const;
 
@@ -71,7 +51,7 @@ const TEMOIGNAGES = [
 const TICKET = [
   { libelle: "Cartes de fidélité", valeur: "illimitées" },
   { libelle: "Rappels de proximité", valeur: "inclus" },
-  { libelle: "Notifications promo", valeur: "3 / semaine" },
+  { libelle: "Notifications promo", valeur: `${MAX_PROMOS} / 7 jours` },
   { libelle: "Mise en route accompagnée", valeur: "offerte" },
   { libelle: "Matériel à acheter", valeur: "aucun" },
 ] as const;
@@ -91,7 +71,7 @@ const QUESTIONS = [
   },
   {
     q: "Combien de temps pour démarrer ?",
-    a: "Une dizaine de minutes. On crée votre carte avec vous — vos couleurs, votre récompense — et vous imprimez le QR à poser sur le comptoir.",
+    a: "Une dizaine de minutes. On crée votre carte avec vous, à vos couleurs et avec votre récompense, puis vous imprimez le QR à poser sur le comptoir.",
   },
   {
     q: "Puis-je arrêter quand je veux ?",
@@ -112,11 +92,10 @@ function ApercuFormule({ visites }: { visites: boolean }) {
   return (
     <svg
       viewBox="0 0 320 116"
-      className={`landing-formule-svg${visites ? "" : " landing-formule-svg--encre"}`}
-      role="img"
+      className={`landing-formule-svg${visites ? "" : " landing-formule-svg--foret"}`}
       aria-hidden="true"
     >
-      <rect className="landing-formule-fond" width="320" height="116" rx="8" />
+      <rect className="landing-formule-fond" width="320" height="116" rx="4" />
       <text className="landing-formule-etiq" x="20" y="32">
         {visites ? "PASSAGES" : "POINTS"}
       </text>
@@ -126,7 +105,7 @@ function ApercuFormule({ visites }: { visites: boolean }) {
       <text className="landing-formule-note" x="20" y="98">
         {visites ? "PLUS QUE 3 AVANT LE CAFÉ OFFERT" : "250 POINTS = UNE BOUTEILLE"}
       </text>
-      <rect className="landing-formule-qr-fond" x="244" y="26" width="56" height="56" rx="4" />
+      <rect className="landing-formule-qr-fond" x="244" y="26" width="56" height="56" rx="3" />
       <g className="landing-formule-qr" transform="translate(254,36)">
         <rect width="12" height="12" />
         <rect x="24" width="12" height="12" />
@@ -180,11 +159,11 @@ export default function LandingPage() {
             <a href="#tarif" className="landing-nav-link">
               Tarif
             </a>
-            <a href="/dashboard" className="landing-nav-link">
+            <a href="/dashboard" className="landing-nav-link landing-nav-link--toujours">
               Se connecter
             </a>
-            <a href="#essai" className="landing-action landing-action--sm">
-              Essayer gratuitement
+            <a href={CONTACT} className="landing-action landing-action--sm">
+              {CTA}
             </a>
           </nav>
         </div>
@@ -194,21 +173,20 @@ export default function LandingPage() {
       <section className="landing-panel">
         <div className="landing-wrap landing-hero">
           <div>
-            <span className="landing-mono landing-hero-eyebrow">Fidélisez votre quartier</span>
             <h1 className="landing-display landing-h1">
-              <span className="landing-hero-titre-bloc">Le carton a fait son temps.</span>
-              <span className="landing-hero-titre-bloc landing-hero-title-ink">
+              <span className="landing-hero-titre-bloc">Le carton a fait son temps.</span>{" "}
+              <span className="landing-hero-titre-bloc landing-hero-titre-suite">
                 Le téléphone prend le relais.
               </span>
             </h1>
             <p className="landing-lede landing-hero-lede">
               La carte de fidélité de votre commerce vit dans Apple Wallet et Google Wallet. Elle ne
-              se perd pas, elle ne se déchire pas — et quand votre client passe dans la rue, elle le
+              se perd pas, elle ne se déchire pas, et quand votre client passe dans la rue, elle le
               lui rappelle.
             </p>
             <div className="landing-hero-actions">
-              <a href="#essai" className="landing-action">
-                Essayer 14 jours
+              <a href={CONTACT} className="landing-action">
+                {CTA}
               </a>
               <a href="#gestes" className="landing-action landing-action--ghost">
                 Comment ça marche
@@ -221,9 +199,9 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="landing-scene">
+          <div className="landing-scene" aria-hidden="true">
             {/* La carte carton : dix cases, huit déjà tamponnées à l'arrivée. */}
-            <div className="landing-carton" aria-hidden="true">
+            <div className="landing-carton">
               <div className="landing-carton-entete">
                 <span className="landing-carton-nom">Boulangerie Martin</span>
                 <span className="landing-carton-mention">Carte fidélité</span>
@@ -239,7 +217,7 @@ export default function LandingPage() {
                           style={
                             {
                               "--tilt": `${((i * 37) % 17) - 8}deg`,
-                              "--retard": `${0.15 + i * 0.13}s`,
+                              "--retard": `${0.1 + i * 0.08}s`,
                             } as React.CSSProperties
                           }
                         />
@@ -266,7 +244,7 @@ export default function LandingPage() {
                       programType="visits"
                       points={8}
                       threshold={10}
-                      rewardLabel="Plus que 2 avant le café offert"
+                      rewardLabel="Plus que 2 avant : Un café offert"
                       firstName="Léa"
                       platform="apple"
                     />
@@ -282,11 +260,53 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Constat ===== */}
+      {/* ===== Rappel de proximité : ce que le carton ne fera jamais ===== */}
       <section className="landing-panel landing-panel--marine">
+        <div className="landing-wrap landing-proximite">
+          <div>
+            <h2 className="landing-display landing-h2">
+              Votre vitrine,
+              <br />
+              dans leur poche.
+            </h2>
+            <p className="landing-lede landing-proximite-lede">
+              Quand un client passe près de votre boutique, sa carte s&apos;affiche seule sur son
+              écran verrouillé. Pas de publicité, pas de notification à rallonge : votre nom, au
+              moment où il peut encore pousser la porte.
+            </p>
+          </div>
+          <div className="landing-proximite-scene" aria-hidden="true">
+            <div className="landing-proximite-echelle">
+              <IOSDevice width={402} height={874} dark lockScreen>
+                <div className="landing-verrou">
+                  <div className="landing-verrou-date">lundi 28 juillet</div>
+                  <div className="landing-verrou-heure">8:12</div>
+                  {/* Le texte exact que porte le pass (applePass.ts, relevantText). */}
+                  <div className="landing-verrou-notif">
+                    <div className="landing-verrou-icone">
+                      <Logo variant="symbol" theme="white" height={20} />
+                    </div>
+                    <div className="landing-verrou-corps">
+                      <div className="landing-verrou-tete">
+                        <span className="landing-verrou-app">Wallet</span>
+                        <span className="landing-verrou-quand">maintenant</span>
+                      </div>
+                      <div className="landing-verrou-texte">
+                        Boulangerie Martin est juste à côté — votre carte est prête !
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </IOSDevice>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ===== Constat ===== */}
+      <section className="landing-panel landing-panel--papier">
         <div className="landing-wrap">
-          <div className="landing-constat-tete">
-            <span className="landing-mono landing-constat-eyebrow">Le constat</span>
+          <div className="landing-tete">
             <h2 className="landing-display landing-h2">
               Ce que le carton vous coûte, sans que ça se voie.
             </h2>
@@ -305,20 +325,23 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Les trois gestes ===== */}
-      <section id="gestes" className="landing-panel landing-panel--papier">
+      {/* ===== Les deux gestes ===== */}
+      <section id="gestes" className="landing-panel">
         <div className="landing-wrap">
-          <div className="landing-tete-centree">
-            <span className="landing-mono landing-eyebrow-ink">La mise en place</span>
-            <h2 className="landing-display landing-h2">Trois gestes, et c&apos;est en route.</h2>
+          <div className="landing-tete">
+            <h2 className="landing-display landing-h2">Deux gestes, et c&apos;est en route.</h2>
           </div>
           <div className="landing-gestes">
             {GESTES.map((g, i) => (
               <Reveal key={g.num} delay={i * 70}>
-                <div>
-                  <div className="landing-geste-marque">{g.num}</div>
-                  <h3 className="landing-display landing-h3 landing-geste-titre">{g.titre}</h3>
-                  <p className="landing-body">{g.desc}</p>
+                <div className="landing-geste">
+                  <div className="landing-geste-marque" aria-hidden="true">
+                    {g.num}
+                  </div>
+                  <div>
+                    <h3 className="landing-display landing-h3 landing-geste-titre">{g.titre}</h3>
+                    <p className="landing-body">{g.desc}</p>
+                  </div>
                 </div>
               </Reveal>
             ))}
@@ -327,11 +350,10 @@ export default function LandingPage() {
       </section>
 
       {/* ===== Formules ===== */}
-      <section id="formules" className="landing-panel">
+      <section id="formules" className="landing-panel landing-panel--papier">
         <div className="landing-wrap">
-          <div className="landing-tete-centree">
-            <span className="landing-mono landing-eyebrow-ink">Deux façons de compter</span>
-            <h2 className="landing-display landing-h2">Celle qui colle à votre commerce.</h2>
+          <div className="landing-tete">
+            <h2 className="landing-display landing-h2">Deux façons de compter.</h2>
           </div>
           <div className="landing-formules">
             <div className="landing-formule">
@@ -347,13 +369,13 @@ export default function LandingPage() {
                 <ApercuFormule visites />
               </div>
             </div>
-            <div className="landing-formule landing-formule--encre">
+            <div className="landing-formule landing-formule--marine">
               <div>
                 <span className="landing-formule-etiquette">Aux points</span>
                 <h3 className="landing-formule-titre">1 € dépensé, 1 point</h3>
                 <p className="landing-body">
                   Le seuil et la récompense sont à votre main. Pour les cavistes, les épiceries
-                  fines, les primeurs — quand le panier compte autant que la visite.
+                  fines, les primeurs : quand le panier compte autant que la visite.
                 </p>
               </div>
               <div className="landing-formule-apercu">
@@ -364,93 +386,11 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Rappel de proximité ===== */}
-      <section className="landing-panel landing-panel--marine">
-        <div className="landing-wrap landing-proximite">
-          <div>
-            <span className="landing-mono landing-constat-eyebrow">Le rappel</span>
-            <h2 className="landing-display landing-h2">
-              Votre vitrine,
-              <br />
-              dans leur poche.
-            </h2>
-            <p className="landing-lede landing-proximite-lede">
-              Quand un client passe à moins de 300 mètres, sa carte s&apos;affiche seule sur son
-              écran verrouillé. Pas de publicité, pas de notification à rallonge — votre nom, au
-              moment où il peut encore pousser la porte.
-            </p>
-            <div className="landing-proximite-chiffres">
-              <div>
-                <div className="landing-chiffre-valeur">300 m</div>
-                <div className="landing-chiffre-label">rayon de rappel</div>
-              </div>
-              <div>
-                <div className="landing-chiffre-valeur">0</div>
-                <div className="landing-chiffre-label">application installée</div>
-              </div>
-            </div>
-          </div>
-          <div className="landing-proximite-scene">
-            <div className="landing-proximite-echelle">
-              <IOSDevice width={402} height={874} dark>
-                <div className="landing-verrou">
-                  <div className="landing-verrou-date">lundi 28 juillet</div>
-                  <div className="landing-verrou-heure">8:12</div>
-                  <div className="landing-verrou-notif">
-                    <div className="landing-verrou-icone">
-                      <Logo variant="symbol" theme="white" height={20} />
-                    </div>
-                    <div className="landing-verrou-corps">
-                      <div className="landing-verrou-tete">
-                        <span className="landing-verrou-app">Boulangerie Martin</span>
-                        <span className="landing-verrou-quand">maintenant</span>
-                      </div>
-                      <div className="landing-verrou-texte">
-                        Vous êtes juste à côté. Plus que 2 passages avant votre café offert.
-                      </div>
-                    </div>
-                  </div>
-                  <div className="landing-cale" />
-                  <div className="landing-verrou-distance">
-                    <span className="landing-pastille" />à 280 m de vous
-                  </div>
-                </div>
-              </IOSDevice>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ===== Témoignages ===== */}
-      <section className="landing-panel landing-panel--papier">
-        <div className="landing-wrap">
-          <div className="landing-tete-centree">
-            <span className="landing-mono landing-eyebrow-ink">Ils l&apos;ont installée</span>
-            <h2 className="landing-display landing-h2">
-              Des commerces comme le vôtre, à deux rues d&apos;ici.
-            </h2>
-          </div>
-          <div className="landing-temoignages">
-            {TEMOIGNAGES.map((t, i) => (
-              <Reveal key={t.nom} delay={i * 70}>
-                <figure className="landing-temoignage">
-                  <blockquote className="landing-temoignage-texte">{t.citation}</blockquote>
-                  <figcaption className="landing-signature">
-                    {t.nom}
-                    <span className="landing-signature-role">{t.role}</span>
-                  </figcaption>
-                </figure>
-              </Reveal>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ===== Tarif : un ticket de caisse ===== */}
       <section id="tarif" className="landing-panel">
         <div className="landing-wrap">
-          <div className="landing-tete-centree">
-            <span className="landing-mono landing-eyebrow-ink">Le tarif</span>
+          <div className="landing-tete">
+            <span className="landing-mono landing-eyebrow">Le tarif</span>
             <h2 className="landing-display landing-h2">Une ligne, pas une grille.</h2>
           </div>
           <div className="landing-ticket">
@@ -467,15 +407,14 @@ export default function LandingPage() {
             ))}
             <div className="landing-ticket-total">
               <span className="landing-ticket-total-label">Total</span>
-              <span>
-                <span className="landing-ticket-montant">XX €</span>
-                <span className="landing-ticket-periode">/ mois</span>
+              {/* TODO : afficher le prix réel dès qu'il est arrêté. */}
+              <span className="landing-ticket-a-venir">
+                Tarif de lancement communiqué à l&apos;inscription
               </span>
             </div>
-            <a href="#essai" className="landing-action landing-ticket-action">
-              Commencer mes 14 jours
+            <a href={CONTACT} className="landing-action landing-ticket-action">
+              {CTA}
             </a>
-            <div className="landing-ticket-pied">Sans carte bancaire</div>
           </div>
         </div>
       </section>
@@ -483,11 +422,8 @@ export default function LandingPage() {
       {/* ===== Questions ===== */}
       <section className="landing-panel landing-panel--papier">
         <div className="landing-wrap">
-          <div className="landing-tete-centree">
-            <span className="landing-mono landing-eyebrow-ink">
-              Les questions qu&apos;on nous pose
-            </span>
-            <h2 className="landing-display landing-h2">On vous dit tout.</h2>
+          <div className="landing-tete">
+            <h2 className="landing-display landing-h2">Ce qu&apos;on nous demande au comptoir.</h2>
           </div>
           <div className="landing-faq">
             {QUESTIONS.map((f, i) => {
@@ -512,6 +448,7 @@ export default function LandingPage() {
                   <div
                     id={`faq-panneau-${i}`}
                     className={`landing-faq-tiroir${open ? " is-open" : ""}`}
+                    aria-hidden={!open}
                   >
                     <div className="landing-faq-contenu">
                       <p className="landing-body landing-faq-reponse">{f.a}</p>
@@ -524,17 +461,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Clôture ===== */}
+      {/* ===== Clôture : l'invitation du lancement ===== */}
       <section id="essai" className="landing-panel landing-panel--marine">
         <div className="landing-wrap landing-cloture">
           <h2 className="landing-display landing-h2 landing-cloture-titre">
             Vos clients ont déjà tout dans leur poche.
           </h2>
+          {/* TODO : confirmer le nombre de places et la ville du programme pilote. */}
           <p className="landing-lede landing-cloture-lede">
-            Ajoutez-y leur fidélité. Dix minutes, aucun matériel, et le carton part au recyclage.
+            Pour le lancement, nous cherchons dix commerces lyonnais. La mise en route est offerte :
+            écrivez-nous, on installe la carte avec vous.
           </p>
-          <a href="mailto:bonjour@fidelo.app" className="landing-action">
-            Essayer 14 jours gratuitement
+          <a href={CONTACT} className="landing-action">
+            {CTA}
           </a>
           <div className="landing-cloture-logo">
             <Logo variant="full" theme="white" height={40} />
@@ -548,6 +487,7 @@ export default function LandingPage() {
           <Logo variant="symbol" theme="white" height={22} />
           <span className="landing-pied-mention">© 2026 Fidelo · Fabriqué à Lyon</span>
           <div className="landing-pied-liens">
+            {/* TODO : pages Mentions légales et Confidentialité (obligatoires, LCEN / RGPD). */}
             <a href="#" className="landing-pied-lien">
               Mentions légales
             </a>

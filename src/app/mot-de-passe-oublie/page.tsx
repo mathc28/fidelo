@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabaseBrowser";
 import { Button, Field, Logo } from "@/components/ui";
+import { emailValide } from "@/lib/uiText";
 
 /**
  * Demande de réinitialisation de mot de passe commerçant : envoie un lien
@@ -15,10 +16,11 @@ export default function MotDePasseOubliePage() {
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
 
-  async function submit() {
+  async function submit(e: FormEvent) {
+    e.preventDefault();
     setError("");
-    if (!/.+@.+\..+/.test(email)) {
-      setError("Email invalide.");
+    if (!emailValide(email)) {
+      setError("Cette adresse email semble incomplète.");
       return;
     }
     setSending(true);
@@ -30,43 +32,47 @@ export default function MotDePasseOubliePage() {
     setSent(true);
   }
 
-  if (sent) {
-    return (
-      <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px", textAlign: "center" }}>
-        <p style={{ fontSize: 40, margin: 0 }}>📬</p>
-        <h1 style={{ fontSize: 22 }}>Vérifiez vos emails</h1>
-        <p style={{ color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.6 }}>
-          Si un compte existe avec cet email, un lien de réinitialisation vient de vous être envoyé.
-          Il est valable 24 h.
-        </p>
-      </main>
-    );
-  }
-
   return (
-    <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
-      <Logo height={40} />
-      <h1 style={{ fontSize: 22, margin: "20px 0 4px" }}>Mot de passe oublié</h1>
-      <p style={{ color: "var(--color-text-secondary)", fontSize: 14, marginBottom: 24 }}>
-        Indiquez l’email de votre espace commerçant, on vous envoie un lien pour en choisir un
-        nouveau.
-      </p>
-      <Field
-        type="email"
-        placeholder="Votre email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && submit()}
-      />
-      {error && <p style={{ color: "var(--color-error)", fontSize: 14 }}>{error}</p>}
-      <Button size="lg" block onClick={submit} disabled={sending}>
-        {sending ? "Envoi…" : "Envoyer le lien"}
-      </Button>
-      <p style={{ color: "var(--color-text-secondary)", fontSize: 13, marginTop: 14 }}>
-        <a href="/dashboard" style={{ color: "var(--color-marine)", fontWeight: 600 }}>
-          ← Retour à la connexion
-        </a>
-      </p>
+    <main className="auth-shell">
+      <Logo height={36} />
+      {sent ? (
+        <div role="status">
+          <h1 className="auth-title">Vérifiez vos emails</h1>
+          <p className="auth-lede">
+            Si un espace commerçant existe pour <strong>{email.trim()}</strong>, un lien pour
+            choisir un nouveau mot de passe vient d&apos;y être envoyé. Il est valable 24 h.
+          </p>
+          <a className="auth-link" href="/dashboard">
+            Retour à la connexion
+          </a>
+        </div>
+      ) : (
+        <>
+          <h1 className="auth-title">Mot de passe oublié</h1>
+          <p className="auth-lede">
+            Indiquez l’email de votre espace commerçant, on vous envoie un lien pour en choisir un
+            nouveau.
+          </p>
+          <form onSubmit={submit} noValidate>
+            <Field
+              type="email"
+              label="Email"
+              autoComplete="email"
+              inputMode="email"
+              autoFocus
+              value={email}
+              error={error || undefined}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Button type="submit" block disabled={sending}>
+              {sending ? "Envoi…" : "Envoyer le lien"}
+            </Button>
+          </form>
+          <a className="auth-link" href="/dashboard">
+            Retour à la connexion
+          </a>
+        </>
+      )}
     </main>
   );
 }

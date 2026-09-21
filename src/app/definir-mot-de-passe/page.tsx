@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabaseBrowser";
 import { Button, Field, Logo } from "@/components/ui";
+import { authErrorFr } from "@/lib/uiText";
 
 /**
  * Page d'atterrissage du lien d'invitation ET du lien de réinitialisation
  * de mot de passe (même mécanique côté Supabase) : le gérant arrive ici
  * avec une session temporaire (token dans l'URL, géré automatiquement par
- * supabase-js), définit son mot de passe, puis file sur son dashboard.
+ * supabase-js), définit son mot de passe, puis file sur son espace.
  */
 export default function DefinirMotDePassePage() {
   const [ready, setReady] = useState(false);
@@ -17,6 +18,7 @@ export default function DefinirMotDePassePage() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
 
   useEffect(() => {
@@ -33,10 +35,11 @@ export default function DefinirMotDePassePage() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  async function save() {
+  async function save(e: FormEvent) {
+    e.preventDefault();
     setError("");
     if (password.length < 8) {
-      setError("8 caractères minimum.");
+      setError("Mot de passe trop court : 8 caractères minimum.");
       return;
     }
     if (password !== confirm) {
@@ -44,9 +47,11 @@ export default function DefinirMotDePassePage() {
       return;
     }
 
+    setSaving(true);
     const { error } = await supabase.auth.updateUser({ password });
+    setSaving(false);
     if (error) {
-      setError(error.message);
+      setError(authErrorFr(error));
       return;
     }
     setDone(true);
@@ -55,64 +60,74 @@ export default function DefinirMotDePassePage() {
     }, 1500);
   }
 
-  if (!ready) return null;
+  if (!ready) {
+    return (
+      <main className="auth-shell" aria-busy="true">
+        <Logo height={36} />
+        <p className="auth-lede" style={{ marginTop: 28 }}>
+          Vérification du lien…
+        </p>
+      </main>
+    );
+  }
 
   if (!hasSession) {
     return (
-      <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
-        <h1 style={{ fontSize: 22 }}>Lien invalide ou expiré</h1>
-        <p style={{ color: "var(--color-text-secondary)", fontSize: 14, lineHeight: 1.6 }}>
-          Ce lien n’est plus valable (il expire après 24 h et ne fonctionne qu’une fois).
-          Demandez-en un nouveau depuis la{" "}
-          <a href="/mot-de-passe-oublie" style={{ color: "var(--color-marine)", fontWeight: 600 }}>
-            page de réinitialisation
-          </a>
-          , ou contactez la personne qui vous a invité si vous attendiez une invitation.
+      <main className="auth-shell">
+        <Logo height={36} />
+        <h1 className="auth-title">Lien invalide ou expiré</h1>
+        <p className="auth-lede">
+          Ce lien n’est plus valable : il expire après 24 h et ne fonctionne qu’une fois. Si vous
+          attendiez une invitation, contactez la personne qui vous a invité.
         </p>
+        <a className="btn btn-primary btn-md btn-block" href="/mot-de-passe-oublie">
+          Demander un nouveau lien
+        </a>
       </main>
     );
   }
 
   if (done) {
     return (
-      <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px", textAlign: "center" }}>
-        <p style={{ fontSize: 40, margin: 0 }}>🎉</p>
-        <h1 style={{ fontSize: 22 }}>Mot de passe enregistré</h1>
-        <p style={{ color: "var(--color-text-secondary)", fontSize: 14 }}>
-          Redirection vers votre dashboard…
-        </p>
+      <main className="auth-shell" role="status">
+        <Logo height={36} />
+        <h1 className="auth-title">Mot de passe enregistré</h1>
+        <p className="auth-lede">Ouverture de votre espace commerçant…</p>
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
-      <Logo height={40} />
-      <h1 style={{ fontSize: 22, margin: "20px 0 4px" }}>
-        {isRecovery ? "Réinitialisez votre mot de passe" : "Bienvenue ! 👋"}
-      </h1>
-      <p style={{ color: "var(--color-text-secondary)", fontSize: 14, marginBottom: 24 }}>
+    <main className="auth-shell">
+      <Logo height={36} />
+      <h1 className="auth-title">{isRecovery ? "Nouveau mot de passe" : "Bienvenue sur Fidelo"}</h1>
+      <p className="auth-lede">
         {isRecovery
           ? "Choisissez un nouveau mot de passe pour votre espace commerçant."
           : "Choisissez le mot de passe de votre espace commerçant."}
       </p>
-      <Field
-        type="password"
-        placeholder="Mot de passe (8 caractères min.)"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
-      <Field
-        type="password"
-        placeholder="Confirmez le mot de passe"
-        value={confirm}
-        onChange={(e) => setConfirm(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && save()}
-      />
-      {error && <p style={{ color: "var(--color-error)", fontSize: 14 }}>{error}</p>}
-      <Button size="lg" block onClick={save}>
-        Accéder à mon dashboard
-      </Button>
+      <form onSubmit={save} noValidate>
+        <Field
+          type="password"
+          label="Mot de passe"
+          hint="8 caractères minimum."
+          autoComplete="new-password"
+          autoFocus
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <Field
+          type="password"
+          label="Confirmation"
+          autoComplete="new-password"
+          value={confirm}
+          error={error || undefined}
+          onChange={(e) => setConfirm(e.target.value)}
+        />
+        <Button type="submit" block disabled={saving}>
+          {saving ? "Enregistrement…" : "Accéder à mon espace"}
+        </Button>
+      </form>
     </main>
   );
 }

@@ -1,40 +1,60 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Button, Field, Card, Badge } from "@/components/ui";
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { Button, ConfirmButton, Field, Logo } from "@/components/ui";
+import { unite } from "@/lib/uiText";
+import "./scan.css";
+
+type ProgramType = "visits" | "points";
 
 type Lookup = {
   customer: { serial: string; firstName: string; points: number; memberSince: string };
-  programType: "visits" | "points";
+  programType: ProgramType;
   alreadyScannedToday: boolean;
   reward: { label: string; cost_points: number } | null;
   rewardAvailable: boolean;
 };
 
+type SearchResult = { serial_number: string; first_name: string; email: string; points: number };
+
+/** Retour d'action : la couleur dit le résultat avant qu'on lise le texte. */
+type Flash = { kind: "success" | "error" | "reward"; title?: string; text: string };
+
 const TOKEN_KEY = "fidelite_device_token";
 const NAME_KEY = "fidelite_merchant_name";
+const NETWORK_ERROR = "Pas de connexion. Vérifiez le réseau et réessayez.";
 
 export default function ScanPage() {
   const [token, setToken] = useState<string | null>(null);
   const [merchantName, setMerchantName] = useState("");
   const [pairCode, setPairCode] = useState("");
   const [pairError, setPairError] = useState("");
+  const [pairing, setPairing] = useState(false);
 
   const [scanning, setScanning] = useState(false);
   const [lookup, setLookup] = useState<Lookup | null>(null);
   const [amount, setAmount] = useState("");
   const [search, setSearch] = useState("");
-  const [searchResults, setSearchResults] = useState<any[] | null>(null);
-  const [flash, setFlash] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchResult[] | null>(null);
+  const [searchProgram, setSearchProgram] = useState<ProgramType>("visits");
+  const [flash, setFlash] = useState<Flash | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const scannerRef = useRef<any>(null);
+  const scannerRef = useRef<{ stop: () => Promise<void> } | null>(null);
   const lastScanRef = useRef<{ serial: string; at: number }>({ serial: "", at: 0 });
 
   useEffect(() => {
     setToken(localStorage.getItem(TOKEN_KEY));
     setMerchantName(localStorage.getItem(NAME_KEY) ?? "");
   }, []);
+
+  // Les confirmations s'effacent seules ; une erreur reste jusqu'à la
+  // prochaine action, pour qu'on ait le temps de la lire.
+  useEffect(() => {
+    if (!flash || flash.kind === "error") return;
+    const t = setTimeout(() => setFlash(null), 4000);
+    return () => clearTimeout(t);
+  }, [flash]);
 
   function authHeaders() {
     return {
@@ -44,39 +64,60 @@ export default function ScanPage() {
   }
 
   // ---------- Appairage ----------
-  async function pair() {
+  async function pair(e: FormEvent) {
+    e.preventDefault();
     setPairError("");
-    const res = await fetch("/api/scan/pair", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: pairCode, label: "Caisse" }),
-    });
-    if (!res.ok) {
-      setPairError("Code invalide ou expiré.");
-      return;
+    setPairing(true);
+    try {
+      const res = await fetch("/api/scan/pair", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: pairCode, label: "Caisse" }),
+      });
+      if (!res.ok) {
+        setPairError(
+          res.status === 429 ? await res.text() : "Code invalide ou expiré. Générez-en un nouveau."
+        );
+        return;
+      }
+      const data = await res.json();
+      localStorage.setItem(TOKEN_KEY, data.token);
+      localStorage.setItem(NAME_KEY, data.merchantName);
+      setToken(data.token);
+      setMerchantName(data.merchantName);
+    } catch {
+      setPairError(NETWORK_ERROR);
+    } finally {
+      setPairing(false);
     }
-    const data = await res.json();
-    localStorage.setItem(TOKEN_KEY, data.token);
-    localStorage.setItem(NAME_KEY, data.merchantName);
-    setToken(data.token);
-    setMerchantName(data.merchantName);
   }
 
   // ---------- Scan caméra ----------
   async function startScanner() {
     setLookup(null);
     setSearchResults(null);
-    setFlash("");
+    setFlash(null);
     setScanning(true);
-    const { Html5Qrcode } = await import("html5-qrcode");
-    const scanner = new Html5Qrcode("qr-reader");
-    scannerRef.current = scanner;
-    await scanner.start(
-      { facingMode: "environment" },
-      { fps: 10, qrbox: { width: 230, height: 230 } },
-      (decoded: string) => onScan(decoded),
-      () => {}
-    );
+    try {
+      const { Html5Qrcode } = await import("html5-qrcode");
+      const scanner = new Html5Qrcode("qr-reader");
+      scannerRef.current = scanner;
+      await scanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 230, height: 230 } },
+        (decoded: string) => onScan(decoded),
+        () => {}
+      );
+    } catch (err) {
+      setScanning(false);
+      const refus = /NotAllowed|Permission/i.test(String(err));
+      setFlash({
+        kind: "error",
+        text: refus
+          ? "Caméra refusée : autorisez-la dans les réglages du navigateur, puis réessayez."
+          : "Impossible d'ouvrir la caméra. Utilisez la recherche par nom en attendant.",
+      });
+    }
   }
 
   async function stopScanner() {
@@ -97,9 +138,9 @@ export default function ScanPage() {
     await doLookup({ serial });
   }
 
-  async function doLookup(body: object) {
+  async function doLookup(body: { serial?: string; search?: string }) {
     setBusy(true);
-    setFlash("");
+    setFlash(null);
     try {
       const res = await fetch("/api/scan/lookup", {
         method: "POST",
@@ -111,16 +152,19 @@ export default function ScanPage() {
         return;
       }
       if (!res.ok) {
-        setFlash(`❌ ${await res.text()}`);
+        setFlash({ kind: "error", text: await res.text() });
         return;
       }
       const data = await res.json();
       if (data.results) {
         setSearchResults(data.results);
+        setSearchProgram(data.programType);
         return;
       }
       setLookup(data);
       setSearchResults(null);
+    } catch {
+      setFlash({ kind: "error", text: NETWORK_ERROR });
     } finally {
       setBusy(false);
     }
@@ -129,45 +173,66 @@ export default function ScanPage() {
   // ---------- Actions ----------
   async function earn() {
     if (!lookup) return;
-    setBusy(true);
-    const res = await fetch("/api/scan/earn", {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({
-        serial: lookup.customer.serial,
-        amountEuros: lookup.programType === "points" ? Number(amount) : undefined,
-      }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setFlash(`❌ ${await res.text()}`);
+    const isVisits = lookup.programType === "visits";
+    // Les montants se tapent à la française : « 12,50 ».
+    const montant = Number(amount.replace(",", "."));
+    const amountEuros = isVisits ? undefined : montant;
+    if (!isVisits && !(montant > 0)) {
+      setFlash({ kind: "error", text: "Montant invalide. Exemple : 12,50" });
       return;
     }
-    const data = await res.json();
-    setFlash(
-      `✅ ${lookup.customer.firstName} : ${data.points} ${lookup.programType === "visits" ? "passage(s)" : "points"}`
-    );
-    setLookup(null);
-    setAmount("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/scan/earn", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ serial: lookup.customer.serial, amountEuros }),
+      });
+      if (!res.ok) {
+        setFlash({ kind: "error", text: await res.text() });
+        return;
+      }
+      const data = await res.json();
+      setFlash({
+        kind: "success",
+        title: `${lookup.customer.firstName} : ${unite(data.points, isVisits)}`,
+        text: isVisits ? "Passage compté." : "Points crédités.",
+      });
+      setLookup(null);
+      setAmount("");
+    } catch {
+      setFlash({ kind: "error", text: NETWORK_ERROR });
+    } finally {
+      setBusy(false);
+    }
   }
 
   /** Remet le compteur à zéro via une transaction 'redeem' tracée. */
   async function redeem() {
     if (!lookup) return;
     setBusy(true);
-    const res = await fetch("/api/scan/redeem", {
-      method: "POST",
-      headers: authHeaders(),
-      body: JSON.stringify({ serial: lookup.customer.serial }),
-    });
-    setBusy(false);
-    if (!res.ok) {
-      setFlash(`❌ ${await res.text()}`);
-      return;
+    try {
+      const res = await fetch("/api/scan/redeem", {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ serial: lookup.customer.serial }),
+      });
+      if (!res.ok) {
+        setFlash({ kind: "error", text: await res.text() });
+        return;
+      }
+      const data = await res.json();
+      setFlash({
+        kind: "reward",
+        title: `${data.reward} pour ${lookup.customer.firstName}`,
+        text: "Récompense offerte, compteur remis à zéro.",
+      });
+      setLookup(null);
+    } catch {
+      setFlash({ kind: "error", text: NETWORK_ERROR });
+    } finally {
+      setBusy(false);
     }
-    const data = await res.json();
-    setFlash(`🎁 ${data.reward} — compteur remis à zéro`);
-    setLookup(null);
   }
 
   function unpair() {
@@ -179,70 +244,87 @@ export default function ScanPage() {
   // ---------- Écran d'appairage ----------
   if (token === null) {
     return (
-      <main style={{ maxWidth: 380, margin: "0 auto", padding: "60px 20px" }}>
-        <h1 style={{ fontSize: 22, marginBottom: 6 }}>Appairer cette caisse</h1>
-        <p style={{ color: "var(--color-text-secondary)", fontSize: 14, marginBottom: 24 }}>
-          Saisissez le code à 6 chiffres affiché dans le dashboard (Mes caisses → Ajouter un
-          appareil).
+      <main className="auth-shell">
+        <Logo height={32} />
+        <h1 className="auth-title">Associer cette caisse</h1>
+        <p className="auth-lede">
+          Saisissez le code à 6 chiffres affiché dans votre espace commerçant, section « Mes caisses
+          ».
         </p>
-        <Field
-          style={{ fontSize: 26, textAlign: "center", letterSpacing: 8 }}
-          inputMode="numeric"
-          maxLength={6}
-          placeholder="000000"
-          value={pairCode}
-          onChange={(e) => setPairCode(e.target.value.replace(/\D/g, ""))}
-        />
-        {pairError && <p style={{ color: "var(--color-error)", fontSize: 14 }}>{pairError}</p>}
-        <Button size="lg" block onClick={pair} disabled={pairCode.length !== 6}>
-          Appairer
-        </Button>
+        <form onSubmit={pair}>
+          <Field
+            label="Code d'association"
+            className="field-input--code"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            maxLength={6}
+            placeholder="000000"
+            value={pairCode}
+            error={pairError || undefined}
+            onChange={(e) => setPairCode(e.target.value.replace(/\D/g, ""))}
+          />
+          <Button type="submit" size="lg" block disabled={pairCode.length !== 6 || pairing}>
+            {pairing ? "Association…" : "Associer cette caisse"}
+          </Button>
+        </form>
       </main>
     );
   }
 
+  const isVisits = lookup?.programType === "visits";
+
   // ---------- Écran principal ----------
   return (
-    <main style={{ maxWidth: 420, margin: "0 auto", padding: "24px 16px" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 18,
-        }}
-      >
-        <span style={{ fontWeight: 700 }}>{merchantName}</span>
-        <Button variant="ghost" size="sm" onClick={unpair}>
-          Désappairer
-        </Button>
+    <main className="scan">
+      <div className="scan-barre">
+        <span className="scan-enseigne">{merchantName}</span>
+        <ConfirmButton
+          variant="ghost"
+          question="Déconnecter cette caisse ?"
+          confirmLabel="Déconnecter"
+          onConfirm={unpair}
+        >
+          Déconnecter cette caisse
+        </ConfirmButton>
       </div>
 
-      {flash && <Card style={{ padding: 16, marginBottom: 14, fontSize: 15 }}>{flash}</Card>}
+      <div aria-live="polite" role="status">
+        {flash && (
+          <div className={`flash flash-${flash.kind} scan-flash`}>
+            {flash.title && <strong>{flash.title}</strong>}
+            {flash.text}
+          </div>
+        )}
+      </div>
 
       {/* Zone caméra */}
-      <div
-        id="qr-reader"
-        style={{ borderRadius: "var(--radius-lg)", overflow: "hidden", marginBottom: 14 }}
-      />
+      <div id="qr-reader" className="scan-camera" />
 
-      {!lookup && !scanning && (
+      {busy && !lookup && <p className="scan-attente">Recherche de la carte…</p>}
+
+      {!lookup && !scanning && !busy && (
         <>
           <Button size="lg" block onClick={startScanner}>
-            📷 Scanner une carte
+            Scanner une carte
           </Button>
-          <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+          <form
+            className="scan-recherche"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (search.trim()) doLookup({ search });
+            }}
+          >
             <Field
-              style={{ marginBottom: 0, flex: 1 }}
-              placeholder="Ou chercher : nom, email…"
+              label="Client sans téléphone"
+              placeholder="Prénom ou email"
+              enterKeyHint="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && doLookup({ search })}
             />
-            <Button onClick={() => doLookup({ search })} disabled={busy}>
-              OK
+            <Button type="submit" variant="secondary" disabled={busy || !search.trim()}>
+              Chercher
             </Button>
-          </div>
+          </form>
         </>
       )}
 
@@ -253,31 +335,22 @@ export default function ScanPage() {
       )}
 
       {/* Résultats de recherche (client sans téléphone) */}
-      {searchResults && (
-        <div style={{ marginTop: 8 }}>
+      {searchResults && !lookup && (
+        <div style={{ marginTop: 12 }}>
           {searchResults.length === 0 && (
-            <p style={{ color: "var(--color-text-secondary)" }}>Aucun client trouvé.</p>
+            <p className="scan-attente">Aucun client ne correspond à « {search.trim()} ».</p>
           )}
           {searchResults.map((r) => (
             <button
               key={r.serial_number}
+              type="button"
+              className="scan-resultat"
               onClick={() => doLookup({ serial: r.serial_number })}
-              className="card"
-              style={{
-                width: "100%",
-                textAlign: "left",
-                padding: 14,
-                color: "var(--color-text)",
-                marginBottom: 8,
-                cursor: "pointer",
-                fontSize: 15,
-                fontFamily: "inherit",
-              }}
             >
               <strong>{r.first_name}</strong>
-              <span style={{ color: "var(--color-text-secondary)" }}>
+              <span className="scan-resultat-meta">
                 {" "}
-                · {r.email} · {r.points} pts
+                · {r.email} · {unite(r.points, searchProgram === "visits")}
               </span>
             </button>
           ))}
@@ -287,82 +360,84 @@ export default function ScanPage() {
       {/* Fiche client après scan */}
       {lookup && (
         <div>
-          <Card variant="cream" style={{ padding: 18, textAlign: "center", marginBottom: 12 }}>
-            <p style={{ margin: 0, fontWeight: 700, fontSize: 17 }}>{lookup.customer.firstName}</p>
-            <p
-              style={{
-                margin: "4px 0 0",
-                fontSize: 38,
-                fontWeight: 800,
-                letterSpacing: -1,
-                color: "var(--color-text)",
-              }}
-            >
-              {lookup.customer.points}
-              <span style={{ fontSize: 14, color: "var(--color-text-secondary)", fontWeight: 400 }}>
-                {" "}
-                {lookup.programType === "visits" ? "passages" : "points"}
-              </span>
+          <div className="scan-fiche">
+            <p className="scan-prenom">{lookup.customer.firstName}</p>
+            <p className="scan-compteur">
+              {lookup.customer.points}{" "}
+              <span className="scan-unite">{isVisits ? "passages" : "points"}</span>
             </p>
             {lookup.reward && !lookup.rewardAvailable && (
-              <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--color-text-secondary)" }}>
+              <p className="scan-objectif">
                 Récompense à {lookup.reward.cost_points} : {lookup.reward.label}
               </p>
             )}
-          </Card>
+          </div>
 
           {lookup.rewardAvailable && lookup.reward && (
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                background: "var(--color-success-bg)",
-                border: "1px solid var(--color-success)",
-                borderRadius: "var(--radius-md)",
-                padding: "12px 14px",
-                marginBottom: 10,
+            <div className="flash flash-success scan-recompense">
+              <p>
+                <strong>Récompense disponible</strong>
+                {lookup.reward.label} ({unite(lookup.reward.cost_points, isVisits)})
+              </p>
+              <ConfirmButton
+                variant="primary"
+                size="lg"
+                block
+                disabled={busy}
+                question={`Offrir « ${lookup.reward.label} » ?`}
+                confirmLabel="Oui, offrir"
+                onConfirm={redeem}
+              >
+                Offrir la récompense
+              </ConfirmButton>
+            </div>
+          )}
+
+          {isVisits ? (
+            lookup.alreadyScannedToday ? (
+              <>
+                <p className="flash flash-warning scan-avis">
+                  Passage déjà compté aujourd&apos;hui pour {lookup.customer.firstName}.
+                </p>
+                <Button size="lg" block variant="secondary" onClick={() => setLookup(null)}>
+                  Terminer
+                </Button>
+              </>
+            ) : (
+              <Button size="lg" block onClick={earn} disabled={busy}>
+                {busy ? "Enregistrement…" : "+1 passage"}
+              </Button>
+            )
+          ) : (
+            <form
+              className="scan-credit"
+              onSubmit={(e) => {
+                e.preventDefault();
+                earn();
               }}
             >
-              <span style={{ flex: 1, fontSize: 14 }}>
-                🎁 {lookup.reward.label}{" "}
-                <Badge variant="success">
-                  {lookup.reward.cost_points} {lookup.programType === "visits" ? "passages" : "pts"}
-                </Badge>
-              </span>
-              <Button size="sm" variant="primary" onClick={redeem} disabled={busy}>
-                Récompense utilisée
-              </Button>
-            </div>
-          )}
-
-          {lookup.programType === "visits" ? (
-            <Button size="lg" block onClick={earn} disabled={busy || lookup.alreadyScannedToday}>
-              {lookup.alreadyScannedToday ? "Passage déjà compté aujourd'hui" : "+1 passage"}
-            </Button>
-          ) : (
-            <div style={{ display: "flex", gap: 8 }}>
               <Field
-                style={{ marginBottom: 0, flex: 1 }}
-                type="number"
+                label="Montant du ticket (€)"
+                type="text"
                 inputMode="decimal"
-                placeholder="Montant €"
+                placeholder="12,50"
+                className="mono"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(e.target.value.replace(/[^\d.,]/g, ""))}
               />
-              <Button size="lg" onClick={earn} disabled={busy || !amount}>
+              <Button type="submit" size="lg" disabled={busy || !amount}>
                 Créditer
               </Button>
-            </div>
+            </form>
           )}
 
-          <div style={{ textAlign: "center", marginTop: 14 }}>
+          <div className="scan-bas">
             <Button
               variant="ghost"
               size="sm"
               onClick={() => {
                 setLookup(null);
-                setFlash("");
+                setFlash(null);
               }}
             >
               Annuler

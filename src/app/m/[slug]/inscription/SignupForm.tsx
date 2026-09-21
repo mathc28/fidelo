@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type FormEvent } from "react";
+import { emailValide } from "@/lib/uiText";
 
 type Links = { serial: string; appleUrl: string; googleUrl: string };
 
-export default function SignupForm({ slug, labelColor }: { slug: string; labelColor: string }) {
+export default function SignupForm({ slug }: { slug: string }) {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [links, setLinks] = useState<Links | null>(null);
@@ -12,105 +13,108 @@ export default function SignupForm({ slug, labelColor }: { slug: string; labelCo
   const [error, setError] = useState("");
   const [forceOther, setForceOther] = useState(false);
 
-  // Détection du téléphone : un seul bouton wallet, le bon
-  const isIOS = useMemo(
-    () => typeof navigator !== "undefined" && /iPhone|iPad|iPod/i.test(navigator.userAgent),
-    []
-  );
+  // Détection du téléphone : un seul bouton wallet, le bon. iPadOS se
+  // présente comme un Mac ; on le reconnaît à son écran tactile.
+  const isIOS = useMemo(() => {
+    if (typeof navigator === "undefined") return false;
+    const ua = navigator.userAgent;
+    return /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  }, []);
   const showApple = forceOther ? !isIOS : isIOS;
 
-  async function handleSubmit() {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
     setError("");
-    if (!firstName || !email) {
-      setError("Prénom et email sont nécessaires.");
+    if (!firstName.trim() || !email.trim()) {
+      setError("Indiquez votre prénom et votre email.");
       return;
     }
+    if (!emailValide(email)) {
+      setError("Cette adresse email semble incomplète.");
+      return;
+    }
+    // Honeypot anti-bot : champ invisible, un humain ne le remplit jamais.
+    const website = String(new FormData(e.currentTarget).get("website") ?? "");
     setLoading(true);
     try {
       const res = await fetch(`/api/m/${slug}/signup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, email, website: "" }),
+        body: JSON.stringify({ firstName: firstName.trim(), email: email.trim(), website }),
       });
+      // 4xx : le serveur dit pourquoi (limite de tentatives, champ manquant).
+      if (res.status >= 400 && res.status < 500) {
+        setError((await res.text()) || "Vérifiez vos informations.");
+        return;
+      }
       if (!res.ok) throw new Error();
       setLinks(await res.json());
     } catch {
-      setError("La création a échoué. Réessayez dans un instant.");
+      setError("La création a échoué. Vérifiez votre connexion et réessayez.");
     } finally {
       setLoading(false);
     }
   }
 
-  const input: React.CSSProperties = {
-    width: "100%",
-    padding: "14px 16px",
-    borderRadius: "var(--radius-md)",
-    border: "1px solid rgba(255,255,255,0.2)",
-    background: "rgba(255,255,255,0.08)",
-    color: "#fff",
-    fontSize: 16,
-    marginBottom: 12,
-    boxSizing: "border-box",
-  };
-
   if (links) {
     const url = showApple ? links.appleUrl : links.googleUrl;
     return (
-      <div>
-        <p style={{ marginBottom: 16 }}>🎉 Votre carte est prête, {firstName} !</p>
-        <a
-          href={url}
-          style={{
-            display: "block",
-            textAlign: "center",
-            padding: "16px",
-            borderRadius: "var(--radius-md)",
-            background: showApple ? "#000" : "#fff",
-            color: showApple ? "#fff" : "#111",
-            border: showApple ? "1px solid rgba(255,255,255,0.3)" : "none",
-            textDecoration: "none",
-            fontWeight: 600,
-          }}
-        >
+      <div role="status">
+        <p className="m-success">Carte créée pour {firstName.trim()}.</p>
+        <p className="m-lede m-muted" style={{ marginBottom: 20 }}>
+          Ajoutez-la à votre téléphone, puis présentez-la en caisse.
+        </p>
+        <a href={url} className={`m-wallet ${showApple ? "m-wallet--apple" : "m-wallet--google"}`}>
           Ajouter à {showApple ? "Apple" : "Google"} Wallet
         </a>
-        <button
-          onClick={() => setForceOther((v) => !v)}
-          style={{
-            background: "none",
-            border: "none",
-            color: "rgba(255,255,255,0.4)",
-            fontSize: 13,
-            marginTop: 12,
-            cursor: "pointer",
-            textDecoration: "underline",
-            display: "block",
-            marginLeft: "auto",
-            marginRight: "auto",
-          }}
-        >
-          {showApple ? "J'ai un Android" : "J'ai un iPhone"}
+        <button type="button" className="m-link m-muted" onClick={() => setForceOther((v) => !v)}>
+          {showApple ? "J'ai un téléphone Android" : "J'ai un iPhone"}
         </button>
+        <a href={`/m/${slug}/compte`} className="m-link m-muted">
+          Voir où en est ma carte
+        </a>
       </div>
     );
   }
 
   return (
-    <>
-      <input
-        style={input}
-        placeholder="Prénom"
-        value={firstName}
-        onChange={(e) => setFirstName(e.target.value)}
-      />
-      <input
-        style={input}
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      {/* Honeypot anti-bot */}
+    <form onSubmit={handleSubmit} noValidate>
+      <div className="m-field">
+        <label className="m-label" htmlFor="signup-prenom">
+          Prénom
+        </label>
+        <input
+          id="signup-prenom"
+          name="given-name"
+          className="field-input field-input--on-theme"
+          autoComplete="given-name"
+          autoCapitalize="words"
+          enterKeyHint="next"
+          value={firstName}
+          onChange={(e) => setFirstName(e.target.value)}
+        />
+      </div>
+      <div className="m-field">
+        <label className="m-label" htmlFor="signup-email">
+          Email
+        </label>
+        <input
+          id="signup-email"
+          name="email"
+          type="email"
+          inputMode="email"
+          autoComplete="email"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="go"
+          className={`field-input field-input--on-theme${error ? " has-error" : ""}`}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? "signup-erreur" : undefined}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </div>
       <input
         type="text"
         name="website"
@@ -119,25 +123,14 @@ export default function SignupForm({ slug, labelColor }: { slug: string; labelCo
         style={{ position: "absolute", left: -9999 }}
         aria-hidden="true"
       />
-      {error && <p style={{ color: "#ff8a8a", fontSize: 14 }}>{error}</p>}
-      <button
-        onClick={handleSubmit}
-        disabled={loading}
-        style={{
-          width: "100%",
-          padding: 16,
-          borderRadius: "var(--radius-md)",
-          border: "none",
-          background: labelColor,
-          color: "#111",
-          fontSize: 16,
-          fontWeight: 700,
-          cursor: "pointer",
-          opacity: loading ? 0.6 : 1,
-        }}
-      >
+      {error && (
+        <p id="signup-erreur" className="m-error" role="alert">
+          {error}
+        </p>
+      )}
+      <button type="submit" className="m-action" disabled={loading}>
         {loading ? "Création…" : "Créer ma carte"}
       </button>
-    </>
+    </form>
   );
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePlatformAdmin } from "@/lib/platformAdmin";
 import { db, getMerchantBySlug } from "@/lib/supabaseAdmin";
+import { PROMO_WINDOW_MS } from "@/lib/promo";
 
 /** GET — vue en lecture seule d'un commerçant pour le back-office plateforme. */
 export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
@@ -12,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   if (!merchant) return new NextResponse("Commerce introuvable", { status: 404 });
 
   const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-  const weekAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString();
+  const weekAgo = new Date(Date.now() - PROMO_WINDOW_MS).toISOString();
 
   const [
     { data: customers },

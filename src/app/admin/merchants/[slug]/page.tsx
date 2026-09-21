@@ -2,9 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
+import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseBrowser";
-import { Button, Field, Logo, SubscriptionBadge, ProgramBadge } from "@/components/ui";
+import { Logo, SubscriptionBadge, ProgramBadge } from "@/components/ui";
+import { MAX_PROMOS } from "@/lib/promo";
 import type * as Row from "@/lib/types";
+import { AdminLogin } from "../../AdminLogin";
+import "../../admin.css";
 
 // Dérivés du modèle : voir src/lib/types.ts.
 type Customer = Pick<Row.Customer, "id" | "first_name" | "email" | "points" | "updated_at">;
@@ -18,6 +22,16 @@ type Stats = {
   promosThisWeek: number;
 };
 
+function Stat({ label, valeur, note }: { label: string; valeur: string; note?: string }) {
+  return (
+    <div className="card">
+      <div className="stat-label">{label}</div>
+      <div className="stat-value">{valeur}</div>
+      {note && <div className="stat-delta">{note}</div>}
+    </div>
+  );
+}
+
 /**
  * Vue admin plateforme en lecture seule du dashboard d'un commerçant.
  * Aucune action possible ici (pas d'édition, pas d'envoi de promo) —
@@ -27,10 +41,7 @@ type Stats = {
 export default function AdminMerchantPage() {
   const { slug } = useParams<{ slug: string }>();
 
-  const [session, setSession] = useState<any>(null);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
+  const [session, setSession] = useState<Session | null | undefined>(undefined);
 
   const [merchant, setMerchant] = useState<Row.Merchant | null>(null);
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -49,35 +60,33 @@ export default function AdminMerchantPage() {
   useEffect(() => {
     if (!session) return;
     (async () => {
-      const res = await fetch(`/api/admin/merchants/${slug}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (res.status === 401) {
-        setLoadError("❌ Ce compte n'est pas admin plateforme (PLATFORM_ADMIN_EMAILS).");
-        return;
+      try {
+        const res = await fetch(`/api/admin/merchants/${slug}`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (res.status === 401) {
+          setLoadError("Ce compte n'a pas accès au back-office.");
+          return;
+        }
+        if (res.status === 404) {
+          setLoadError("Commerce introuvable.");
+          return;
+        }
+        if (!res.ok) {
+          setLoadError((await res.text()) || "La fiche n'a pas pu être chargée.");
+          return;
+        }
+        const data = await res.json();
+        setMerchant(data.merchant);
+        setCustomers(data.customers);
+        setReward(data.reward);
+        setDevices(data.devices);
+        setStats(data.stats);
+      } catch {
+        setLoadError("Pas de connexion. Rechargez la page.");
       }
-      if (res.status === 404) {
-        setLoadError("❌ Commerce introuvable.");
-        return;
-      }
-      if (!res.ok) {
-        setLoadError(`❌ ${await res.text()}`);
-        return;
-      }
-      const data = await res.json();
-      setMerchant(data.merchant);
-      setCustomers(data.customers);
-      setReward(data.reward);
-      setDevices(data.devices);
-      setStats(data.stats);
     })();
   }, [session, slug]);
-
-  async function login() {
-    setAuthError("");
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setAuthError(error.message);
-  }
 
   const filteredClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -87,395 +96,147 @@ export default function AdminMerchantPage() {
     );
   }, [customers, search]);
 
-  if (!session) {
-    return (
-      <main style={{ maxWidth: 380, margin: "0 auto", padding: "80px 20px" }}>
-        <Logo height={40} />
-        <h1 style={{ fontSize: 22, margin: "20px 0 4px" }}>Back-office plateforme</h1>
-        <Field
-          type="email"
-          placeholder="Email admin"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <Field
-          type="password"
-          placeholder="Mot de passe"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && login()}
-        />
-        {authError && <p style={{ color: "var(--color-error)", fontSize: 14 }}>{authError}</p>}
-        <Button block onClick={login}>
-          Connexion
-        </Button>
-      </main>
-    );
-  }
+  if (session === undefined) return <main className="admin-chargement">Chargement…</main>;
+
+  if (!session) return <AdminLogin />;
 
   if (loadError) {
     return (
-      <main style={{ maxWidth: 560, margin: "0 auto", padding: "80px 20px" }}>
-        <p style={{ color: "var(--color-error)" }}>{loadError}</p>
+      <main className="auth-shell">
+        <Logo height={32} />
+        <h1 className="auth-title">Fiche indisponible</h1>
+        <p className="auth-lede" role="alert">
+          {loadError}
+        </p>
         <a href="/admin" className="row-action">
-          ← Retour au back-office
+          Retour au back-office
         </a>
       </main>
     );
   }
 
   if (!merchant || !stats) {
-    return (
-      <main style={{ padding: 80, textAlign: "center", color: "var(--color-text-secondary)" }}>
-        Chargement…
-      </main>
-    );
+    return <main className="admin-chargement">Chargement de la fiche…</main>;
   }
 
   const isVisits = merchant.program_type === "visits";
   const unit = isVisits ? "passages" : "points";
 
   return (
-    <div style={{ minHeight: "100vh" }}>
-      <header
-        style={{
-          background: "var(--color-marine)",
-          padding: "0 28px",
-          height: 56,
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          position: "sticky",
-          top: 0,
-          zIndex: 20,
-        }}
-      >
+    <div>
+      <header className="admin-barre on-dark">
         <Logo variant="symbol" theme="white" height={24} />
-        <a href="/admin" style={{ color: "#B9C2DC", fontSize: 13, textDecoration: "none" }}>
-          ← Back-office
+        <a href="/admin" className="admin-barre-lien">
+          Back-office
         </a>
-        <div style={{ flex: 1 }} />
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#B9C2DC",
-            background: "rgba(255,255,255,.1)",
-            borderRadius: 999,
-            padding: "4px 10px",
-            letterSpacing: ".05em",
-          }}
-        >
-          LECTURE SEULE
-        </span>
+        <div className="admin-barre-fin">
+          <span className="pill-on-dark">Lecture seule</span>
+        </div>
       </header>
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 32px" }}>
-        <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 20 }}>
-          <h1 style={{ fontSize: 24 }}>{merchant.name}</h1>
+      <div className="admin-corps">
+        <div className="admin-fiche-tete">
+          <h1 className="admin-titre">{merchant.name}</h1>
           <ProgramBadge programType={merchant.program_type} />
           <SubscriptionBadge status={merchant.subscription_status} />
-          <span
-            style={{
-              fontFamily: "ui-monospace, monospace",
-              fontSize: 12,
-              color: "var(--color-text-secondary)",
-            }}
-          >
-            fidelo.app/{merchant.slug}
-          </span>
+          <span className="admin-slug">/m/{merchant.slug}/inscription</span>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 16,
-            marginBottom: 20,
-          }}
-        >
-          <div className="card">
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--color-text-secondary)",
-                marginBottom: 8,
-              }}
-            >
-              Cartes actives
-            </div>
-            <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
-              {stats.totalCards.toLocaleString("fr-FR")}
-            </div>
-            <div
-              style={{ fontSize: 12, color: "var(--color-success)", fontWeight: 700, marginTop: 8 }}
-            >
-              +{stats.cardsThisMonth} ce mois
-            </div>
-          </div>
-          <div className="card">
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--color-text-secondary)",
-                marginBottom: 8,
-              }}
-            >
-              {isVisits ? "Passages ce mois" : "Points crédités ce mois"}
-            </div>
-            <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
-              {stats.txThisMonth.toLocaleString("fr-FR")}
-            </div>
-          </div>
-          <div className="card">
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--color-text-secondary)",
-                marginBottom: 8,
-              }}
-            >
-              Promos envoyées
-            </div>
-            <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
-              {stats.promosThisMonth}
-            </div>
-            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 8 }}>
-              {stats.promosThisWeek}/3 cette semaine
-            </div>
-          </div>
-          <div className="card">
-            <div
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "var(--color-text-secondary)",
-                marginBottom: 8,
-              }}
-            >
-              Caisses actives
-            </div>
-            <div style={{ fontSize: 36, fontWeight: 800, letterSpacing: -1, lineHeight: 1 }}>
-              {devices.length}
-            </div>
-          </div>
+        <div className="admin-stats">
+          <Stat
+            label="Cartes actives"
+            valeur={stats.totalCards.toLocaleString("fr-FR")}
+            note={`+${stats.cardsThisMonth} ce mois`}
+          />
+          <Stat
+            label={isVisits ? "Passages ce mois" : "Points crédités ce mois"}
+            valeur={stats.txThisMonth.toLocaleString("fr-FR")}
+          />
+          <Stat
+            label="Promos ce mois"
+            valeur={String(stats.promosThisMonth)}
+            note={`${stats.promosThisWeek}/${MAX_PROMOS} sur 7 jours glissants`}
+          />
+          <Stat label="Caisses actives" valeur={String(devices.length)} />
         </div>
 
-        <div
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, alignItems: "start" }}
-        >
-          <section className="card" style={{ padding: "24px 26px" }}>
-            <h2 style={{ fontSize: 20, marginBottom: 4 }}>Récompense</h2>
-            <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 16px" }}>
+        <div className="admin-duo">
+          <section className="card">
+            <h2 className="admin-titre-2">Récompense</h2>
+            <p className="admin-note">
               {isVisits ? "1 tampon par visite." : "1 point par euro dépensé."}
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {reward && (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 14,
-                    border: "1px solid #F0EDE2",
-                    borderRadius: "var(--radius-md)",
-                    padding: "12px 16px",
-                    opacity: 1,
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 44,
-                      height: 44,
-                      flex: "none",
-                      borderRadius: "var(--radius-md)",
-                      background: "var(--color-cream)",
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <div style={{ fontWeight: 800, fontSize: 15, lineHeight: 1 }}>
-                      {reward.cost_points}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: 8.5,
-                        fontWeight: 700,
-                        color: "var(--color-text-secondary)",
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      {unit}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{reward.label}</div>
-                    <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                      Seuil du programme
-                    </div>
+            {reward ? (
+              <div className="admin-ligne">
+                <div className="admin-seuil" aria-label={`${reward.cost_points} ${unit}`}>
+                  {reward.cost_points}
+                </div>
+                <div>
+                  <div className="admin-ligne-titre">{reward.label}</div>
+                  <div className="admin-ligne-meta">
+                    Seuil : {reward.cost_points} {unit}
                   </div>
                 </div>
-              )}
-              {!reward && (
-                <div
-                  style={{
-                    padding: 16,
-                    textAlign: "center",
-                    color: "var(--color-text-secondary)",
-                    fontSize: 13,
-                  }}
-                >
-                  Aucune récompense configurée
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <p className="admin-vide">Aucune récompense configurée.</p>
+            )}
           </section>
 
-          <section className="card" style={{ padding: "24px 26px" }}>
-            <h2 style={{ fontSize: 20, marginBottom: 4 }}>Caisses</h2>
-            <p style={{ fontSize: 13, color: "var(--color-text-secondary)", margin: "0 0 16px" }}>
+          <section className="card">
+            <h2 className="admin-titre-2">Caisses</h2>
+            <p className="admin-note">
               Téléphones autorisés à scanner les cartes de ce commerçant.
             </p>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {devices.map((d) => (
-                <div
-                  key={d.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 12,
-                    background: "var(--color-surface)",
-                    borderRadius: "var(--radius-md)",
-                    padding: "12px 16px",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 34,
-                      height: 34,
-                      borderRadius: 10,
-                      background: "#fff",
-                      border: "1px solid var(--color-border)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 15,
-                    }}
-                  >
-                    📱
+            {devices.map((d) => (
+              <div key={d.id} className="admin-ligne">
+                <div>
+                  <div className="admin-ligne-titre">{d.label}</div>
+                  <div className="admin-ligne-meta">
+                    Appairée le {new Date(d.created_at).toLocaleDateString("fr-FR")}
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 700, fontSize: 14 }}>{d.label}</div>
-                    <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                      Appairé le {new Date(d.created_at).toLocaleDateString("fr-FR")}
-                    </div>
-                  </div>
-                </div>
-              ))}
-              {devices.length === 0 && (
-                <div
-                  style={{
-                    padding: 16,
-                    textAlign: "center",
-                    color: "var(--color-text-secondary)",
-                    fontSize: 13,
-                  }}
-                >
-                  Aucune caisse appairée
-                </div>
-              )}
-            </div>
-          </section>
-
-          <section className="card" style={{ padding: "24px 26px", gridColumn: "1 / -1" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 16,
-                marginBottom: 16,
-                flexWrap: "wrap",
-              }}
-            >
-              <h2 style={{ fontSize: 20 }}>Derniers clients</h2>
-              <input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher un prénom ou un email…"
-                className="field-input"
-                style={{ width: 280, padding: "10px 14px", fontSize: 13 }}
-              />
-            </div>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.4fr 1.8fr 1fr 1fr",
-                padding: "8px 16px",
-                fontSize: 11,
-                fontWeight: 700,
-                color: "var(--color-text-secondary)",
-                textTransform: "uppercase",
-                letterSpacing: ".06em",
-              }}
-            >
-              <div>Client</div>
-              <div>Email</div>
-              <div>{isVisits ? "Passages" : "Points"}</div>
-              <div style={{ textAlign: "right" }}>Dernier passage</div>
-            </div>
-            {filteredClients.map((c) => (
-              <div
-                key={c.id}
-                className="table-row"
-                style={{ gridTemplateColumns: "1.4fr 1.8fr 1fr 1fr" }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div
-                    style={{
-                      width: 30,
-                      height: 30,
-                      flex: "none",
-                      borderRadius: "50%",
-                      background: "var(--color-cream)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontWeight: 700,
-                      fontSize: 12,
-                    }}
-                  >
-                    {c.first_name.charAt(0).toUpperCase()}
-                  </div>
-                  <span style={{ fontWeight: 700 }}>{c.first_name}</span>
-                </div>
-                <div style={{ color: "var(--color-text-secondary)", fontSize: 13 }}>{c.email}</div>
-                <div style={{ fontWeight: 700 }}>{c.points}</div>
-                <div
-                  style={{ textAlign: "right", color: "var(--color-text-secondary)", fontSize: 13 }}
-                >
-                  {new Date(c.updated_at).toLocaleString("fr-FR", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
                 </div>
               </div>
             ))}
+            {devices.length === 0 && <p className="admin-vide">Aucune caisse appairée.</p>}
+          </section>
+
+          <section className="card admin-table admin-pleine">
+            <div className="admin-table-tete">
+              <h2 className="admin-titre-2">Derniers clients</h2>
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Prénom ou email"
+                aria-label="Filtrer les clients"
+                className="field-input field-input--sm admin-recherche"
+              />
+            </div>
+            <div className="admin-defile">
+              <div className="table-head admin-cols-clients">
+                <div>Client</div>
+                <div>Email</div>
+                <div className="admin-droite">{isVisits ? "Passages" : "Points"}</div>
+                <div className="admin-droite">Dernière activité</div>
+              </div>
+              {filteredClients.map((c) => (
+                <div key={c.id} className="table-row admin-cols-clients">
+                  <div className="admin-nom">{c.first_name}</div>
+                  <div className="admin-slug">{c.email}</div>
+                  <div className="admin-droite mono">{c.points}</div>
+                  <div className="admin-droite mono">
+                    {new Date(c.updated_at).toLocaleString("fr-FR", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
             {filteredClients.length === 0 && (
-              <div
-                style={{
-                  padding: 24,
-                  textAlign: "center",
-                  color: "var(--color-text-secondary)",
-                  fontSize: 13,
-                }}
-              >
+              <div className="admin-vide">
                 {search
                   ? `Aucun client ne correspond à « ${search} »`
                   : "Aucun client pour l'instant."}
