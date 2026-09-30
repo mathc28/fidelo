@@ -11,7 +11,7 @@ import "./landing.css";
 const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
 
 /** Tant qu'il n'y a pas d'inscription en libre-service, l'action est honnête : on écrit. */
-const CONTACT = "mailto:hello@fiduo.app?subject=D%C3%A9marrer%20avec%20Fiduo";
+const CONTACT = "mailto:mathco.dev@gmail.com?subject=D%C3%A9marrer%20avec%20Fiduo";
 const CTA = "Démarrer";
 
 /** Le carton d'aujourd'hui, tenu en registre : trois constats, pas trois tuiles. */
