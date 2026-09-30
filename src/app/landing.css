@@ -270,6 +270,7 @@
 
 .landing-panel--marine a:focus-visible,
 .landing-panel--marine button:focus-visible,
+.landing-ticket a:focus-visible,
 .landing-pied a:focus-visible {
   outline-color: var(--color-paper);
 }
@@ -841,11 +842,14 @@
 .landing-ticket {
   max-width: 460px;
   margin-inline: auto;
-  background: var(--color-paper);
+  /* Ticket marine : sur le crème, le papier ne se détachait plus du fond. */
+  background: var(--color-marine);
+  color: var(--color-paper);
   padding: clamp(30px, 4vw, 44px) clamp(26px, 3.4vw, 40px) clamp(38px, 4.6vw, 52px);
   position: relative;
   box-shadow: 0 1px 2px var(--color-rule-soft);
-  /* Bord déchiré en bas — la découpe du rouleau thermique. */
+  /* Bord déchiré en bas — la découpe du rouleau thermique. Le masque rogne
+     aussi le filet du bas, qui apparaît donc échancré comme le papier. */
   -webkit-mask-image: radial-gradient(circle at 6px 100%, transparent 0 5px, #000 5.5px);
   mask-image: radial-gradient(circle at 6px 100%, transparent 0 5px, #000 5.5px);
   -webkit-mask-size: 12px 100%;
@@ -856,7 +860,7 @@
 
 .landing-ticket-tete {
   text-align: center;
-  border-bottom: 1px dashed var(--color-rule);
+  border-bottom: 1px dashed var(--papier-22);
   padding-bottom: 20px;
   margin-bottom: 22px;
 }
@@ -866,7 +870,7 @@
   font-size: 1.3rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--color-marine);
+  color: var(--color-paper);
 }
 
 .landing-ticket-mention {
@@ -874,7 +878,7 @@
   font-size: var(--mono-s);
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-text-secondary);
+  color: var(--papier-72);
   margin-top: 7px;
 }
 
@@ -886,18 +890,18 @@
   gap: 8px;
   font-family: var(--font-mono), ui-monospace, monospace;
   font-size: var(--mono-m);
-  color: var(--color-text-secondary);
+  color: var(--papier-72);
   padding: 9px 0;
 }
 
 .landing-ligne-conduite {
   flex: 1;
-  border-bottom: 1px dotted var(--color-rule-strong);
+  border-bottom: 1px dotted var(--papier-22);
   transform: translateY(-3px);
 }
 
 .landing-ligne-valeur {
-  color: var(--color-marine);
+  color: var(--color-paper);
   font-weight: 700;
   white-space: nowrap;
 }
@@ -907,7 +911,7 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 16px;
-  border-top: 1px dashed var(--color-rule);
+  border-top: 1px dashed var(--papier-22);
   margin-top: 18px;
   padding-top: 22px;
 }
@@ -918,7 +922,7 @@
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--color-text-secondary);
+  color: var(--papier-72);
 }
 
 .landing-ticket-a-venir {
@@ -929,7 +933,7 @@
   line-height: 1.25;
   text-align: right;
   max-width: 22ch;
-  color: var(--color-marine);
+  color: var(--color-paper);
 }
 
 .landing-ticket-action {
