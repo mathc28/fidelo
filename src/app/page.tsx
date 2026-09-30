@@ -12,7 +12,7 @@ const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_co
 
 /** Tant qu'il n'y a pas d'inscription en libre-service, l'action est honnête : on écrit. */
 const CONTACT = "mailto:bonjour@fiduo.app?subject=D%C3%A9marrer%20avec%20Fiduo";
-const CTA = "Écrire pour démarrer";
+const CTA = "Démarrer";
 
 /** Le carton d'aujourd'hui, tenu en registre : trois constats, pas trois tuiles. */
 const CONSTATS = [
