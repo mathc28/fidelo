@@ -95,7 +95,7 @@ function ApercuFormule({ visites }: { visites: boolean }) {
       className={`landing-formule-svg${visites ? "" : " landing-formule-svg--foret"}`}
       aria-hidden="true"
     >
-      <rect className="landing-formule-fond" width="320" height="116" rx="4" />
+      <rect className="landing-formule-fond" width="320" height="116" rx="10" />
       <text className="landing-formule-etiq" x="20" y="32">
         {visites ? "PASSAGES" : "POINTS"}
       </text>
