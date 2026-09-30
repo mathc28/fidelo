@@ -12,6 +12,16 @@
    ============================================================ */
 
 .landing-page {
+  /* Direction « crème clair » : le kraft de l'app laisse place à un crème
+     plus pâle et moins jaune. Le jeton est redéfini ici, donc tout ce qui
+     tire sur var(--color-kraft) dans la page suit — fond, en-tête, cartes
+     de formule. Le reste de l'application garde le kraft d'origine. */
+  --color-kraft: #f7f4ec;
+  /* Filet du bas de l'en-tête, en crème assombri. */
+  --filet-creme: #ebe5d6;
+  /* Corail encré : la seule teinte corail qui porte du texte sur le crème
+     (4:1 — assez pour du grand titre, pas pour du texte courant). */
+  --corail-fonce: #d64535;
   /* Le corail de marque ne tient que 4,4:1 sur le marine : cette version
      éclaircie (5,7:1) sert au petit texte sur fond sombre. */
   --corail-clair: #ff8b7a;
@@ -150,8 +160,10 @@
   position: sticky;
   top: 0;
   z-index: 50;
-  background: var(--color-kraft);
-  border-bottom: 1px solid var(--color-rule-soft);
+  /* L'en-tête est la seule surface blanche de la page : elle se détache du
+     crème par un filet d'ombre, qui tient aussi bien au défilement. */
+  background: #fff;
+  box-shadow: 0 1px 0 var(--filet-creme);
 }
 
 .landing-header-inner {
@@ -278,7 +290,7 @@
 }
 
 .landing-hero-titre-suite {
-  color: var(--color-text-secondary);
+  color: var(--corail-fonce);
 }
 
 .landing-hero-lede {
@@ -380,18 +392,29 @@
   position: relative;
 }
 
-/* L'impression : encre inégale, légèrement de travers. C'est ici — et
-   seulement ici, avec la marque des gestes — que vit l'encre violette. */
+/* L'impression : encre inégale, légèrement de travers. Marine, comme la
+   carte du logo. */
 .landing-case-encre {
   width: 84%;
   height: 84%;
   border-radius: 50%;
   /* Un disque plein, pas un glyphe : sous le filtre de déplacement, un
      caractère de 8 px se réduit à du bruit. L'encre, elle, s'écrase. */
-  background: var(--color-ink);
+  background: var(--color-marine);
   opacity: 0.86;
   transform: rotate(var(--tilt, -6deg));
   filter: url(#landing-encre-rugueuse);
+}
+
+/* Le dernier tampon : le cœur corail du logo. Pas de filtre d'encre ici —
+   à cette taille, il mangerait la pointe et les deux lobes. */
+.landing-case-encre--coeur {
+  background: var(--color-coral);
+  opacity: 1;
+  filter: none;
+  -webkit-mask: var(--masque-coeur) center / contain no-repeat;
+  mask: var(--masque-coeur) center / contain no-repeat;
+  --masque-coeur: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
 }
 
 .landing-case--frappe .landing-case-encre {
