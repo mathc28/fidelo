@@ -148,7 +148,7 @@ export default function LandingPage() {
       {/* ===== En-tête ===== */}
       <header className="landing-header">
         <div className="landing-wrap landing-header-inner">
-          <Logo variant="full" height={50} />
+          <Logo variant="full" height={40} />
           <nav className="landing-nav">
             <a href="#gestes" className="landing-nav-link">
               Comment ça marche
