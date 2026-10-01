@@ -44,7 +44,7 @@ export function SiteFooter() {
   return (
     <footer className="landing-pied">
       <div className="landing-wrap landing-pied-inner">
-        <Logo variant="symbol" theme="white" height={22} />
+        <Logo variant="full" theme="white" height={28} />
         <span className="landing-pied-mention">© 2026 Fiduo · Fabriqué à Lyon</span>
         <div className="landing-pied-liens">
           <a href="/mentions-legales" className="landing-pied-lien">

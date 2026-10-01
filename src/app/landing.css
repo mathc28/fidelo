@@ -1048,11 +1048,6 @@
   margin: 22px auto 34px;
 }
 
-.landing-cloture-logo {
-  margin-top: clamp(48px, 6vw, 72px);
-  opacity: 0.7;
-}
-
 /* ---------- Pied ---------- */
 
 .landing-pied {

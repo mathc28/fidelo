@@ -453,9 +453,6 @@ export default function LandingPage() {
           <a href={CONTACT} className="landing-action">
             {CTA}
           </a>
-          <div className="landing-cloture-logo">
-            <Logo variant="full" theme="white" height={40} />
-          </div>
         </div>
       </section>
 
