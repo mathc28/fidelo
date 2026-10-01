@@ -328,7 +328,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== Les deux gestes ===== */}
-      <section id="gestes" className="landing-panel">
+      <section id="gestes" className="landing-panel landing-panel--marine">
         <div className="landing-wrap">
           <div className="landing-tete">
             <h2 className="landing-display landing-h2">Deux gestes, et c&apos;est en route.</h2>
@@ -389,7 +389,7 @@ export default function LandingPage() {
       </section>
 
       {/* ===== Tarif : un ticket de caisse ===== */}
-      <section id="tarif" className="landing-panel">
+      <section id="tarif" className="landing-panel landing-panel--marine">
         <div className="landing-wrap">
           <div className="landing-tete">
             <span className="landing-mono landing-eyebrow">Le tarif</span>
