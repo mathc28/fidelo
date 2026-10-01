@@ -1,0 +1,108 @@
+/* Pages légales — l'en-tête, le pied, le fond et les variables viennent de
+   la landing (.landing-page) ; ici, seulement la colonne de lecture. */
+
+/* Le pied reste en bas même quand la page est courte. */
+.legal-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.legal-page .landing-pied {
+  margin-top: auto;
+}
+
+.legal-wrap {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 clamp(16px, 5vw, 32px);
+}
+
+.legal-contenu {
+  width: 100%;
+  padding-top: clamp(40px, 6vw, 72px);
+  padding-bottom: clamp(48px, 7vw, 96px);
+}
+
+.legal-h1 {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: clamp(2rem, 4vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.legal-maj {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--mono-m);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin: 14px 0 0;
+}
+
+.legal-chapeau {
+  font-size: 1.1rem;
+  margin-top: 28px;
+}
+
+.legal-contenu section {
+  margin-top: 44px;
+  padding-top: 32px;
+  border-top: 1px dashed var(--color-rule);
+}
+
+.legal-contenu h2 {
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 14px;
+}
+
+.legal-contenu h3 {
+  font-size: 1.02rem;
+  font-weight: 700;
+  margin: 26px 0 8px;
+}
+
+.legal-contenu p,
+.legal-contenu li {
+  font-size: 0.98rem;
+  line-height: 1.65;
+  color: var(--color-text-secondary);
+}
+
+.legal-contenu p {
+  margin: 0 0 12px;
+}
+
+.legal-contenu ul {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+
+.legal-contenu li {
+  margin-bottom: 8px;
+}
+
+.legal-contenu strong {
+  color: var(--color-marine);
+}
+
+/* Liens du texte seulement : l'en-tête et le pied gardent leurs couleurs. */
+.legal-contenu a {
+  color: var(--color-marine);
+  text-underline-offset: 3px;
+}
+
+/* Trou à combler avant la mise en ligne : impossible à rater. */
+.legal-a-completer {
+  background: #ffe08a;
+  color: #4a3500;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-weight: 600;
+}

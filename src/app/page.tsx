@@ -6,13 +6,11 @@ import { IOSDevice } from "@/components/IOSFrame";
 import { Reveal } from "@/components/Reveal";
 import WalletPreview, { type Theme } from "@/components/WalletPreview";
 import { MAX_PROMOS } from "@/lib/promo";
+import { CONTACT, CTA } from "@/lib/site";
+import { SiteHeader, SiteFooter } from "@/components/SiteChrome";
 import "./landing.css";
 
 const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
-
-/** Tant qu'il n'y a pas d'inscription en libre-service, l'action est honnête : on écrit. */
-const CONTACT = "mailto:mathco.dev@gmail.com?subject=D%C3%A9marrer%20avec%20Fiduo";
-const CTA = "Démarrer";
 
 /** Le carton d'aujourd'hui, tenu en registre : trois constats, pas trois tuiles. */
 const CONSTATS = [
@@ -145,29 +143,7 @@ export default function LandingPage() {
         </filter>
       </svg>
 
-      {/* ===== En-tête ===== */}
-      <header className="landing-header">
-        <div className="landing-wrap landing-header-inner">
-          <Logo variant="full" height={40} />
-          <nav className="landing-nav">
-            <a href="#gestes" className="landing-nav-link">
-              Comment ça marche
-            </a>
-            <a href="#formules" className="landing-nav-link">
-              Formules
-            </a>
-            <a href="#tarif" className="landing-nav-link">
-              Tarif
-            </a>
-            <a href="/dashboard" className="landing-nav-link landing-nav-link--toujours">
-              Se connecter
-            </a>
-            <a href={CONTACT} className="landing-action landing-action--sm">
-              {CTA}
-            </a>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
       {/* ===== Hero : le tampon tombe, la carte passe la main au téléphone ===== */}
       <section className="landing-panel">
@@ -483,25 +459,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Pied ===== */}
-      <footer className="landing-pied">
-        <div className="landing-wrap landing-pied-inner">
-          <Logo variant="symbol" theme="white" height={22} />
-          <span className="landing-pied-mention">© 2026 Fiduo · Fabriqué à Lyon</span>
-          <div className="landing-pied-liens">
-            {/* TODO : pages Mentions légales et Confidentialité (obligatoires, LCEN / RGPD). */}
-            <a href="#" className="landing-pied-lien">
-              Mentions légales
-            </a>
-            <a href="#" className="landing-pied-lien">
-              Confidentialité
-            </a>
-            <a href="mailto:bonjour@fiduo.app" className="landing-pied-lien">
-              bonjour@fiduo.app
-            </a>
-          </div>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }
