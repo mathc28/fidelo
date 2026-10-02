@@ -25,6 +25,9 @@ export function SiteHeader() {
           <a href="/#formules" className="landing-nav-link">
             Formules
           </a>
+          <a href="/#personnalisation" className="landing-nav-link">
+            Personnalisation
+          </a>
           <a href="/#tarif" className="landing-nav-link">
             Tarif
           </a>

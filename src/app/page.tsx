@@ -8,6 +8,7 @@ import WalletPreview, { type Theme } from "@/components/WalletPreview";
 import { MAX_PROMOS } from "@/lib/promo";
 import { CONTACT, CTA } from "@/lib/site";
 import { SiteHeader, SiteFooter } from "@/components/SiteChrome";
+import { Personnalisation } from "./Personnalisation";
 import "./landing.css";
 
 const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
@@ -363,6 +364,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ===== Personnalisation : la carte aux couleurs du commerce ===== */}
+      <Personnalisation />
 
       {/* ===== Tarif : un ticket de caisse ===== */}
       <section id="tarif" className="landing-panel landing-panel--marine">

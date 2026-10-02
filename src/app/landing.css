@@ -207,7 +207,8 @@
 
 /* Sur téléphone — là où un commerçant se connecte — seul « Se connecter »
    reste à côté de l'action. */
-@media (max-width: 880px) {
+/* 960 px : avec quatre ancres, la nav complète ne tient plus en dessous. */
+@media (max-width: 960px) {
   .landing-nav {
     gap: 14px;
   }
@@ -586,6 +587,7 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(24px, 4vw, 56px);
   max-width: 980px;
+  margin-inline: auto;
 }
 
 @media (max-width: 760px) {
@@ -595,11 +597,12 @@
   }
 }
 
+/* Le numéro au-dessus du texte, l'ensemble centré. */
 .landing-geste {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 20px;
-  align-items: start;
+  gap: 18px;
+  justify-items: center;
+  text-align: center;
 }
 
 /* La numérotation est légitime ici : c'est une vraie séquence, le second
@@ -858,6 +861,151 @@
 .landing-verrou-texte {
   font-size: 13px;
   line-height: 1.35;
+}
+
+/* ---------- Personnalisation : la carte aux couleurs du commerce ---------- */
+
+.landing-perso-sous-titre {
+  margin: 16px auto 0;
+}
+
+.landing-perso {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(36px, 6vw, 88px);
+  align-items: center;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+@media (max-width: 860px) {
+  .landing-perso {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.landing-perso-points {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* Trois entrées séparées par le pointillé du coupon, comme le reste de la page. */
+.landing-perso-point {
+  padding: 20px 0;
+  border-top: 1px dashed var(--color-rule);
+}
+
+.landing-perso-point:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.landing-perso-point .landing-h3 {
+  margin-bottom: 8px;
+}
+
+.landing-perso-note {
+  margin: 8px 0 0;
+  padding: 16px 18px;
+  border-radius: var(--rayon-petit);
+  background: var(--color-wash);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.landing-perso-demo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+}
+
+/* La carte de WalletPreview porte ses couleurs en style inline : la
+   transition se pose sur ses descendants. Coupée par la règle
+   prefers-reduced-motion commune à la page (section Accessibilité). */
+.landing-perso-carte,
+.landing-perso-carte * {
+  transition:
+    background-color 0.35s ease,
+    color 0.35s ease;
+}
+
+/* La carte Wallet fait 300 px de large en dur : sur les plus petits
+   téléphones, on la réduit plutôt que de la rogner. */
+@media (max-width: 360px) {
+  .landing-perso-carte {
+    zoom: 0.9;
+  }
+}
+
+.landing-perso-themes {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  text-align: center;
+}
+
+.landing-perso-legende {
+  display: block;
+  width: 100%;
+  margin-bottom: 14px;
+  color: var(--color-text-secondary);
+}
+
+.landing-perso-pastilles {
+  display: grid;
+  grid-template-columns: repeat(5, 44px);
+  gap: 12px;
+  justify-content: center;
+}
+
+.landing-perso-pastille {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+}
+
+/* Le fond du thème, et une pastille de sa couleur d'accent : les deux
+   teintes qui changent sur la carte. */
+.landing-perso-disque {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 68% 32%,
+    var(--pastille-accent) 0 5px,
+    var(--pastille-fond) 5.5px
+  );
+  box-shadow: 0 0 0 1px var(--color-rule-soft);
+  transition: box-shadow 0.18s ease;
+}
+
+.landing-perso-pastille:hover .landing-perso-disque {
+  box-shadow:
+    0 0 0 3px var(--color-kraft),
+    0 0 0 4px var(--color-rule-strong);
+}
+
+.landing-perso-radio:checked + .landing-perso-disque {
+  box-shadow:
+    0 0 0 3px var(--color-kraft),
+    0 0 0 5px var(--color-marine);
+}
+
+.landing-perso-radio:focus-visible + .landing-perso-disque {
+  outline: 2px solid var(--color-marine);
+  outline-offset: 6px;
+}
+
+.landing-perso-nom {
+  margin: 14px 0 0;
+  font-weight: 700;
+  font-size: var(--text-md);
 }
 
 /* ---------- Tarif : le ticket de caisse ---------- */
