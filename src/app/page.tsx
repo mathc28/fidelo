@@ -9,6 +9,7 @@ import { MAX_PROMOS } from "@/lib/promo";
 import { CONTACT, CTA } from "@/lib/site";
 import { SiteHeader, SiteFooter } from "@/components/SiteChrome";
 import { Personnalisation } from "./Personnalisation";
+import { Promos } from "./Promos";
 import "./landing.css";
 
 const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
@@ -364,6 +365,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* ===== Promos : un message sur la carte de tous les clients ===== */}
+      <Promos />
 
       {/* ===== Personnalisation : la carte aux couleurs du commerce ===== */}
       <Personnalisation />
