@@ -94,6 +94,11 @@ export async function buildApplePass(
   // Rangée secondaire — le compteur et la récompense côte à côte. Le libellé
   // y est au-dessus de la valeur et prend la `labelColor` du thème, ce que la
   // rangée principale ne permet pas.
+  //
+  // Pas de `changeMessage` ici, volontairement : ces champs changent à chaque
+  // passage en caisse, quand le client a son téléphone en main. Une
+  // notification à chaque scan l'inciterait à couper celles de la carte, et
+  // avec elles les promos. La carte se met à jour en silence.
   pass.secondaryFields.push(
     {
       key: "balance",
@@ -103,7 +108,6 @@ export async function buildApplePass(
       value: nextReward
         ? texteCompteur(customer.points, nextReward.cost_points, isVisits)
         : customer.points,
-      changeMessage: isVisits ? "Passage enregistré ! %@" : "Vous avez maintenant %@ points !",
     },
     {
       key: "reward",
@@ -112,15 +116,15 @@ export async function buildApplePass(
       // Calé à droite pour fermer la rangée : le compteur garde l'alignement
       // à gauche par défaut, les deux champs s'appuient sur les bords.
       textAlignment: "PKTextAlignmentRight",
-      changeMessage: "%@",
     }
   );
 
-  // Dernière promo du commerce, en tête du dos de la carte. Son changeMessage
-  // fait qu'à chaque nouveau texte, iOS l'affiche en notification sur l'écran
-  // verrouillé (avec le nom du commerce en titre). Un texte identique au
-  // précédent ne change pas la valeur, donc ne notifie pas : le dashboard
-  // prévient le commerçant. Aucun champ sans promo en cours d'affichage.
+  // Dernière promo du commerce, en tête du dos de la carte. Seul champ de la
+  // carte à porter un changeMessage : à chaque nouveau texte, iOS l'affiche
+  // en notification sur l'écran verrouillé (avec le nom du commerce en
+  // titre). Un texte identique au précédent ne change pas la valeur, donc ne
+  // notifie pas : le dashboard prévient le commerçant. Aucun champ sans
+  // promo en cours d'affichage.
   if (promo) {
     pass.backFields.push({
       key: "promo",
