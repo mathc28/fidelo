@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/promos-expirees",
+      "schedule": "5 23 * * *"
+    }
+  ]
+}

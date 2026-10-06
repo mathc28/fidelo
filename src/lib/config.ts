@@ -19,8 +19,8 @@ export const config = {
     signerKey: () => fromBase64("APPLE_SIGNER_KEY_BASE64"),
     signerKeyPassphrase: process.env.APPLE_SIGNER_KEY_PASSPHRASE ?? "",
     wwdrCert: () => fromBase64("APPLE_WWDR_CERT_BASE64"),
-    apnsKeyId: required("APNS_KEY_ID"),
-    apnsKey: () => fromBase64("APNS_KEY_BASE64").toString("utf-8"),
+    // APNs s'authentifie avec ce même certificat (signerCert / signerKey) :
+    // APNS_KEY_ID et APNS_KEY_BASE64 ne servent plus.
   },
 
   google: {

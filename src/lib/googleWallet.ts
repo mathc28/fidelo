@@ -218,14 +218,27 @@ export async function updateGooglePoints(customer: Customer, merchant: Merchant)
   });
 }
 
-/** Message sur la classe du merchant = notification à TOUS ses clients Android. */
+/**
+ * Message sur la classe du merchant = notification à TOUS ses clients Android.
+ * `displayInterval` borne son affichage : passé `expiresAt`, Google ne le
+ * montre plus sur la carte, sans autre appel de notre part.
+ */
 export async function broadcastMerchantPromo(
   merchant: Merchant,
   title: string,
-  body: string
+  body: string,
+  expiresAt: Date
 ): Promise<void> {
   const classId = await ensureMerchantClass(merchant);
   await request("POST", `${API}/loyaltyClass/${classId}/addMessage`, {
-    message: { header: title, body, messageType: "TEXT_AND_NOTIFY" },
+    message: {
+      header: title,
+      body,
+      messageType: "TEXT_AND_NOTIFY",
+      displayInterval: {
+        start: { date: new Date().toISOString() },
+        end: { date: expiresAt.toISOString() },
+      },
+    },
   });
 }

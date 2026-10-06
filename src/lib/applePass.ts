@@ -1,8 +1,9 @@
 import { PKPass } from "passkit-generator";
 import { config } from "./config";
-import { Customer, Merchant, Reward, getCardTheme } from "./supabaseAdmin";
+import { Customer, Merchant, Reward, db, getCardTheme } from "./supabaseAdmin";
 import { getPassImages } from "./passAssets";
 import { separerRecompense, texteCompteur, texteRecompense } from "./wallet/rewardText";
+import { promoActive } from "./promo";
 
 /**
  * Génère le .pkpass d'un client, entièrement paramétré par son merchant :
@@ -14,8 +15,11 @@ export async function buildApplePass(
   merchant: Merchant,
   reward: Reward | null
 ): Promise<Buffer> {
-  const images = await getPassImages(merchant);
-  const theme = await getCardTheme(merchant.theme_id);
+  const [images, theme, promo] = await Promise.all([
+    getPassImages(merchant),
+    getCardTheme(merchant.theme_id),
+    dernierePromo(merchant.id),
+  ]);
   const isVisits = merchant.program_type === "visits";
 
   // Même découpe que l'aperçu du dashboard : source unique dans wallet/rewardText.
@@ -112,6 +116,20 @@ export async function buildApplePass(
     }
   );
 
+  // Dernière promo du commerce, en tête du dos de la carte. Son changeMessage
+  // fait qu'à chaque nouveau texte, iOS l'affiche en notification sur l'écran
+  // verrouillé (avec le nom du commerce en titre). Un texte identique au
+  // précédent ne change pas la valeur, donc ne notifie pas : le dashboard
+  // prévient le commerçant. Aucun champ sans promo en cours d'affichage.
+  if (promo) {
+    pass.backFields.push({
+      key: "promo",
+      label: "Message",
+      value: promo,
+      changeMessage: "%@",
+    });
+  }
+
   pass.backFields.push(
     { key: "email", label: "Compte", value: customer.email },
     {
@@ -136,6 +154,24 @@ export async function buildApplePass(
   });
 
   return pass.getAsBuffer();
+}
+
+/**
+ * Texte de la dernière promo du commerce si elle est encore dans sa durée
+ * d'affichage, null sinon. Seule la dernière compte : une promo plus ancienne
+ * mais plus longue ne revient pas à l'expiration d'une plus récente (elle
+ * renotifierait les clients). Une promo expirée laisse la carte sans champ
+ * « Message » : la tâche /api/cron/promos-expirees pousse cette version.
+ */
+async function dernierePromo(merchantId: string): Promise<string | null> {
+  const { data } = await db
+    .from("promos")
+    .select("message, expires_at")
+    .eq("merchant_id", merchantId)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  return data && promoActive(data.expires_at) ? data.message : null;
 }
 
 function hexToRgb(hex: string): string {

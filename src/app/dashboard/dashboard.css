@@ -700,6 +700,41 @@
   min-height: 84px;
 }
 
+/* Le message actuellement affiché sur les cartes, et jusqu'à quand. */
+.cpt-promo-en-cours {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--color-wash);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}
+
+.cpt-promo-en-cours-fin,
+.cpt-promo-fin {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--mono-m);
+  color: var(--color-text-secondary);
+}
+
+.cpt-promo-duree {
+  border: none;
+  padding: 0;
+  margin: 14px 0 0;
+  min-width: 0;
+}
+
+.cpt-promo-duree .cpt-bascules {
+  margin-bottom: 8px;
+}
+
+.cpt-promo-fin {
+  margin: 0;
+}
+
 .cpt-promo-pied {
   display: flex;
   align-items: center;

@@ -138,10 +138,16 @@ create table promos (
   title text,
   message text not null,
   apple_devices_notified integer not null default 0,
-  sent_at timestamptz not null default now()
+  sent_at timestamptz not null default now(),
+  -- Fin d'affichage sur la carte : minuit (Paris) à la fin du dernier jour
+  -- choisi (1, 3 ou 7 jours). Calculée par l'API (lib/promo.ts).
+  expires_at timestamptz not null,
+  -- Posé par /api/cron/promos-expirees une fois le message retiré des iPhone.
+  retired_at timestamptz
 );
 
 create index idx_promos_merchant on promos(merchant_id, sent_at desc);
+create index idx_promos_a_retirer on promos(expires_at) where retired_at is null;
 
 -- ============================================================
 -- FONCTIONS & TRIGGERS

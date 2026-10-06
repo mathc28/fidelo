@@ -14,7 +14,17 @@ import {
 } from "@/components/ui";
 import WalletPreview from "@/components/WalletPreview";
 import { separerRecompense, texteRecompense } from "@/lib/wallet/rewardText";
-import { MAX_PROMOS, PROMO_WINDOW_MS, prochainEnvoiPossible } from "@/lib/promo";
+import {
+  DUREES_PROMO,
+  DUREE_PROMO_DEFAUT,
+  MAX_PROMOS,
+  PROMO_WINDOW_MS,
+  dernierJourVisible,
+  finAffichage,
+  prochainEnvoiPossible,
+  promoActive,
+  type DureePromo,
+} from "@/lib/promo";
 import { authErrorFr, pluriel } from "@/lib/uiText";
 import "./dashboard.css";
 
@@ -211,6 +221,13 @@ export default function DashboardPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   const [promoText, setPromoText] = useState("");
+  // Dernière promo envoyée : affichée tant qu'elle est visible, et comparée au
+  // nouveau texte (un envoi identique ne notifie pas les iPhone).
+  const [dernierePromo, setDernierePromo] = useState<{
+    message: string;
+    expires_at: string;
+  } | null>(null);
+  const [promoDuree, setPromoDuree] = useState<DureePromo>(DUREE_PROMO_DEFAUT);
   const [sendingPromo, setSendingPromo] = useState(false);
 
   const [pairingCode, setPairingCode] = useState<string | null>(null);
@@ -280,6 +297,12 @@ export default function DashboardPage() {
         .eq("type", "earn")
         .gte("created_at", debutFrise.toISOString()),
       supabase.from("promos").select("sent_at").gte("sent_at", fenetrePromo),
+      supabase
+        .from("promos")
+        .select("message, expires_at")
+        .order("sent_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ] as const);
 
     // Une lecture en échec ne doit pas se déguiser en état vide (« personne
@@ -297,6 +320,7 @@ export default function DashboardPage() {
       { count: newThisMonth },
       { data: earnRows },
       { data: promos },
+      { data: derniere },
     ] = resultats;
 
     setCustomers(c ?? []);
@@ -308,6 +332,7 @@ export default function DashboardPage() {
     setTotalCards(total ?? 0);
     setCardsThisMonth(newThisMonth ?? 0);
     setPromoDates((promos ?? []).map((p) => p.sent_at));
+    setDernierePromo(derniere ?? null);
 
     // Un « passage » se compte à la ligne, un point se somme.
     const rows = earnRows ?? [];
@@ -502,6 +527,12 @@ export default function DashboardPage() {
   ).length;
   const promoMaxed = prochainEnvoi !== null;
   const promoEmpty = promoText.trim().length === 0;
+  // Le message en cours sur les cartes, s'il n'a pas encore expiré.
+  const promoEnCours =
+    dernierePromo && promoActive(dernierePromo.expires_at) ? dernierePromo : null;
+  // Identique seulement si l'ancien message est encore sur les cartes : une fois
+  // retiré, le même texte redevient une nouveauté.
+  const promoIdentique = !promoEmpty && promoText.trim() === promoEnCours?.message;
   const sansClients = totalCards === 0;
 
   async function sendPromo() {
@@ -514,17 +545,18 @@ export default function DashboardPage() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ title: null, message: promoText.trim() }),
+        body: JSON.stringify({ title: null, message: promoText.trim(), dureeJours: promoDuree }),
       });
       if (!res.ok) {
         accuser(await res.text(), true);
         return;
       }
-      const data: { apple_devices_notified: number } = await res.json();
+      const data: { apple_devices_notified: number; expires_at: string } = await res.json();
+      setDernierePromo({ message: promoText.trim(), expires_at: data.expires_at });
       setPromoText("");
       setPromoDates((list) => [...list, new Date().toISOString()]);
       accuser(
-        `Promo envoyée. ${pluriel(data.apple_devices_notified, "iPhone prévenu", "iPhone prévenus")} ; les cartes Google Wallet se mettent à jour d'elles-mêmes.`
+        `Promo envoyée, visible jusqu'au ${dernierJourVisible(data.expires_at)}. ${pluriel(data.apple_devices_notified, "iPhone prévenu", "iPhone prévenus")} ; les cartes Google Wallet se mettent à jour d'elles-mêmes.`
       );
     } catch {
       accuser("Pas de connexion : la promo n'est pas partie.", true);
@@ -932,6 +964,16 @@ export default function DashboardPage() {
                   ? "Dès qu'un client aura sa carte, le message s'affichera dessus, dans son téléphone."
                   : `Le message s'affiche sur la carte de vos ${pluriel(totalCards, "client")}, dans leur téléphone.`}
               </p>
+              {promoEnCours && (
+                <p className="cpt-promo-en-cours">
+                  <span className="cpt-promo-en-cours-texte">
+                    En ce moment sur les cartes : « {promoEnCours.message} »
+                  </span>
+                  <span className="cpt-promo-en-cours-fin">
+                    Visible jusqu&apos;au {dernierJourVisible(promoEnCours.expires_at)}
+                  </span>
+                </p>
+              )}
               <label className="field-label" htmlFor="cpt-promo">
                 Message
               </label>
@@ -942,8 +984,28 @@ export default function DashboardPage() {
                 onChange={(e) => setPromoText(e.target.value.slice(0, 140))}
                 placeholder="Ce samedi, la brioche est à −20 % dès 16 h."
                 className="field-input cpt-promo-saisie"
-                aria-describedby="cpt-promo-compteur"
+                aria-describedby={`cpt-promo-compteur${promoIdentique ? " cpt-promo-identique" : ""}`}
               />
+              <fieldset className="cpt-promo-duree">
+                <legend className="field-label">Durée d&apos;affichage sur la carte</legend>
+                <div className="cpt-bascules">
+                  {DUREES_PROMO.map((d) => (
+                    <Button
+                      key={d}
+                      size="sm"
+                      variant="secondary"
+                      className={promoDuree === d ? "is-selected" : undefined}
+                      aria-pressed={promoDuree === d}
+                      onClick={() => setPromoDuree(d)}
+                    >
+                      {pluriel(d, "jour")}
+                    </Button>
+                  ))}
+                </div>
+                <p className="cpt-promo-fin" aria-live="polite">
+                  Visible jusqu&apos;au {dernierJourVisible(finAffichage(promoDuree))}
+                </p>
+              </fieldset>
               <div className="cpt-promo-pied">
                 <span id="cpt-promo-compteur" className="cpt-compteur">
                   {promoText.length}/140
@@ -959,6 +1021,15 @@ export default function DashboardPage() {
                   Envoyer à mes clients
                 </ConfirmButton>
               </div>
+              {/* Avertissement, pas un blocage : Android notifie quand même,
+                  et le commerçant peut vouloir relancer le même message. */}
+              {promoIdentique && (
+                <p id="cpt-promo-identique" className="cpt-avis" role="status">
+                  C&apos;est le même texte que votre promo précédente. Sur iPhone, un message
+                  identique ne déclenche pas de notification : vos clients ne seront prévenus que
+                  sur Android. Changez quelques mots pour prévenir tout le monde.
+                </p>
+              )}
               {promoMaxed && prochainEnvoi && (
                 <p className="cpt-avis">
                   {MAX_PROMOS} envois sur 7 jours glissants, c&apos;est la limite. Prochain envoi
