@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireDevice } from "@/lib/deviceAuth";
+import { messageCarteIntrouvable, requireDevice } from "@/lib/deviceAuth";
 import { db, merchantActive } from "@/lib/supabaseAdmin";
 import { applyTransaction, getMerchantReward } from "@/lib/loyalty";
 
@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
     getMerchantReward(auth.merchant.id),
   ]);
 
-  if (!customer) return new NextResponse("Carte inconnue", { status: 404 });
+  if (!customer) {
+    return new NextResponse(await messageCarteIntrouvable(serial), { status: 404 });
+  }
   if (!reward) return new NextResponse("Aucune récompense configurée", { status: 404 });
 
   // Le seuil est revérifié ici : la caisse peut afficher un état périmé si le

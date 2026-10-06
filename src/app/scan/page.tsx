@@ -44,8 +44,29 @@ export default function ScanPage() {
   const lastScanRef = useRef<{ serial: string; at: number }>({ serial: "", at: 0 });
 
   useEffect(() => {
-    setToken(localStorage.getItem(TOKEN_KEY));
+    const t = localStorage.getItem(TOKEN_KEY);
+    setToken(t);
     setMerchantName(localStorage.getItem(NAME_KEY) ?? "");
+    if (!t) return;
+    // Le nom en cache s'affiche tout de suite ; le serveur, qui ne connaît la
+    // caisse que par son jeton, le confirme (ou le corrige s'il a changé). Un
+    // jeton révoqué depuis le dashboard ramène à l'écran d'appairage.
+    fetch("/api/scan/caisse", { headers: { Authorization: `Device ${t}` } })
+      .then(async (res) => {
+        if (res.status === 401) {
+          // Au chargement, rien d'autre à effacer que le jeton et le nom.
+          localStorage.removeItem(TOKEN_KEY);
+          localStorage.removeItem(NAME_KEY);
+          setToken(null);
+          setMerchantName("");
+          return;
+        }
+        if (!res.ok) return;
+        const { merchantName: nom } = (await res.json()) as { merchantName: string };
+        localStorage.setItem(NAME_KEY, nom);
+        setMerchantName(nom);
+      })
+      .catch(() => {});
   }, []);
 
   // Les confirmations s'effacent seules ; une erreur reste jusqu'à la
@@ -148,7 +169,7 @@ export default function ScanPage() {
         body: JSON.stringify(body),
       });
       if (res.status === 401) {
-        unpair();
+        oublierCaisse();
         return;
       }
       if (!res.ok) {
@@ -235,10 +256,41 @@ export default function ScanPage() {
     }
   }
 
-  function unpair() {
+  /** Efface l'appairage du navigateur et revient à la saisie du code. */
+  function oublierCaisse() {
+    void stopScanner();
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(NAME_KEY);
     setToken(null);
+    setMerchantName("");
+    setLookup(null);
+    setSearchResults(null);
+    setFlash(null);
+    setPairCode("");
+  }
+
+  /**
+   * « Déconnecter cette caisse » : le jeton est d'abord révoqué côté serveur,
+   * puis oublié. S'il était déjà révoqué (401), on l'oublie aussi. Sans
+   * réseau, on ne fait rien : la caisse resterait active côté serveur.
+   */
+  async function deconnecter() {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/scan/caisse", { method: "DELETE", headers: authHeaders() });
+      if (res.ok || res.status === 401) {
+        oublierCaisse();
+        return;
+      }
+      setFlash({ kind: "error", text: await res.text() });
+    } catch {
+      setFlash({
+        kind: "error",
+        text: "Pas de connexion : la caisse n'est pas déconnectée. Réessayez, ou retirez-la depuis votre espace commerçant.",
+      });
+    } finally {
+      setBusy(false);
+    }
   }
 
   // ---------- Écran d'appairage ----------
@@ -276,17 +328,12 @@ export default function ScanPage() {
   // ---------- Écran principal ----------
   return (
     <main className="scan">
-      <div className="scan-barre">
-        <span className="scan-enseigne">{merchantName}</span>
-        <ConfirmButton
-          variant="ghost"
-          question="Déconnecter cette caisse ?"
-          confirmLabel="Déconnecter"
-          onConfirm={unpair}
-        >
-          Déconnecter cette caisse
-        </ConfirmButton>
-      </div>
+      {/* Le commerce de la caisse, en premier : on sait d'un coup d'œil pour
+          qui on scanne. Il vient du jeton d'appairage, pas de l'URL. */}
+      <header className="scan-barre">
+        <span className="scan-barre-label">Caisse de</span>
+        <h1 className="scan-enseigne">{merchantName || "votre commerce"}</h1>
+      </header>
 
       <div aria-live="polite" role="status">
         {flash && (
@@ -444,6 +491,22 @@ export default function ScanPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* En bas, loin des gestes de caisse : on ne déconnecte pas par mégarde. */}
+      {!lookup && !scanning && (
+        <footer className="scan-pied">
+          <ConfirmButton
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            question={`Déconnecter cette caisse de ${merchantName || "votre commerce"} ?`}
+            confirmLabel="Déconnecter"
+            onConfirm={deconnecter}
+          >
+            Déconnecter cette caisse
+          </ConfirmButton>
+        </footer>
       )}
     </main>
   );

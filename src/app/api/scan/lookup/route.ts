@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireDevice } from "@/lib/deviceAuth";
+import { messageCarteIntrouvable, requireDevice } from "@/lib/deviceAuth";
 import { db } from "@/lib/supabaseAdmin";
 import { getMerchantReward } from "@/lib/loyalty";
 
@@ -32,7 +32,9 @@ export async function POST(req: NextRequest) {
     .eq("merchant_id", auth.merchant.id) // un QR d'un autre commerce = introuvable
     .single();
 
-  if (!customer) return new NextResponse("Carte inconnue dans ce commerce", { status: 404 });
+  if (!customer) {
+    return new NextResponse(await messageCarteIntrouvable(serial), { status: 404 });
+  }
 
   const reward = await getMerchantReward(auth.merchant.id);
   const { count: scansToday } = await db

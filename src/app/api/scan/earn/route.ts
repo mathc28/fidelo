@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireDevice } from "@/lib/deviceAuth";
+import { messageCarteIntrouvable, requireDevice } from "@/lib/deviceAuth";
 import { db, merchantActive } from "@/lib/supabaseAdmin";
 import { applyTransaction } from "@/lib/loyalty";
 
@@ -21,7 +21,9 @@ export async function POST(req: NextRequest) {
     .eq("serial_number", serial)
     .eq("merchant_id", auth.merchant.id)
     .single();
-  if (!customer) return new NextResponse("Carte inconnue", { status: 404 });
+  if (!customer) {
+    return new NextResponse(await messageCarteIntrouvable(serial), { status: 404 });
+  }
 
   const isVisits = auth.merchant.program_type === "visits";
   const delta = isVisits ? 1 : Math.floor(Number(amountEuros ?? 0));

@@ -6,21 +6,41 @@
   padding: 20px 16px 40px;
 }
 
+/* Le commerce de la caisse, en tête et en grand : sur un comptoir partagé
+   ou un téléphone prêté, on vérifie avant de scanner. */
 .scan-barre {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
   margin-bottom: 18px;
-  padding-bottom: 14px;
-  border-bottom: 1px dashed var(--color-rule);
+  padding: 14px 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-marine);
+  color: var(--color-paper);
+}
+
+.scan-barre-label {
+  display: block;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: var(--mono-m);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-on-marine-muted);
 }
 
 .scan-enseigne {
+  margin: 4px 0 0;
   font-family: var(--font-display), system-ui, sans-serif;
-  font-weight: 600;
-  font-size: var(--text-lg);
+  font-weight: 700;
+  font-size: 1.6rem;
+  line-height: 1.15;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+.scan-pied {
+  display: flex;
+  justify-content: center;
+  margin-top: 36px;
+  padding-top: 16px;
+  border-top: 1px dashed var(--color-rule);
 }
 
 .scan-flash {
