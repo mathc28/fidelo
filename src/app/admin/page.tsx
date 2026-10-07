@@ -8,6 +8,7 @@ import { Button, Field, Logo, SubscriptionBadge, ProgramBadge } from "@/componen
 import { emailValide } from "@/lib/uiText";
 import type * as Row from "@/lib/types";
 import { AdminLogin } from "./AdminLogin";
+import { RafraichirCartes } from "./RafraichirCartes";
 import "./admin.css";
 
 // `cards` est calculé par l'API, pas une colonne : d'où l'intersection.
@@ -200,13 +201,20 @@ export default function AdminPage() {
                   : "Chargement…"}
               </p>
             </div>
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Nom ou slug"
-              aria-label="Rechercher un commerçant"
-              className="field-input field-input--sm admin-recherche"
-            />
+            <div className="admin-table-outils">
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Nom ou slug"
+                aria-label="Rechercher un commerçant"
+                className="field-input field-input--sm admin-recherche"
+              />
+              <RafraichirCartes
+                url="/api/admin/cartes"
+                jeton={session.access_token}
+                question="Mettre à jour les cartes de tous les commerces ?"
+              />
+            </div>
           </div>
 
           <div className="admin-defile">

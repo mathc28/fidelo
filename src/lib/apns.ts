@@ -130,17 +130,14 @@ export async function pushPassUpdate(serialNumber: string): Promise<void> {
   );
 }
 
-/**
- * Push tous les pass d'UN merchant (promo) — jamais toute la plateforme.
- * Renvoie le nombre d'appareils dont Apple a accepté le push.
- */
-export async function pushMerchantPasses(merchantId: string): Promise<number> {
+/** Jetons APNs de tous les iPhone qui portent une carte du commerce. */
+async function jetonsDuCommerce(merchantId: string): Promise<string[]> {
   const { data: customers } = await db
     .from("customers")
     .select("serial_number")
     .eq("merchant_id", merchantId);
 
-  if (!customers?.length) return 0;
+  if (!customers?.length) return [];
 
   const { data: regs } = await db
     .from("apple_registrations")
@@ -150,6 +147,37 @@ export async function pushMerchantPasses(merchantId: string): Promise<number> {
       customers.map((c) => c.serial_number)
     );
 
-  const tokens = [...new Set((regs ?? []).map((r) => r.push_token))];
-  return pushTokens(tokens, `commerce ${merchantId.slice(0, 8)}`);
+  return [...new Set((regs ?? []).map((r) => r.push_token))];
+}
+
+/**
+ * Push tous les pass d'UN merchant (promo) — jamais toute la plateforme.
+ * Renvoie le nombre d'appareils dont Apple a accepté le push.
+ */
+export async function pushMerchantPasses(merchantId: string): Promise<number> {
+  return pushTokens(await jetonsDuCommerce(merchantId), `commerce ${merchantId.slice(0, 8)}`);
+}
+
+/**
+ * Remise à niveau silencieuse de toutes les cartes Apple d'un commerce
+ * (back-office) : les iPhone retéléchargent la carte telle que le code la
+ * génère aujourd'hui (emplacement, mise en page…).
+ *
+ * Silencieuse par construction : le seul champ portant un changeMessage est
+ * le « Message » de promo, et sa valeur ne bouge pas ici — c'est la promo en
+ * cours, déjà reçue au moment de son envoi, ou rien.
+ */
+export async function rafraichirCartesCommerce(
+  merchantId: string
+): Promise<{ appareils: number; acceptes: number }> {
+  // Sans ce marquage, l'iPhone demanderait la liste des cartes modifiées,
+  // n'en trouverait aucune et ne téléchargerait rien.
+  await db
+    .from("customers")
+    .update({ updated_at: new Date().toISOString() })
+    .eq("merchant_id", merchantId);
+
+  const jetons = await jetonsDuCommerce(merchantId);
+  const acceptes = await pushTokens(jetons, `remise à niveau commerce ${merchantId.slice(0, 8)}`);
+  return { appareils: jetons.length, acceptes };
 }

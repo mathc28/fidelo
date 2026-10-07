@@ -8,6 +8,7 @@ import { Logo, SubscriptionBadge, ProgramBadge } from "@/components/ui";
 import { MAX_PROMOS } from "@/lib/promo";
 import type * as Row from "@/lib/types";
 import { AdminLogin } from "../../AdminLogin";
+import { RafraichirCartes } from "../../RafraichirCartes";
 import "../../admin.css";
 
 // Dérivés du modèle : voir src/lib/types.ts.
@@ -33,10 +34,10 @@ function Stat({ label, valeur, note }: { label: string; valeur: string; note?: s
 }
 
 /**
- * Vue admin plateforme en lecture seule du dashboard d'un commerçant.
- * Aucune action possible ici (pas d'édition, pas d'envoi de promo) —
- * juste un aperçu pour diagnostiquer/support, alimenté par une API
- * qui bypass la RLS (service_role) puisque l'admin n'est pas le gérant.
+ * Vue admin plateforme du dashboard d'un commerçant, pour diagnostic et
+ * support. Ni édition ni envoi de promo ; seule action : remettre à niveau
+ * ses cartes Apple Wallet, sans notification. Alimentée par une API qui
+ * bypass la RLS (service_role) puisque l'admin n'est pas le gérant.
  */
 export default function AdminMerchantPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -130,7 +131,7 @@ export default function AdminMerchantPage() {
           Back-office
         </a>
         <div className="admin-barre-fin">
-          <span className="pill-on-dark">Lecture seule</span>
+          <span className="pill-on-dark">Support</span>
         </div>
       </header>
 
@@ -199,6 +200,20 @@ export default function AdminMerchantPage() {
               </div>
             ))}
             {devices.length === 0 && <p className="admin-vide">Aucune caisse appairée.</p>}
+          </section>
+
+          <section className="card admin-pleine">
+            <h2 className="admin-titre-2">Cartes Apple Wallet</h2>
+            <p className="admin-note">
+              Fait retélécharger leur carte à tous les iPhone de ce commerce, sans notification.
+              Utile après une évolution de la carte, pour les clients qui ne repassent pas en
+              caisse.
+            </p>
+            <RafraichirCartes
+              url={`/api/admin/merchants/${merchant.slug}/cartes`}
+              jeton={session.access_token}
+              question={`Mettre à jour les cartes de ${merchant.name} ?`}
+            />
           </section>
 
           <section className="card admin-table admin-pleine">

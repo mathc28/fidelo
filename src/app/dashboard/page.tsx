@@ -1204,7 +1204,7 @@ export default function DashboardPage() {
                 <Field
                   label="Adresse du commerce"
                   autoComplete="street-address"
-                  hint="Géocodée automatiquement. C'est elle qui déclenche le rappel sur l'écran verrouillé quand un client passe à proximité."
+                  hint="Géocodée automatiquement. La carte peut apparaître sur l'écran verrouillé de vos clients quand ils passent près de la boutique."
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
                 />

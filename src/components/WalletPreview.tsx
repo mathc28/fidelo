@@ -401,7 +401,7 @@ function PhoneFrame({
         >
           <strong style={{ fontSize: 12 }}>Wallet</strong>
           <p style={{ margin: "2px 0 0", opacity: 0.9 }}>
-            {merchantName} est juste à côté — votre carte est prête !
+            {merchantName} est juste à côté. Votre carte est prête.
           </p>
         </div>
         <div style={{ marginTop: 16, transform: "scale(.92)" }}>{children}</div>

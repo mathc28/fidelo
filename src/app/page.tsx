@@ -272,7 +272,7 @@ export default function LandingPage() {
                         <span className="landing-verrou-quand">maintenant</span>
                       </div>
                       <div className="landing-verrou-texte">
-                        Boulangerie Martin est juste à côté — votre carte est prête !
+                        Boulangerie Martin est juste à côté. Votre carte est prête.
                       </div>
                     </div>
                   </div>

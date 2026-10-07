@@ -58,19 +58,6 @@ export async function buildApplePass(
       // à l'identification : Apple ne l'affiche jamais sur la face avant, il ne
       // sert qu'aux notifications, aux réglages et au dos de la carte.
 
-      ...(merchant.lat != null && merchant.lng != null
-        ? {
-            locations: [
-              {
-                latitude: merchant.lat,
-                longitude: merchant.lng,
-                relevantText: `${merchant.name} est juste à côté — votre carte est prête !`,
-              },
-            ],
-            maxDistance: 300,
-          }
-        : {}),
-
       backgroundColor: hexToRgb(theme.bg_color),
       foregroundColor: hexToRgb(theme.text_color),
       labelColor: hexToRgb(theme.label_color),
@@ -78,6 +65,22 @@ export async function buildApplePass(
   );
 
   pass.type = "storeCard";
+
+  // Rappel de proximité : près de la boutique, iOS propose la carte sur
+  // l'écran verrouillé. Passé par setLocations et non par les propriétés du
+  // constructeur, que passkit-generator filtre : `locations` y était jeté en
+  // silence et aucune carte ne portait d'emplacement.
+  //
+  // Pas de maxDistance : pour une storeCard, Apple plafonne le rayon à une
+  // centaine de mètres, on laisse son rayon par défaut s'appliquer. Le texte
+  // reste court, l'écran verrouillé le tronque.
+  if (merchant.lat != null && merchant.lng != null) {
+    pass.setLocations({
+      latitude: merchant.lat,
+      longitude: merchant.lng,
+      relevantText: texteProximite(merchant.name),
+    });
+  }
 
   // En-tête — le prénom à droite du logo et du nom du commerce. Ce champ
   // prend sur la largeur de `logoText` : sur un nom long, c'est lui qui
@@ -176,6 +179,11 @@ async function dernierePromo(merchantId: string): Promise<string | null> {
     .limit(1)
     .maybeSingle();
   return data && promoActive(data.expires_at) ? data.message : null;
+}
+
+/** Texte affiché sur l'écran verrouillé près de la boutique. */
+export function texteProximite(nomCommerce: string): string {
+  return `${nomCommerce} est juste à côté. Votre carte est prête.`;
 }
 
 function hexToRgb(hex: string): string {
