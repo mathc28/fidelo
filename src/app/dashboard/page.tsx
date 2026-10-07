@@ -14,6 +14,7 @@ import {
 } from "@/components/ui";
 import WalletPreview from "@/components/WalletPreview";
 import { separerRecompense, texteRecompense } from "@/lib/wallet/rewardText";
+import { EMAIL_CONTACT } from "@/lib/site";
 import {
   DUREES_PROMO,
   DUREE_PROMO_DEFAUT,
@@ -805,7 +806,10 @@ export default function DashboardPage() {
           <span className="cpt-enseigne">{merchant.name}</span>
           <Statut status={merchant.subscription_status} />
           {statut.variant === "error" && (
-            <a className="cpt-regulariser" href="mailto:bonjour@fiduo.app?subject=Mon%20abonnement">
+            <a
+              className="cpt-regulariser"
+              href={`mailto:${EMAIL_CONTACT}?subject=Mon%20abonnement`}
+            >
               Régulariser le paiement
             </a>
           )}

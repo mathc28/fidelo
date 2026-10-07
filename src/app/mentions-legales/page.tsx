@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { LegalShell, ACompleter } from "@/components/LegalShell";
+import { EMAIL_CONTACT } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Mentions légales",
   description: "Éditeur, hébergeur et conditions d'utilisation du site Fiduo.",
 };
 
-const CONTACT = "bonjour@fiduo.app";
+const CONTACT = EMAIL_CONTACT;
 
 export default function MentionsLegalesPage() {
   return (

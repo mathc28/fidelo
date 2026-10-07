@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalShell, ACompleter } from "@/components/LegalShell";
+import { EMAIL_CONTACT } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
@@ -7,7 +8,7 @@ export const metadata: Metadata = {
     "Quelles données Fiduo traite, pourquoi, combien de temps, et comment exercer vos droits.",
 };
 
-const CONTACT = "bonjour@fiduo.app";
+const CONTACT = EMAIL_CONTACT;
 
 export default function ConfidentialitePage() {
   return (
