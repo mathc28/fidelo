@@ -364,3 +364,31 @@
 .admin-rafraichir-resultat:empty {
   display: none;
 }
+
+/* ---------- Zone de danger : suppression d'un commerce ---------- */
+
+.admin-danger {
+  border-color: var(--color-error);
+}
+
+.admin-danger .admin-titre-2 {
+  color: var(--color-error-text);
+}
+
+.admin-danger-liste {
+  margin: 8px 0 14px;
+  padding-left: 20px;
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.admin-danger-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-danger-confirmation .field-error,
+.admin-danger .field-error {
+  margin-top: 10px;
+}

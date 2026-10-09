@@ -9,6 +9,7 @@ import { MAX_PROMOS } from "@/lib/promo";
 import type * as Row from "@/lib/types";
 import { AdminLogin } from "../../AdminLogin";
 import { RafraichirCartes } from "../../RafraichirCartes";
+import { SuppressionCommerce } from "../../SuppressionCommerce";
 import "../../admin.css";
 
 // Dérivés du modèle : voir src/lib/types.ts.
@@ -35,8 +36,8 @@ function Stat({ label, valeur, note }: { label: string; valeur: string; note?: s
 
 /**
  * Vue admin plateforme du dashboard d'un commerçant, pour diagnostic et
- * support. Ni édition ni envoi de promo ; seule action : remettre à niveau
- * ses cartes Apple Wallet, sans notification. Alimentée par une API qui
+ * support. Ni édition ni envoi de promo ; deux actions : remettre à niveau
+ * ses cartes Apple Wallet sans notification, et supprimer le commerce. Alimentée par une API qui
  * bypass la RLS (service_role) puisque l'admin n'est pas le gérant.
  */
 export default function AdminMerchantPage() {
@@ -257,6 +258,19 @@ export default function AdminMerchantPage() {
                   : "Aucun client pour l'instant."}
               </div>
             )}
+          </section>
+
+          <section className="card admin-pleine admin-danger">
+            <h2 className="admin-titre-2">Zone de danger</h2>
+            <p className="admin-note">
+              Supprime le commerce, ses clients et tout leur historique, sans retour possible.
+              Réservé aux comptes de test et aux demandes de suppression.
+            </p>
+            <SuppressionCommerce
+              slug={merchant.slug}
+              nom={merchant.name}
+              jeton={session.access_token}
+            />
           </section>
         </div>
       </div>

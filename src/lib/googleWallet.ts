@@ -242,3 +242,35 @@ export async function broadcastMerchantPromo(
     },
   });
 }
+
+/**
+ * Passe les cartes Google de ces clients à l'état EXPIRED : elles quittent la
+ * liste principale du Wallet pour « Cartes expirées ». Google ne permet de
+ * supprimer ni un objet ni une classe ; l'expiration est ce qui s'en approche
+ * le plus. Une carte jamais ajoutée à Google Wallet n'existe pas chez lui
+ * (404) : comptée comme absente, pas comme une erreur.
+ */
+export async function expireLoyaltyObjects(
+  serials: string[]
+): Promise<{ expirees: number; absentes: number; echecs: number }> {
+  const bilan = { expirees: 0, absentes: 0, echecs: 0 };
+  for (let i = 0; i < serials.length; i += 10) {
+    await Promise.all(
+      serials.slice(i, i + 10).map(async (serial) => {
+        try {
+          const res = await request(
+            "PATCH",
+            `${API}/loyaltyObject/${objectId(serial)}`,
+            { state: "EXPIRED" },
+            [404]
+          );
+          if (res.status === 404) bilan.absentes++;
+          else bilan.expirees++;
+        } catch {
+          bilan.echecs++;
+        }
+      })
+    );
+  }
+  return bilan;
+}
