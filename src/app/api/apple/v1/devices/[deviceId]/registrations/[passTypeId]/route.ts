@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabaseAdmin";
 import { bonPassType, court, log } from "@/lib/appleWebService";
+import { identifiantEffectif } from "@/lib/passCerts";
 
 /**
  * Après un push, l'iPhone demande quelles cartes ont changé depuis sa
@@ -17,7 +18,7 @@ export async function GET(
   { params }: { params: { deviceId: string; passTypeId: string } }
 ) {
   const appareil = `appareil ${court(params.deviceId)}`;
-  if (!bonPassType(params.passTypeId)) {
+  if (!(await bonPassType(params.passTypeId))) {
     log(`liste refusée, Pass Type ID inconnu (${params.passTypeId}) — ${appareil} → 404`);
     return new NextResponse(null, { status: 404 });
   }
@@ -37,19 +38,24 @@ export async function GET(
 
   let query = db
     .from("customers")
-    .select("serial_number, updated_at")
+    .select("serial_number, updated_at, pass_type_identifier")
     .in(
       "serial_number",
       regs.map((r) => r.serial_number)
     );
   if (depuis) query = query.gte("updated_at", depuis.toISOString());
 
-  const { data: modifiees, error } = await query;
+  const { data: lignes, error } = await query;
+  // Un même iPhone peut porter des cartes de plusieurs Pass Type IDs ; Apple
+  // demande la liste identifiant par identifiant : on ne renvoie que les siennes.
+  const modifiees = (lignes ?? []).filter(
+    (c) => identifiantEffectif(c.pass_type_identifier) === params.passTypeId
+  );
   if (error) {
     log(`liste en échec — ${appareil} → 500 (${error.message})`);
     return new NextResponse(null, { status: 500 });
   }
-  if (!modifiees?.length) {
+  if (!modifiees.length) {
     log(
       `liste : rien de nouveau pour ${appareil} depuis ${depuis?.toISOString() ?? "toujours"} → 204`
     );

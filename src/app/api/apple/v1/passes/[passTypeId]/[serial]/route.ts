@@ -11,12 +11,12 @@ export async function GET(
 ) {
   const carte = `carte ${court(params.serial)}`;
 
-  if (!bonPassType(params.passTypeId)) {
+  if (!(await bonPassType(params.passTypeId))) {
     log(`téléchargement refusé, Pass Type ID inconnu (${params.passTypeId}) — ${carte} → 404`);
     return new NextResponse(null, { status: 404 });
   }
 
-  const customer = await authentifier(req, params.serial);
+  const customer = await authentifier(req, params.serial, params.passTypeId);
   if (!customer) {
     log(`téléchargement refusé, authenticationToken invalide — ${carte} → 401`);
     return new NextResponse(null, { status: 401 });

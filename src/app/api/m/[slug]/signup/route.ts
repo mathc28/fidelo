@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID, randomBytes } from "crypto";
 import { db, getMerchantBySlug } from "@/lib/supabaseAdmin";
 import { clientIp, isRateLimited } from "@/lib/rateLimit";
+import { identifiantPourNouvelleCarte } from "@/lib/passCerts";
 
 /** Inscription publique d'un client final, scopée au commerce du slug. */
 export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
@@ -41,6 +42,9 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
       first_name: String(firstName).trim(),
       email: normalizedEmail,
       points: 0,
+      // Figé ici pour la vie de la carte : le Pass Type ID du commerce s'il en
+      // a un, sinon l'identifiant partagé (null).
+      pass_type_identifier: await identifiantPourNouvelleCarte(merchant.id),
     });
     if (error) return new NextResponse("Erreur de création", { status: 500 });
   }

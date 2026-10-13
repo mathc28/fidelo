@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { requirePlatformAdmin } from "@/lib/platformAdmin";
 import { db } from "@/lib/supabaseAdmin";
 import { config } from "@/lib/config";
+import { provisionnerPassTypeId } from "@/lib/passTypeProvisioning";
+
+// La création du Pass Type ID chez Apple prend quelques secondes.
+export const maxDuration = 60;
 
 /** GET — liste des commerçants de la plateforme (back-office). */
 export async function GET(req: NextRequest) {
@@ -29,6 +33,9 @@ export async function GET(req: NextRequest) {
  * 1. Invite le gérant par email (Supabase envoie le lien d'invitation)
  * 2. Crée la ligne merchants rattachée à ce nouvel utilisateur
  * 3. Crée la première récompense
+ * 4. Lui crée son propre Pass Type ID Apple. Un échec ici ne bloque rien :
+ *    l'invitation est déjà partie, le commerce utilise l'identifiant partagé
+ *    et l'admin peut réessayer depuis la fiche.
  *
  * Le gérant clique le lien → /definir-mot-de-passe → son dashboard.
  */
@@ -116,8 +123,23 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  // 4. Pass Type ID propre au commerce (best effort).
+  let carteApple: { statut: "activee"; identifier: string } | { statut: "echec"; erreur: string };
+  try {
+    const r = await provisionnerPassTypeId(merchant.id);
+    carteApple = { statut: "activee", identifier: r.identifier };
+  } catch (e) {
+    const erreur = (e as Error).message;
+    console.error(
+      `[Pass Type ID] création pour ${merchant.slug} en échec, à réessayer depuis /admin :`,
+      erreur
+    );
+    carteApple = { statut: "echec", erreur };
+  }
+
   return NextResponse.json({
     ok: true,
+    carteApple,
     merchant: { slug: merchant.slug, name: merchant.name },
     invitationSentTo: email,
     inscriptionUrl: `${config.baseUrl}/m/${merchant.slug}/inscription`,

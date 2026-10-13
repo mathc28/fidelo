@@ -392,3 +392,13 @@
 .admin-danger .field-error {
   margin-top: 10px;
 }
+
+/* ---------- Certificat Apple partagé ---------- */
+
+.admin-alertes {
+  padding-bottom: 0;
+}
+
+.admin-certificat {
+  margin: 0;
+}

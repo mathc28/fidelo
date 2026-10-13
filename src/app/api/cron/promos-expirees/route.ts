@@ -2,20 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabaseAdmin";
 import { pushMerchantPasses } from "@/lib/apns";
 import { promoActive } from "@/lib/promo";
+import { renouvelerCertificatsProches } from "@/lib/passTypeProvisioning";
+
+export const maxDuration = 60;
 
 /**
- * Tâche planifiée (vercel.json), juste après minuit heure de Paris : retire
- * des cartes Apple le message des promos arrivées en fin d'affichage.
+ * Tâche planifiée quotidienne (vercel.json), juste après minuit heure de
+ * Paris. Deux travaux indépendants : l'échec de l'un n'empêche pas l'autre.
  *
- * Une carte Apple ne se met à jour que si on la pousse. À l'expiration, la
- * carte générée n'a plus de champ « Message » (applePass.ts), mais les iPhone
- * gardent l'ancienne version tant qu'on ne les prévient pas : c'est ce que
- * fait cette tâche. Côté Google, rien à faire : le displayInterval du message
- * suffit.
+ * 1. Promos expirées — retire des cartes Apple le message des promos
+ *    arrivées en fin d'affichage. Une carte Apple ne se met à jour que si on
+ *    la pousse : à l'expiration, la carte générée n'a plus de champ
+ *    « Message » (applePass.ts), mais les iPhone gardent l'ancienne version
+ *    tant qu'on ne les prévient pas. Côté Google, le displayInterval du
+ *    message suffit. Seule la dernière promo d'un commerce est affichée : si
+ *    elle a été remplacée par une plus récente encore active, on marque la
+ *    promo traitée sans rien pousser.
  *
- * Seule la dernière promo d'un commerce est affichée : si elle a été
- * remplacée par une plus récente encore active, le message a déjà changé sur
- * les cartes, on marque la promo traitée sans rien pousser.
+ * 2. Certificats Apple des commerces — renouvelle ceux qui expirent dans
+ *    moins de 30 jours (passTypeProvisioning.ts).
  */
 export async function GET(req: NextRequest) {
   // Vercel envoie `Authorization: Bearer <CRON_SECRET>` à ses tâches planifiées.
@@ -24,19 +29,37 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Non autorisé", { status: 401 });
   }
 
+  let promos: { commerces: number; promos: number } | { erreur: string };
+  try {
+    promos = await retirerPromosExpirees();
+  } catch (e) {
+    console.error("[Promos expirées] en échec :", (e as Error).message);
+    promos = { erreur: (e as Error).message };
+  }
+
+  let certificats: Awaited<ReturnType<typeof renouvelerCertificatsProches>> | { erreur: string };
+  try {
+    certificats = await renouvelerCertificatsProches(30);
+  } catch (e) {
+    console.error("[Pass Type ID] vérification des certificats en échec :", (e as Error).message);
+    certificats = { erreur: (e as Error).message };
+  }
+
+  const enEchec = "erreur" in promos || "erreur" in certificats;
+  return NextResponse.json({ promos, certificats }, { status: enEchec ? 500 : 200 });
+}
+
+async function retirerPromosExpirees(): Promise<{ commerces: number; promos: number }> {
   const maintenant = new Date().toISOString();
   const { data: expirees, error } = await db
     .from("promos")
     .select("id, merchant_id")
     .lte("expires_at", maintenant)
     .is("retired_at", null);
-  if (error) {
-    console.error("[Promos expirées] lecture en échec :", error.message);
-    return new NextResponse(null, { status: 500 });
-  }
+  if (error) throw new Error(`lecture en échec : ${error.message}`);
   if (!expirees?.length) {
     console.log("[Promos expirées] rien à retirer");
-    return NextResponse.json({ commerces: 0 });
+    return { commerces: 0, promos: 0 };
   }
 
   const commerces = [...new Set(expirees.map((p) => p.merchant_id))];
@@ -76,5 +99,5 @@ export async function GET(req: NextRequest) {
   console.log(
     `[Promos expirées] ${expirees.length} promo(s) traitée(s), ${pousses} commerce(s) mis à jour`
   );
-  return NextResponse.json({ commerces: pousses, promos: expirees.length });
+  return { commerces: pousses, promos: expirees.length };
 }

@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto";
 import { NextRequest } from "next/server";
-import { config } from "./config";
 import { db, type Customer } from "./supabaseAdmin";
+import { identifiantConnu, identifiantEffectif } from "./passCerts";
 
 /*
  * Outils communs au web service Apple Wallet (/api/apple/v1/…), l'API que
@@ -18,9 +18,12 @@ export function court(id: string): string {
   return id.slice(0, 8);
 }
 
-/** Le web service ne répond que pour notre Pass Type ID. */
-export function bonPassType(passTypeId: string): boolean {
-  return passTypeId === config.apple.passTypeId;
+/**
+ * Le web service ne répond que pour nos Pass Type IDs : l'identifiant partagé
+ * du .env et ceux des commerces (merchant_pass_certs). Tout autre est rejeté.
+ */
+export async function bonPassType(passTypeId: string): Promise<boolean> {
+  return identifiantConnu(passTypeId);
 }
 
 function egaux(a: string, b: string): boolean {
@@ -31,10 +34,15 @@ function egaux(a: string, b: string): boolean {
 
 /**
  * Vérifie l'en-tête `Authorization: ApplePass <authenticationToken>` contre le
- * jeton propre à la carte (customers.auth_token, embarqué dans le .pkpass).
- * Renvoie le client si le jeton correspond, null sinon.
+ * jeton propre à la carte (customers.auth_token, embarqué dans le .pkpass), et
+ * que la carte relève bien du Pass Type ID de l'URL. Renvoie le client si les
+ * deux correspondent, null sinon.
  */
-export async function authentifier(req: NextRequest, serial: string): Promise<Customer | null> {
+export async function authentifier(
+  req: NextRequest,
+  serial: string,
+  passTypeId: string
+): Promise<Customer | null> {
   const entete = req.headers.get("authorization") ?? "";
   if (!entete.startsWith("ApplePass ")) return null;
   const jeton = entete.slice("ApplePass ".length);
@@ -44,5 +52,6 @@ export async function authentifier(req: NextRequest, serial: string): Promise<Cu
     .select("*")
     .eq("serial_number", serial)
     .maybeSingle<Customer>();
-  return data && egaux(data.auth_token, jeton) ? data : null;
+  if (!data || !egaux(data.auth_token, jeton)) return null;
+  return identifiantEffectif(data.pass_type_identifier) === passTypeId ? data : null;
 }

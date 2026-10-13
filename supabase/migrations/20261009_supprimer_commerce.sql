@@ -52,7 +52,9 @@ begin
   get diagnostics n_clients = row_count;
 
   -- Compteurs anti-abus liés au commerce (inscription, consultation de carte).
-  delete from rate_limit_hits where bucket like '%:' || p_merchant_id::text;
+  if to_regclass('public.rate_limit_hits') is not null then
+    execute 'delete from rate_limit_hits where bucket like $1' using '%:' || p_merchant_id::text;
+  end if;
 
   delete from merchants where id = p_merchant_id;
 

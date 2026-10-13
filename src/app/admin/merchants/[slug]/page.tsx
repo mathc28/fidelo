@@ -10,6 +10,7 @@ import type * as Row from "@/lib/types";
 import { AdminLogin } from "../../AdminLogin";
 import { RafraichirCartes } from "../../RafraichirCartes";
 import { SuppressionCommerce } from "../../SuppressionCommerce";
+import { CarteAppleIndependante } from "../../CarteAppleIndependante";
 import "../../admin.css";
 
 // Dérivés du modèle : voir src/lib/types.ts.
@@ -215,6 +216,11 @@ export default function AdminMerchantPage() {
               jeton={session.access_token}
               question={`Mettre à jour les cartes de ${merchant.name} ?`}
             />
+          </section>
+
+          <section className="card admin-pleine">
+            <h2 className="admin-titre-2">Carte Apple indépendante</h2>
+            <CarteAppleIndependante slug={merchant.slug} jeton={session.access_token} />
           </section>
 
           <section className="card admin-table admin-pleine">

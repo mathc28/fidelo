@@ -4,6 +4,7 @@ import { Customer, Merchant, Reward, db, getCardTheme } from "./supabaseAdmin";
 import { getPassImages } from "./passAssets";
 import { separerRecompense, texteCompteur, texteRecompense } from "./wallet/rewardText";
 import { promoActive } from "./promo";
+import { identiteCarte } from "./passCerts";
 
 /**
  * Génère le .pkpass d'un client, entièrement paramétré par son merchant :
@@ -15,10 +16,13 @@ export async function buildApplePass(
   merchant: Merchant,
   reward: Reward | null
 ): Promise<Buffer> {
-  const [images, theme, promo] = await Promise.all([
+  const [images, theme, promo, identite] = await Promise.all([
     getPassImages(merchant),
     getCardTheme(merchant.theme_id),
     dernierePromo(merchant.id),
+    // Pass Type ID figé sur la carte à sa création : partagé ou propre au
+    // commerce. Une carte installée ne peut pas en changer.
+    identiteCarte(customer.pass_type_identifier),
   ]);
   const isVisits = merchant.program_type === "visits";
 
@@ -29,20 +33,18 @@ export async function buildApplePass(
     images,
     {
       wwdr: config.apple.wwdrCert(),
-      signerCert: config.apple.signerCert(),
-      signerKey: config.apple.signerKey(),
+      signerCert: identite.cert,
+      signerKey: identite.key,
       // Le schéma de passkit-generator déclare `signerKeyPassphrase` en
       // `Joi.string()` sans `.allow("")` : une chaîne vide est refusée, alors
       // que la propriété absente passe (elle n'est pas `.required()`). Une clé
       // non chiffrée n'a pas de passphrase — on omet donc la clé au lieu
       // d'envoyer "", que node-forge ignorerait de toute façon.
-      ...(config.apple.signerKeyPassphrase
-        ? { signerKeyPassphrase: config.apple.signerKeyPassphrase }
-        : {}),
+      ...(identite.passphrase ? { signerKeyPassphrase: identite.passphrase } : {}),
     },
     {
       formatVersion: 1,
-      passTypeIdentifier: config.apple.passTypeId,
+      passTypeIdentifier: identite.passTypeIdentifier,
       teamIdentifier: config.apple.teamId,
       serialNumber: customer.serial_number,
       organizationName: merchant.name,

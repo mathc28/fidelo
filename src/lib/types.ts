@@ -46,6 +46,8 @@ export type Customer = {
   points: number;
   created_at: string;
   updated_at: string;
+  /** Pass Type ID Apple figé à la création ; null = identifiant partagé du .env. */
+  pass_type_identifier: string | null;
 };
 
 /** Un commerce n'en a qu'une active — voir l'index unique partiel en base. */

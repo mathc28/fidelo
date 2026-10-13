@@ -365,16 +365,36 @@ create unique index idx_rewards_one_active_per_merchant
   on rewards(merchant_id) where active;
 
 -- ------------------------------------------------------------
--- SUPPRESSION D'UN COMMERCE (migrations/20261009_supprimer_commerce.sql)
+-- PASS TYPE ID PAR COMMERCE + SUPPRESSION D'UN COMMERCE
+-- (migrations 20261009_supprimer_commerce.sql et 20261012_pass_type_par_commerce.sql)
 -- ------------------------------------------------------------
--- Suppression définitive d'un commerce et de toutes ses données en base.
--- Appelée par le back-office plateforme (/api/admin/merchants/[slug]/suppression)
--- avec le client service_role. Les fichiers Storage et le compte Auth du
--- gérant sont supprimés ensuite par l'API, une fois cette fonction réussie.
---
--- Un appel de fonction est une seule transaction : si une étape échoue, rien
--- n'est supprimé. Jamais de commerce à moitié effacé.
+-- 1. Certificat Apple de chaque commerce. Une ligne au plus par commerce.
+--    La clé privée est chiffrée par l'application (AES-256-GCM, clé
+--    PASS_CERTS_ENCRYPTION_KEY) : la base ne la voit jamais en clair.
+create table merchant_pass_certs (
+  merchant_id uuid primary key references merchants(id) on delete cascade,
+  pass_type_identifier text not null unique,   -- pass.app.fiduo.<8 hex>
+  asc_pass_type_id text not null,              -- id App Store Connect du Pass Type ID
+  asc_certificate_id text not null,            -- id App Store Connect du certificat en cours
+  cert_pem text not null,
+  key_pem_chiffre text not null,
+  expires_at timestamptz not null,
+  created_at timestamptz not null default now()
+);
 
+-- RLS activée et AUCUNE policy : seul le service_role (qui contourne la RLS)
+-- lit ou écrit cette table. Ni les commerçants ni le public n'y ont accès.
+alter table merchant_pass_certs enable row level security;
+
+-- 2. Pass Type ID de chaque carte client, figé à sa création.
+--    NULL = l'identifiant historique partagé (APPLE_PASS_TYPE_ID du .env).
+--    Une carte déjà installée ne peut pas changer de Pass Type ID : les cartes
+--    existantes restent donc sur l'identifiant partagé, seules les nouvelles
+--    cartes d'un commerce équipé prennent son identifiant propre.
+alter table customers add column pass_type_identifier text;
+
+-- 3. supprimer_commerce : supprime aussi le certificat du commerce.
+--    (La cascade le ferait, mais on le compte et on le rend explicite.)
 create or replace function supprimer_commerce(p_merchant_id uuid)
 returns jsonb
 language plpgsql
@@ -388,16 +408,13 @@ declare
   n_caisses integer;
   n_codes integer;
   n_clients integer;
+  n_certs integer;
 begin
-  -- Verrou sur le commerce : deux suppressions simultanées ne se marchent pas
-  -- dessus, et aucun ajout ne se glisse pendant l'opération.
   perform 1 from merchants where id = p_merchant_id for update;
   if not found then
     raise exception 'Commerce introuvable : %', p_merchant_id using errcode = 'P0002';
   end if;
 
-  -- Ordre imposé par les clés étrangères : transactions avant caisses et
-  -- récompenses (device_id, reward_id sans cascade), clients avant commerce.
   delete from apple_registrations
   where serial_number in (select serial_number from customers where merchant_id = p_merchant_id);
   get diagnostics n_apple = row_count;
@@ -420,8 +437,12 @@ begin
   delete from customers where merchant_id = p_merchant_id;
   get diagnostics n_clients = row_count;
 
-  -- Compteurs anti-abus liés au commerce (inscription, consultation de carte).
-  delete from rate_limit_hits where bucket like '%:' || p_merchant_id::text;
+  delete from merchant_pass_certs where merchant_id = p_merchant_id;
+  get diagnostics n_certs = row_count;
+
+  if to_regclass('public.rate_limit_hits') is not null then
+    execute 'delete from rate_limit_hits where bucket like $1' using '%:' || p_merchant_id::text;
+  end if;
 
   delete from merchants where id = p_merchant_id;
 
@@ -432,13 +453,13 @@ begin
     'rewards', n_recompenses,
     'devices', n_caisses,
     'pairing_codes', n_codes,
-    'customers', n_clients
+    'customers', n_clients,
+    'pass_certs', n_certs
   );
 end $$;
 
--- Indispensable : Supabase expose les fonctions du schéma public via son API
--- et les rend exécutables par défaut. Sans ces lignes, n'importe quel
--- commerçant connecté pourrait supprimer n'importe quel commerce.
+-- « create or replace » conserve les droits existants ; on les réaffirme
+-- quand même, au cas où la fonction aurait été recréée autrement.
 revoke all on function supprimer_commerce(uuid) from public;
 revoke all on function supprimer_commerce(uuid) from anon, authenticated;
 grant execute on function supprimer_commerce(uuid) to service_role;

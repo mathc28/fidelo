@@ -1,6 +1,7 @@
 import http2 from "http2";
-import { config } from "./config";
 import { db } from "./supabaseAdmin";
+import { identiteCarte, identifiantEffectif } from "./passCerts";
+import type { IdentitePass } from "./passIdentite";
 
 /**
  * Mises à jour des cartes Apple Wallet via APNs, en production.
@@ -8,6 +9,10 @@ import { db } from "./supabaseAdmin";
  * Authentification par certificat : le certificat du Pass Type ID (celui qui
  * signe les .pkpass) ouvre aussi la connexion TLS à APNs. Pas de clé .p8 ni
  * de JWT — Apple n'accepte d'ailleurs que le certificat pour les passes.
+ *
+ * Chaque carte a son Pass Type ID (partagé ou propre à son commerce) : un
+ * push part avec le topic ET le certificat de cet identifiant. Les jetons sont
+ * donc regroupés par identifiant, une connexion par certificat.
  *
  * Le push ne transporte rien (payload `{}`) : il dit seulement à l'iPhone
  * « cette carte a changé ». L'iPhone redemande alors la liste des cartes
@@ -21,11 +26,14 @@ const RAISONS_JETON_MORT = new Set(["BadDeviceToken", "Unregistered", "ExpiredTo
 
 type Resultat = { token: string; status: number; reason?: string };
 
-function connecter(): http2.ClientHttp2Session {
+/** Un appareil à prévenir, et le Pass Type ID de la carte concernée (null = partagé). */
+type Jeton = { token: string; identifiant: string | null };
+
+function connecter(identite: IdentitePass): http2.ClientHttp2Session {
   const client = http2.connect(APNS_HOST, {
-    cert: config.apple.signerCert(),
-    key: config.apple.signerKey(),
-    ...(config.apple.signerKeyPassphrase ? { passphrase: config.apple.signerKeyPassphrase } : {}),
+    cert: identite.cert,
+    key: identite.key,
+    ...(identite.passphrase ? { passphrase: identite.passphrase } : {}),
   });
   // Sans écouteur, une erreur de session (TLS refusé, réseau) ferait tomber
   // le processus. Les requêtes en cours la reçoivent aussi et se résolvent.
@@ -33,14 +41,18 @@ function connecter(): http2.ClientHttp2Session {
   return client;
 }
 
-function pushToDevice(client: http2.ClientHttp2Session, token: string): Promise<Resultat> {
+function pushToDevice(
+  client: http2.ClientHttp2Session,
+  token: string,
+  topic: string
+): Promise<Resultat> {
   return new Promise((resolve) => {
     let status = 0;
     let corps = "";
     const req = client.request({
       ":method": "POST",
       ":path": `/3/device/${token}`,
-      "apns-topic": config.apple.passTypeId,
+      "apns-topic": topic,
     });
     req.setEncoding("utf8");
     req.on("response", (h) => {
@@ -69,30 +81,56 @@ function court(token: string): string {
   return `…${token.slice(-8)}`;
 }
 
-async function pushTokens(tokens: string[], contexte: string): Promise<number> {
-  if (!tokens.length) {
-    console.log(`[APNs] ${contexte} : aucun appareil enregistré, rien à envoyer`);
-    return 0;
-  }
-
+/** Envoie à un groupe de jetons qui partagent le même Pass Type ID. */
+async function pushGroupe(
+  identifiant: string,
+  tokens: string[],
+  contexte: string
+): Promise<Resultat[]> {
   // Un certificat absent ou illisible ne doit pas faire échouer le scan ou
-  // la promo qui a déclenché le push : on le signale et on s'arrête là.
+  // la promo qui a déclenché le push : on le signale et on passe.
   let client: http2.ClientHttp2Session;
+  let topic: string;
   try {
-    client = connecter();
+    const identite = await identiteCarte(identifiant);
+    topic = identite.passTypeIdentifier;
+    client = connecter(identite);
   } catch (e) {
-    console.error(`[APNs] ${contexte} : connexion impossible —`, (e as Error).message);
-    return 0;
+    console.error(
+      `[APNs] ${contexte} · ${identifiant} : connexion impossible —`,
+      (e as Error).message
+    );
+    return [];
   }
   const resultats: Resultat[] = [];
   try {
     for (let i = 0; i < tokens.length; i += 50) {
       resultats.push(
-        ...(await Promise.all(tokens.slice(i, i + 50).map((t) => pushToDevice(client, t))))
+        ...(await Promise.all(tokens.slice(i, i + 50).map((t) => pushToDevice(client, t, topic))))
       );
     }
   } finally {
     client.close();
+  }
+  return resultats;
+}
+
+async function pushTokens(jetons: Jeton[], contexte: string): Promise<number> {
+  if (!jetons.length) {
+    console.log(`[APNs] ${contexte} : aucun appareil enregistré, rien à envoyer`);
+    return 0;
+  }
+
+  // Regroupement par Pass Type ID effectif, sans doublon de jeton.
+  const groupes = new Map<string, Set<string>>();
+  for (const j of jetons) {
+    const id = identifiantEffectif(j.identifiant);
+    if (!groupes.has(id)) groupes.set(id, new Set());
+    groupes.get(id)!.add(j.token);
+  }
+  const resultats: Resultat[] = [];
+  for (const [identifiant, tokens] of groupes) {
+    resultats.push(...(await pushGroupe(identifiant, [...tokens], contexte)));
   }
 
   for (const r of resultats) {
@@ -118,36 +156,38 @@ async function pushTokens(tokens: string[], contexte: string): Promise<number> {
   return ok;
 }
 
+type LigneEnregistrement = {
+  push_token: string;
+  customers: { pass_type_identifier: string | null };
+};
+
 /** Push tous les appareils enregistrés pour UN pass. */
 export async function pushPassUpdate(serialNumber: string): Promise<void> {
   const { data: regs } = await db
     .from("apple_registrations")
-    .select("push_token")
-    .eq("serial_number", serialNumber);
+    .select("push_token, customers!inner(pass_type_identifier)")
+    .eq("serial_number", serialNumber)
+    .returns<LigneEnregistrement[]>();
   await pushTokens(
-    [...new Set((regs ?? []).map((r) => r.push_token))],
+    (regs ?? []).map((r) => ({
+      token: r.push_token,
+      identifiant: r.customers.pass_type_identifier,
+    })),
     `carte ${serialNumber.slice(0, 8)}`
   );
 }
 
 /** Jetons APNs de tous les iPhone qui portent une carte du commerce. */
-async function jetonsDuCommerce(merchantId: string): Promise<string[]> {
-  const { data: customers } = await db
-    .from("customers")
-    .select("serial_number")
-    .eq("merchant_id", merchantId);
-
-  if (!customers?.length) return [];
-
+async function jetonsDuCommerce(merchantId: string): Promise<Jeton[]> {
   const { data: regs } = await db
     .from("apple_registrations")
-    .select("push_token")
-    .in(
-      "serial_number",
-      customers.map((c) => c.serial_number)
-    );
-
-  return [...new Set((regs ?? []).map((r) => r.push_token))];
+    .select("push_token, customers!inner(pass_type_identifier, merchant_id)")
+    .eq("customers.merchant_id", merchantId)
+    .returns<LigneEnregistrement[]>();
+  return (regs ?? []).map((r) => ({
+    token: r.push_token,
+    identifiant: r.customers.pass_type_identifier,
+  }));
 }
 
 /**
@@ -179,5 +219,5 @@ export async function rafraichirCartesCommerce(
 
   const jetons = await jetonsDuCommerce(merchantId);
   const acceptes = await pushTokens(jetons, `remise à niveau commerce ${merchantId.slice(0, 8)}`);
-  return { appareils: jetons.length, acceptes };
+  return { appareils: new Set(jetons.map((j) => j.token)).size, acceptes };
 }

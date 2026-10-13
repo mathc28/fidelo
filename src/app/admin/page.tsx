@@ -9,6 +9,7 @@ import { emailValide } from "@/lib/uiText";
 import type * as Row from "@/lib/types";
 import { AdminLogin } from "./AdminLogin";
 import { RafraichirCartes } from "./RafraichirCartes";
+import { CertificatPartage } from "./CertificatPartage";
 import "./admin.css";
 
 // `cards` est calculé par l'API, pas une colonne : d'où l'intersection.
@@ -188,6 +189,10 @@ export default function AdminPage() {
           </button>
         </div>
       </header>
+
+      <div className="admin-corps admin-alertes">
+        <CertificatPartage jeton={session.access_token} />
+      </div>
 
       <div className="admin-corps admin-grille">
         {/* ===== Tableau commerçants ===== */}

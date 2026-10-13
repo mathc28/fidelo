@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { isPlatformAdminEmail, requirePlatformAdmin } from "@/lib/platformAdmin";
 import { db, getMerchantBySlug, type Merchant } from "@/lib/supabaseAdmin";
 import { expireLoyaltyObjects } from "@/lib/googleWallet";
+import { revoquerCertificat } from "@/lib/appStoreConnect";
 
 // Expiration des cartes Google une par une : peut prendre du temps.
 export const maxDuration = 60;
@@ -87,9 +88,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { slug: str
   }
 
   // Ce qu'il faudra traiter hors base, relevé avant que les lignes disparaissent.
-  const [{ data: clients }, { data: fichiers }] = await Promise.all([
+  const [{ data: clients }, { data: fichiers }, { data: certPass }] = await Promise.all([
     db.from("customers").select("serial_number").eq("merchant_id", merchant.id),
     db.storage.from("pass-assets").list(merchant.id, { limit: 1000 }),
+    db
+      .from("merchant_pass_certs")
+      .select("pass_type_identifier, asc_certificate_id")
+      .eq("merchant_id", merchant.id)
+      .maybeSingle(),
   ]);
   const serials = (clients ?? []).map((c) => c.serial_number);
 
@@ -127,7 +133,17 @@ export async function DELETE(req: NextRequest, { params }: { params: { slug: str
     ? await expireLoyaltyObjects(serials)
     : { expirees: 0, absentes: 0, echecs: 0 };
 
-  // 4. Compte Auth du gérant, s'il ne gère aucun autre commerce.
+  // 4. Certificat Apple propre au commerce : révoqué chez Apple (best effort).
+  //    Le Pass Type ID lui-même reste déclaré dans le compte développeur.
+  let certificatApple = "aucun (identifiant partagé)";
+  if (certPass) {
+    certificatApple = await revoquerCertificat(certPass.asc_certificate_id)
+      .then(() => `${certPass.asc_certificate_id} révoqué`)
+      .catch((e) => `${certPass.asc_certificate_id} NON révoqué (${(e as Error).message})`);
+    certificatApple += ` ; Pass Type ID ${certPass.pass_type_identifier} conservé chez Apple`;
+  }
+
+  // 5. Compte Auth du gérant, s'il ne gère aucun autre commerce.
   let compteAuth: string;
   if (compte.autresCommerces > 0) {
     compteAuth = `conservé (gère encore ${compte.autresCommerces} autre(s) commerce(s))`;
@@ -144,11 +160,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { slug: str
     rewards: number;
     devices: number;
     pairing_codes: number;
+    pass_certs?: number;
   };
   const bilan = {
     ...base,
     fichiers: fichiersSupprimes,
     google,
+    certificatApple,
     compteAuth,
   };
   console.log(
@@ -159,6 +177,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { slug: str
       `${fichiersSupprimes}/${chemins.length} fichier(s) Storage, ` +
       `Google : ${google.expirees} carte(s) expirée(s), ${google.absentes} absente(s), ${google.echecs} échec(s) ; ` +
       `la classe ${merchant.google_class_id ?? "(aucune)"} reste chez Google ; ` +
+      `certificat Apple : ${certificatApple} ; ` +
       `compte du gérant ${compte.email ?? "?"} ${compteAuth}`
   );
 

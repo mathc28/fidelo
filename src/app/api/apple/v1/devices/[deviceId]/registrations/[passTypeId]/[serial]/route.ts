@@ -12,11 +12,11 @@ type Params = { params: { deviceId: string; passTypeId: string; serial: string }
 export async function POST(req: NextRequest, { params }: Params) {
   const quoi = `appareil ${court(params.deviceId)} · carte ${court(params.serial)}`;
 
-  if (!bonPassType(params.passTypeId)) {
+  if (!(await bonPassType(params.passTypeId))) {
     log(`enregistrement refusé, Pass Type ID inconnu (${params.passTypeId}) — ${quoi} → 404`);
     return new NextResponse(null, { status: 404 });
   }
-  if (!(await authentifier(req, params.serial))) {
+  if (!(await authentifier(req, params.serial, params.passTypeId))) {
     log(`enregistrement refusé, authenticationToken invalide — ${quoi} → 401`);
     return new NextResponse(null, { status: 401 });
   }
@@ -56,11 +56,11 @@ export async function POST(req: NextRequest, { params }: Params) {
 export async function DELETE(req: NextRequest, { params }: Params) {
   const quoi = `appareil ${court(params.deviceId)} · carte ${court(params.serial)}`;
 
-  if (!bonPassType(params.passTypeId)) {
+  if (!(await bonPassType(params.passTypeId))) {
     log(`désenregistrement refusé, Pass Type ID inconnu (${params.passTypeId}) — ${quoi} → 404`);
     return new NextResponse(null, { status: 404 });
   }
-  if (!(await authentifier(req, params.serial))) {
+  if (!(await authentifier(req, params.serial, params.passTypeId))) {
     log(`désenregistrement refusé, authenticationToken invalide — ${quoi} → 401`);
     return new NextResponse(null, { status: 401 });
   }
