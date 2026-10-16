@@ -8,223 +8,269 @@ export const metadata: Metadata = {
     "Quelles données Fiduo traite, pourquoi, combien de temps, et comment exercer vos droits.",
 };
 
-const CONTACT = EMAIL_CONTACT;
+const Email = () => <a href={`mailto:${EMAIL_CONTACT}`}>{EMAIL_CONTACT}</a>;
+
+const FINALITES = [
+  [
+    "Créer, afficher et mettre à jour votre carte de fidélité",
+    "Exécution du service proposé par le commerce",
+  ],
+  [
+    "Envoyer les offres du commerce sous forme de notification sur la carte",
+    "Intérêt légitime du commerce ; vous pouvez désactiver les notifications à tout moment dans les réglages de la carte",
+  ],
+  [
+    "Fournir le service aux commerçants (compte, carte, caisse, facturation)",
+    "Exécution du contrat",
+  ],
+  [
+    "Envoyer les e-mails liés au compte commerçant (invitation, réinitialisation du mot de passe)",
+    "Exécution du contrat",
+  ],
+  ["Sécuriser le service (inscriptions automatisées, tentatives d'intrusion)", "Intérêt légitime"],
+  ["Conserver les factures", "Obligation légale"],
+] as const;
 
 export default function ConfidentialitePage() {
   return (
-    <LegalShell titre="Politique de confidentialité" miseAJour="1er octobre 2026">
+    <LegalShell
+      titre="Politique de confidentialité"
+      sousTitre={
+        <>
+          Dernière mise à jour : <ACompleter>date</ACompleter>
+        </>
+      }
+    >
       <p className="legal-chapeau">
-        Fiduo met la carte de fidélité des commerces de quartier dans Apple Wallet et Google Wallet.
-        Cette page explique quelles données nous traitons pour cela, pourquoi, pendant combien de
-        temps, et comment exercer vos droits. Nous collectons le strict nécessaire : pas de
-        publicité, pas de revente, pas de mesure d&apos;audience.
+        Fiduo permet aux commerces de proximité de proposer une carte de fidélité dans Apple Wallet
+        et Google Wallet. Nous collectons uniquement les données nécessaires au fonctionnement du
+        service. Pas de publicité, pas de revente de données, pas de mesure d&apos;audience.
       </p>
 
       <section>
-        <h2>1. Qui sommes-nous</h2>
-        <p>
-          Fiduo est édité par <ACompleter>raison sociale et forme juridique</ACompleter>, dont le
-          siège est situé <ACompleter>adresse postale</ACompleter>, immatriculé sous le numéro{" "}
-          <ACompleter>SIRET</ACompleter>.
-        </p>
-        <p>
-          Pour toute question sur vos données : <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
-        </p>
-      </section>
-
-      <section>
-        <h2>2. Qui est responsable de vos données</h2>
-        <p>Cela dépend de qui vous êtes.</p>
+        <h2>1. Qui est responsable de vos données ?</h2>
         <ul>
           <li>
-            <strong>Vous avez une carte de fidélité chez un commerce.</strong> C&apos;est le
-            commerce qui décide de son programme de fidélité : il est responsable du traitement.
-            Fiduo agit pour son compte, comme sous-traitant, et n&apos;utilise jamais vos données à
-            ses propres fins.
+            <strong>Vous êtes client d&apos;un commerce et possédez une carte de fidélité :</strong>{" "}
+            le <strong>commerce</strong> est responsable du traitement de vos données. Fiduo agit
+            comme <strong>sous-traitant</strong> : nous traitons vos données pour son compte et
+            selon ses instructions.
           </li>
           <li>
-            <strong>Vous êtes commerçant ou vous visitez ce site.</strong> Fiduo est responsable du
-            traitement des données de votre compte et de votre visite.
-          </li>
-        </ul>
-      </section>
-
-      <section>
-        <h2>3. Les données que nous traitons</h2>
-
-        <h3>Si vous avez une carte de fidélité</h3>
-        <ul>
-          <li>Votre prénom et votre adresse email, saisis à l&apos;inscription.</li>
-          <li>
-            L&apos;historique de votre carte : passages, points gagnés, récompenses utilisées, avec
-            leur date. Pour les programmes à points, le montant de vos achats sert à calculer les
-            points.
-          </li>
-          <li>
-            Un identifiant de carte, et, si vous utilisez Apple Wallet, un identifiant technique de
-            votre appareil et un jeton de notification fournis par Apple. Ils servent uniquement à
-            mettre votre carte à jour.
+            <strong>Vous êtes commerçant ou visiteur du site :</strong> Fiduo est responsable du
+            traitement.
           </li>
         </ul>
         <p>
-          <strong>Votre position ne nous est jamais transmise.</strong> La carte contient
-          l&apos;adresse du commerce : c&apos;est votre téléphone, de lui-même, qui affiche la carte
-          sur l&apos;écran verrouillé quand vous passez à proximité. Ce calcul reste sur votre
-          téléphone.
-        </p>
-
-        <h3>Si vous êtes commerçant</h3>
-        <ul>
-          <li>L&apos;adresse email de votre compte et votre mot de passe (chiffré).</li>
-          <li>
-            Les informations de votre commerce : nom, adresse, logo, réglages du programme et
-            récompenses. L&apos;adresse est convertie en coordonnées GPS pour les rappels de
-            proximité.
-          </li>
-          <li>Les messages promotionnels que vous envoyez, et leur date.</li>
-          <li>Les téléphones et tablettes de caisse que vous associez à votre compte.</li>
-        </ul>
-
-        <h3>Pour tout le monde</h3>
-        <p>
-          Votre adresse IP est enregistrée quand vous vous inscrivez, consultez votre carte ou
-          associez une caisse, pour bloquer les tentatives abusives. Elle est effacée
-          automatiquement au bout d&apos;une heure au plus.
+          Fiduo : Mathieu Cocu, Entrepreneur individuel, <ACompleter>adresse</ACompleter>, SIRET{" "}
+          <ACompleter>SIRET</ACompleter>. Contact : <Email />.
         </p>
       </section>
 
       <section>
-        <h2>4. Pourquoi nous les utilisons</h2>
+        <h2>2. Données collectées</h2>
+
+        <h3>Titulaires d&apos;une carte de fidélité</h3>
         <ul>
+          <li>prénom et adresse e-mail ;</li>
+          <li>historique d&apos;utilisation de la carte (passages, tampons, récompenses) ;</li>
+          <li>identifiant de la carte ;</li>
           <li>
-            <strong>Faire fonctionner votre carte de fidélité</strong> : la créer, compter vos
-            passages ou vos points, la mettre à jour dans votre téléphone. C&apos;est nécessaire au
-            programme de fidélité auquel vous vous inscrivez.
-          </li>
-          <li>
-            <strong>Vous transmettre les offres du commerce</strong> sous forme de notification sur
-            la carte. Vous pouvez les couper à tout moment dans les réglages de la carte, dans Apple
-            Wallet ou Google Wallet.
-          </li>
-          <li>
-            <strong>Fournir le service aux commerçants</strong> : gérer leur compte, leur programme
-            et leur abonnement. C&apos;est nécessaire au contrat qui nous lie.
-          </li>
-          <li>
-            <strong>Protéger le service</strong> contre les inscriptions automatisées et les
-            tentatives d&apos;intrusion. C&apos;est notre intérêt légitime.
+            pour Apple Wallet : identifiant technique de l&apos;appareil et jeton de notification,
+            nécessaires aux mises à jour de la carte.
           </li>
         </ul>
-        <p>Nous ne vendons ni ne louons aucune donnée, et nous ne faisons pas de publicité.</p>
+        <p>
+          Votre position n&apos;est jamais transmise à Fiduo : le rappel de proximité est géré
+          directement par votre téléphone.
+        </p>
+
+        <h3>Commerçants</h3>
+        <ul>
+          <li>
+            adresse e-mail du compte et mot de passe (stocké sous forme chiffrée, jamais en clair) ;
+          </li>
+          <li>
+            informations du commerce (nom, logo, couleurs, adresse, convertie en coordonnées GPS
+            pour le rappel de proximité) ;
+          </li>
+          <li>messages promotionnels envoyés aux clients ;</li>
+          <li>téléphones de caisse appairés ;</li>
+          <li>date d&apos;acceptation des conditions générales de vente.</li>
+        </ul>
+
+        <h3>Tous les utilisateurs</h3>
+        <ul>
+          <li>
+            adresse IP, utilisée uniquement pour la prévention des abus (limitation des requêtes),
+            supprimée au plus tard au bout d&apos;une heure.
+          </li>
+        </ul>
       </section>
 
       <section>
-        <h2>5. Qui y a accès</h2>
+        <h2>3. Pourquoi et sur quelle base ?</h2>
+        <div className="legal-tableau">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Finalité</th>
+                <th scope="col">Base légale</th>
+              </tr>
+            </thead>
+            <tbody>
+              {FINALITES.map(([finalite, base]) => (
+                <tr key={finalite}>
+                  <td>{finalite}</td>
+                  <td>{base}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section>
+        <h2>4. Qui reçoit vos données ?</h2>
         <p>
-          Le commerce auprès duquel vous avez une carte voit votre prénom, votre email et
-          l&apos;historique de votre carte chez lui, et seulement chez lui. Un commerce ne voit
-          jamais vos cartes chez d&apos;autres commerces.
+          Chaque commerce n&apos;a accès qu&apos;aux données de ses propres clients. Nous faisons
+          appel aux prestataires suivants :
         </p>
-        <p>Pour faire fonctionner le service, nous faisons appel à :</p>
-        <ul>
-          <li>
-            <strong>Supabase</strong>, pour la base de données, les comptes commerçants et le
-            stockage des logos <ACompleter>région d&apos;hébergement du projet Supabase</ACompleter>
-            .
-          </li>
-          <li>
-            <strong>
-              <ACompleter>hébergeur du site, par exemple Vercel</ACompleter>
-            </strong>
-            , pour l&apos;hébergement du site.
-          </li>
-          <li>
-            <strong>Apple</strong> et <strong>Google</strong>, pour afficher et mettre à jour votre
-            carte dans Apple Wallet ou Google Wallet, et pour vous envoyer les notifications de la
-            carte.
-          </li>
-          <li>
-            <strong>OpenStreetMap (Nominatim)</strong>, pour convertir l&apos;adresse d&apos;un
-            commerce en coordonnées GPS. Seule l&apos;adresse du commerce lui est envoyée, aucune
-            donnée de client.
-          </li>
-        </ul>
+        <div className="legal-tableau">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Prestataire</th>
+                <th scope="col">Rôle</th>
+                <th scope="col">Localisation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Supabase Inc.</td>
+                <td>Base de données et stockage des logos</td>
+                <td>
+                  Serveurs : <ACompleter>région</ACompleter>
+                </td>
+              </tr>
+              <tr>
+                <td>Vercel Inc.</td>
+                <td>Hébergement du site et tâches planifiées</td>
+                <td>États-Unis / réseau mondial</td>
+              </tr>
+              <tr>
+                <td>Resend Inc.</td>
+                <td>Envoi des e-mails aux commerçants (invitation, réinitialisation)</td>
+                <td>États-Unis</td>
+              </tr>
+              <tr>
+                <td>Apple Inc.</td>
+                <td>Mise à jour et notifications des cartes Apple Wallet</td>
+                <td>États-Unis</td>
+              </tr>
+              <tr>
+                <td>Google LLC</td>
+                <td>Mise à jour et notifications des cartes Google Wallet</td>
+                <td>États-Unis</td>
+              </tr>
+              <tr>
+                <td>OpenStreetMap (Nominatim)</td>
+                <td>
+                  Conversion de l&apos;adresse du commerce en coordonnées GPS (adresse du commerce
+                  uniquement)
+                </td>
+                <td>Union européenne</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
         <p>
-          Certains de ces prestataires sont établis hors de l&apos;Union européenne, notamment aux
-          États-Unis. Ces transferts sont encadrés par les garanties prévues par le RGPD : décision
-          d&apos;adéquation (Data Privacy Framework) ou clauses contractuelles types de la
+          Lorsque vous ajoutez une carte à Apple Wallet ou Google Wallet, ces services traitent
+          également vos données selon leurs propres politiques :{" "}
+          <a href="https://www.apple.com/legal/privacy/">Apple</a> ·{" "}
+          <a href="https://policies.google.com/privacy">Google</a>.
+        </p>
+        <p>
+          <strong>Transferts hors Union européenne :</strong> certains prestataires sont situés aux
+          États-Unis. Ces transferts sont encadrés par le Data Privacy Framework UE–États-Unis
+          lorsque le prestataire y est certifié, et/ou par les clauses contractuelles types de la
           Commission européenne.
         </p>
       </section>
 
       <section>
-        <h2>6. Combien de temps nous les gardons</h2>
+        <h2>5. Durées de conservation</h2>
         <ul>
           <li>
-            <strong>Carte de fidélité</strong> :{" "}
-            <ACompleter>
-              durée, par exemple jusqu&apos;à la suppression de la carte ou 3 ans après le dernier
-              passage
-            </ACompleter>
-            .
+            <strong>Cartes de fidélité :</strong> supprimées 3 ans après la dernière utilisation de
+            la carte, ou dès la fermeture du compte du commerce.
           </li>
           <li>
-            <strong>Compte commerçant</strong> :{" "}
-            <ACompleter>
-              durée, par exemple pendant l&apos;abonnement puis 3 ans après sa fin
-            </ACompleter>
-            . Les factures sont conservées 10 ans, comme l&apos;exige la loi.
+            <strong>Comptes commerçants :</strong> conservés pendant toute la durée de
+            l&apos;abonnement, puis supprimés dans les 3 mois suivant la résiliation.
           </li>
           <li>
-            <strong>Adresse IP anti-abus</strong> : une heure au plus.
+            <strong>Factures :</strong> 10 ans (obligation légale).
+          </li>
+          <li>
+            <strong>Adresses IP :</strong> 1 heure maximum.
           </li>
         </ul>
         <p>
-          Retirer la carte de votre téléphone ne supprime pas vos données : écrivez-nous pour cela
-          (voir ci-dessous).
+          Supprimer la carte de votre téléphone ne supprime pas vos données chez nous. Pour cela,
+          écrivez-nous (voir section 7).
         </p>
       </section>
 
       <section>
-        <h2>7. Cookies</h2>
+        <h2>6. Cookies</h2>
         <p>
-          Ce site ne dépose aucun cookie publicitaire ni de mesure d&apos;audience. Le seul stockage
-          utilisé dans votre navigateur sert à garder un commerçant connecté à son tableau de bord.
-          Il est indispensable au service et ne demande donc pas de consentement.
+          Aucun cookie publicitaire ni de mesure d&apos;audience. Le seul stockage utilisé dans le
+          navigateur sert à maintenir la connexion des commerçants à leur espace.
         </p>
       </section>
 
       <section>
-        <h2>8. Vos droits</h2>
+        <h2>7. Vos droits</h2>
         <p>
-          Vous pouvez à tout moment accéder à vos données, les faire corriger ou supprimer, en
-          obtenir une copie, vous opposer à leur utilisation ou en demander la limitation.
+          Vous disposez d&apos;un droit d&apos;accès, de rectification, d&apos;effacement, de
+          portabilité, d&apos;opposition et de limitation du traitement. Pour l&apos;exercer :{" "}
+          <strong>
+            <Email />
+          </strong>
+          .
         </p>
         <p>
-          Écrivez-nous à <a href={`mailto:${CONTACT}`}>{CONTACT}</a> en précisant le commerce
-          concerné si vous êtes client. Si votre demande relève du commerce, nous la lui
-          transmettons. Nous répondons sous un mois.
+          Si votre demande concerne une carte de fidélité, nous la transmettons au commerce
+          concerné, responsable du traitement, et l&apos;aidons à y répondre. Nous répondons dans un
+          délai d&apos;un mois.
         </p>
         <p>
-          Si vous estimez que vos droits ne sont pas respectés, vous pouvez adresser une réclamation
-          à la CNIL, sur <a href="https://www.cnil.fr">cnil.fr</a>.
+          Vous pouvez introduire une réclamation auprès de la CNIL (
+          <a href="https://www.cnil.fr">cnil.fr</a>).
+        </p>
+        <p>
+          <strong>Utilisateurs en Suisse :</strong> vous disposez de droits équivalents en vertu de
+          la loi fédérale sur la protection des données (nLPD). L&apos;autorité compétente est le
+          Préposé fédéral à la protection des données et à la transparence (PFPDT,{" "}
+          <a href="https://www.edoeb.admin.ch">edoeb.admin.ch</a>).
         </p>
       </section>
 
       <section>
-        <h2>9. Sécurité</h2>
+        <h2>8. Sécurité</h2>
         <p>
-          Les échanges avec le site sont chiffrés. Chaque commerce n&apos;accède qu&apos;à ses
-          propres clients, cloisonnement appliqué directement par la base de données. Les mots de
-          passe et les jetons des caisses ne sont jamais stockés en clair.
+          Connexions chiffrées (HTTPS), isolation des données de chaque commerce assurée par la base
+          de données, mots de passe et jetons techniques jamais stockés en clair, clés de signature
+          des cartes chiffrées.
         </p>
       </section>
 
       <section>
-        <h2>10. Modifications</h2>
+        <h2>9. Modifications</h2>
         <p>
-          Nous pouvons mettre à jour cette politique, par exemple si le service évolue. La date en
-          haut de page indique la dernière version.
+          Nous pouvons mettre à jour cette politique. La date de dernière mise à jour figure en haut
+          de la page.
         </p>
       </section>
     </LegalShell>

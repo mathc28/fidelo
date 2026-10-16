@@ -56,6 +56,9 @@ export function SiteFooter() {
           <a href="/confidentialite" className="landing-pied-lien">
             Confidentialité
           </a>
+          <a href="/cgv" className="landing-pied-lien">
+            CGV
+          </a>
         </div>
       </div>
     </footer>

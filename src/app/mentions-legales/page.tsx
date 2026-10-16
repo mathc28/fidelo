@@ -4,83 +4,104 @@ import { EMAIL_CONTACT } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Mentions légales",
-  description: "Éditeur, hébergeur et conditions d'utilisation du site Fiduo.",
+  description: "Éditeur, hébergeur et propriété intellectuelle du site Fiduo.",
 };
 
-const CONTACT = EMAIL_CONTACT;
+const Email = () => <a href={`mailto:${EMAIL_CONTACT}`}>{EMAIL_CONTACT}</a>;
 
 export default function MentionsLegalesPage() {
   return (
-    <LegalShell titre="Mentions légales" miseAJour="1er octobre 2026">
+    <LegalShell
+      titre="Mentions légales"
+      sousTitre={
+        <>
+          Dernière mise à jour : <ACompleter>date</ACompleter>
+        </>
+      }
+    >
       <p className="legal-chapeau">
-        Informations prévues par l&apos;article 6 de la loi n° 2004-575 du 21 juin 2004 pour la
-        confiance dans l&apos;économie numérique (LCEN).
+        Conformément à l&apos;article 6 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans
+        l&apos;économie numérique (LCEN), voici les informations relatives à l&apos;éditeur et à
+        l&apos;hébergeur du site fiduo.app.
       </p>
 
       <section>
         <h2>Éditeur du site</h2>
-        <p>
-          Le site fiduo.app est édité par <ACompleter>raison sociale et forme juridique</ACompleter>
-          , <ACompleter>capital social, si société</ACompleter>.
-        </p>
         <ul>
           <li>
-            Siège : <ACompleter>adresse postale</ACompleter>
+            <strong>Éditeur :</strong> Mathieu Cocu, Entrepreneur individuel (EI), exerçant sous le
+            nom commercial « Fiduo »
           </li>
           <li>
-            SIRET : <ACompleter>numéro SIRET</ACompleter>
+            <strong>Adresse :</strong>{" "}
+            <ACompleter>adresse professionnelle ou de domiciliation</ACompleter>
           </li>
           <li>
-            Immatriculation :{" "}
-            <ACompleter>RCS et ville, ou « dispensé d&apos;immatriculation »</ACompleter>
+            <strong>SIRET :</strong> <ACompleter>SIRET</ACompleter>
           </li>
           <li>
-            TVA intracommunautaire :{" "}
-            <ACompleter>numéro, ou « TVA non applicable, art. 293 B du CGI »</ACompleter>
+            <strong>Code APE :</strong> <ACompleter>code APE</ACompleter>
           </li>
           <li>
-            Téléphone : <ACompleter>numéro</ACompleter>
+            <strong>Immatriculation :</strong> Registre national des entreprises (RNE)
           </li>
           <li>
-            Email : <a href={`mailto:${CONTACT}`}>{CONTACT}</a>
+            <strong>TVA :</strong>{" "}
+            <ACompleter>
+              « TVA non applicable, art. 293 B du CGI » si franchise en base, sinon n° de TVA
+              intracommunautaire
+            </ACompleter>
+          </li>
+          <li>
+            <strong>E-mail :</strong> <Email />
+          </li>
+          <li>
+            <strong>Téléphone :</strong> <ACompleter>téléphone</ACompleter>
+          </li>
+          <li>
+            <strong>Directeur de la publication :</strong> Mathieu Cocu
           </li>
         </ul>
-        <p>
-          Directeur de la publication : <ACompleter>nom et prénom</ACompleter>.
-        </p>
       </section>
 
       <section>
         <h2>Hébergement</h2>
-        <p>
-          Le site est hébergé par <ACompleter>nom de l&apos;hébergeur</ACompleter>,{" "}
-          <ACompleter>adresse et téléphone de l&apos;hébergeur</ACompleter>.
-        </p>
-        <p>
-          Les données du service sont hébergées par Supabase, Inc.,{" "}
-          <ACompleter>adresse de Supabase</ACompleter>, sur des serveurs situés{" "}
-          <ACompleter>région du projet Supabase</ACompleter>.
-        </p>
+        <ul>
+          <li>
+            <strong>Site web :</strong> Vercel Inc. —{" "}
+            <ACompleter>adresse officielle, voir vercel.com/legal</ACompleter> —{" "}
+            <a href="https://vercel.com">vercel.com</a>
+          </li>
+          <li>
+            <strong>Base de données et fichiers :</strong> Supabase Inc. —{" "}
+            <ACompleter>adresse officielle, voir supabase.com/legal</ACompleter> —{" "}
+            <a href="https://supabase.com">supabase.com</a>. Serveurs situés dans la région{" "}
+            <ACompleter>ex. « Union européenne (Francfort) »</ACompleter>.
+          </li>
+        </ul>
       </section>
 
       <section>
         <h2>Propriété intellectuelle</h2>
         <p>
-          La marque Fiduo, son logo, les textes, les illustrations et le code de ce site sont la
-          propriété de l&apos;éditeur. Toute reproduction, même partielle, sans autorisation écrite
-          est interdite.
+          La marque Fiduo, son logo, les textes, illustrations, interfaces et le code du site sont
+          la propriété de l&apos;éditeur. Toute reproduction ou réutilisation sans autorisation
+          écrite préalable est interdite.
         </p>
         <p>
-          Les noms, logos et contenus des commerces affichés sur leurs cartes de fidélité
-          appartiennent à ces commerces. Apple Wallet est une marque d&apos;Apple Inc. ; Google
-          Wallet est une marque de Google LLC.
+          Les noms, logos et contenus des commerces affichés sur leurs cartes de fidélité restent la
+          propriété de ces commerces, qui en autorisent l&apos;usage par Fiduo dans le cadre du
+          service.
+        </p>
+        <p>
+          Apple Wallet est une marque d&apos;Apple Inc. Google Wallet est une marque de Google LLC.
         </p>
       </section>
 
       <section>
         <h2>Données personnelles</h2>
         <p>
-          La manière dont Fiduo traite les données personnelles est décrite dans la{" "}
+          Le traitement des données personnelles est décrit dans notre{" "}
           <a href="/confidentialite">politique de confidentialité</a>.
         </p>
       </section>
@@ -88,7 +109,7 @@ export default function MentionsLegalesPage() {
       <section>
         <h2>Contact</h2>
         <p>
-          Pour toute question sur le site : <a href={`mailto:${CONTACT}`}>{CONTACT}</a>.
+          Pour toute question : <Email />
         </p>
       </section>
     </LegalShell>

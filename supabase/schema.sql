@@ -463,3 +463,9 @@ end $$;
 revoke all on function supprimer_commerce(uuid) from public;
 revoke all on function supprimer_commerce(uuid) from anon, authenticated;
 grant execute on function supprimer_commerce(uuid) to service_role;
+
+-- ------------------------------------------------------------
+-- ACCEPTATION DES CGV (migrations/20261016_acceptation_cgv.sql)
+-- ------------------------------------------------------------
+alter table merchants add column if not exists cgv_accepted_at timestamptz;
+alter table merchants add column if not exists cgv_version text;

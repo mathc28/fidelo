@@ -10,6 +10,10 @@ import { authErrorFr } from "@/lib/uiText";
  * de mot de passe (même mécanique côté Supabase) : le gérant arrive ici
  * avec une session temporaire (token dans l'URL, géré automatiquement par
  * supabase-js), définit son mot de passe, puis file sur son espace.
+ *
+ * À l'activation (invitation, pas réinitialisation), le gérant doit accepter
+ * les CGV et l'accord de sous-traitance qu'elles contiennent : la case est
+ * obligatoire, et l'acceptation est enregistrée avant le mot de passe.
  */
 export default function DefinirMotDePassePage() {
   const [ready, setReady] = useState(false);
@@ -17,6 +21,7 @@ export default function DefinirMotDePassePage() {
   const [isRecovery, setIsRecovery] = useState(false);
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [cgv, setCgv] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
@@ -46,8 +51,38 @@ export default function DefinirMotDePassePage() {
       setError("Les deux mots de passe ne correspondent pas.");
       return;
     }
+    if (!isRecovery && !cgv) {
+      setError("Acceptez les conditions générales de vente pour activer votre compte.");
+      return;
+    }
 
     setSaving(true);
+
+    // 1. L'acceptation des CGV d'abord : sans elle, le compte n'est pas activé.
+    if (!isRecovery) {
+      const { data } = await supabase.auth.getSession();
+      try {
+        const res = await fetch("/api/dashboard/cgv", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${data.session?.access_token ?? ""}` },
+        });
+        if (!res.ok) {
+          setSaving(false);
+          setError(
+            res.status === 401
+              ? "Aucun commerce n'est rattaché à ce compte. Contactez-nous."
+              : (await res.text()) || "L'acceptation des CGV n'a pas pu être enregistrée."
+          );
+          return;
+        }
+      } catch {
+        setSaving(false);
+        setError("Pas de connexion. Vérifiez le réseau et réessayez.");
+        return;
+      }
+    }
+
+    // 2. Le mot de passe.
     const { error } = await supabase.auth.updateUser({ password });
     setSaving(false);
     if (error) {
@@ -124,7 +159,28 @@ export default function DefinirMotDePassePage() {
           error={error || undefined}
           onChange={(e) => setConfirm(e.target.value)}
         />
-        <Button type="submit" block disabled={saving}>
+        {!isRecovery && (
+          <label className="auth-cgv">
+            <input
+              type="checkbox"
+              required
+              checked={cgv}
+              onChange={(e) => setCgv(e.target.checked)}
+            />
+            <span>
+              J&apos;accepte les{" "}
+              <a href="/cgv" target="_blank" rel="noopener">
+                Conditions générales de vente
+              </a>{" "}
+              et l&apos;
+              <a href="/cgv#sous-traitance" target="_blank" rel="noopener">
+                accord de sous-traitance des données
+              </a>
+              .
+            </span>
+          </label>
+        )}
+        <Button type="submit" block disabled={saving || (!isRecovery && !cgv)}>
           {saving ? "Enregistrement…" : "Accéder à mon espace"}
         </Button>
       </form>

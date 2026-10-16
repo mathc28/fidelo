@@ -33,6 +33,9 @@ export type Merchant = {
   max_scans_per_day: number;
   google_class_id: string | null;
   subscription_status: SubscriptionStatus;
+  /** Acceptation des CGV à l'activation du compte : date et version acceptée. */
+  cgv_accepted_at: string | null;
+  cgv_version: string | null;
 };
 
 export type Customer = {

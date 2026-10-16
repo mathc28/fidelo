@@ -17,6 +17,8 @@ function buildMerchant(subscriptionStatus: Merchant["subscription_status"]): Mer
     max_scans_per_day: 1,
     google_class_id: null,
     subscription_status: subscriptionStatus,
+    cgv_accepted_at: null,
+    cgv_version: null,
   };
 }
 
