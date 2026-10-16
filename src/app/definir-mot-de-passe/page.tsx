@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { supabase } from "@/lib/supabaseBrowser";
 import { Button, Field, Logo } from "@/components/ui";
 import { authErrorFr } from "@/lib/uiText";
+import { CaseCgv } from "@/components/CaseCgv";
 
 /**
  * Page d'atterrissage du lien d'invitation ET du lien de réinitialisation
@@ -159,27 +160,7 @@ export default function DefinirMotDePassePage() {
           error={error || undefined}
           onChange={(e) => setConfirm(e.target.value)}
         />
-        {!isRecovery && (
-          <label className="auth-cgv">
-            <input
-              type="checkbox"
-              required
-              checked={cgv}
-              onChange={(e) => setCgv(e.target.checked)}
-            />
-            <span>
-              J&apos;accepte les{" "}
-              <a href="/cgv" target="_blank" rel="noopener">
-                Conditions générales de vente
-              </a>{" "}
-              et l&apos;
-              <a href="/cgv#sous-traitance" target="_blank" rel="noopener">
-                accord de sous-traitance des données
-              </a>
-              .
-            </span>
-          </label>
-        )}
+        {!isRecovery && <CaseCgv checked={cgv} onChange={setCgv} />}
         <Button type="submit" block disabled={saving || (!isRecovery && !cgv)}>
           {saving ? "Enregistrement…" : "Accéder à mon espace"}
         </Button>

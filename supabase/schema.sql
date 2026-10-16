@@ -469,3 +469,9 @@ grant execute on function supprimer_commerce(uuid) to service_role;
 -- ------------------------------------------------------------
 alter table merchants add column if not exists cgv_accepted_at timestamptz;
 alter table merchants add column if not exists cgv_version text;
+
+-- ------------------------------------------------------------
+-- RÉSILIATION (migrations/20261016_resiliation_commerce.sql)
+-- Purge RGPD : commerce supprimé 3 mois après resiliated_at.
+-- ------------------------------------------------------------
+alter table merchants add column if not exists resiliated_at timestamptz;

@@ -1,7 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireMerchant } from "@/lib/dashboardAuth";
+import { requireMerchant, requireMerchantEtCompte } from "@/lib/dashboardAuth";
+import { isPlatformAdminEmail } from "@/lib/platformAdmin";
+import { doitAccepterCgv } from "@/lib/cgv";
 import { db } from "@/lib/supabaseAdmin";
 import { CGV_VERSION } from "@/lib/site";
+
+/**
+ * GET — le gérant connecté doit-il accepter les CGV en vigueur avant
+ * d'accéder à son dashboard ? (Jamais pour un admin plateforme.)
+ */
+export async function GET(req: NextRequest) {
+  const auth = await requireMerchantEtCompte(req);
+  if (!auth) return new NextResponse("Non autorisé", { status: 401 });
+  return NextResponse.json({
+    doitAccepter: doitAccepterCgv(auth.merchant.cgv_version, isPlatformAdminEmail(auth.email)),
+    versionEnVigueur: CGV_VERSION,
+    versionAcceptee: auth.merchant.cgv_version,
+  });
+}
 
 /**
  * POST — le gérant connecté accepte les CGV (et l'accord de sous-traitance

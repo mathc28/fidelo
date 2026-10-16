@@ -552,6 +552,14 @@ h3 {
   color: var(--color-text-secondary);
 }
 
+button.auth-link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 /* ---------- Tableaux ---------- */
 .table-head {
   display: grid;

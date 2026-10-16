@@ -3,12 +3,13 @@ import { db } from "@/lib/supabaseAdmin";
 import { pushMerchantPasses } from "@/lib/apns";
 import { promoActive } from "@/lib/promo";
 import { renouvelerCertificatsProches } from "@/lib/passTypeProvisioning";
+import { purgerCartesInactives, purgerCommercesResilies } from "@/lib/purgesRgpd";
 
 export const maxDuration = 60;
 
 /**
  * Tâche planifiée quotidienne (vercel.json), juste après minuit heure de
- * Paris. Deux travaux indépendants : l'échec de l'un n'empêche pas l'autre.
+ * Paris. Trois travaux indépendants : l'échec de l'un n'empêche pas les autres.
  *
  * 1. Promos expirées — retire des cartes Apple le message des promos
  *    arrivées en fin d'affichage. Une carte Apple ne se met à jour que si on
@@ -21,6 +22,9 @@ export const maxDuration = 60;
  *
  * 2. Certificats Apple des commerces — renouvelle ceux qui expirent dans
  *    moins de 30 jours (passTypeProvisioning.ts).
+ *
+ * 3. Purges RGPD (purgesRgpd.ts) — cartes inutilisées depuis 3 ans, et
+ *    commerces résiliés depuis plus de 3 mois.
  */
 export async function GET(req: NextRequest) {
   // Vercel envoie `Authorization: Bearer <CRON_SECRET>` à ses tâches planifiées.
@@ -45,8 +49,31 @@ export async function GET(req: NextRequest) {
     certificats = { erreur: (e as Error).message };
   }
 
-  const enEchec = "erreur" in promos || "erreur" in certificats;
-  return NextResponse.json({ promos, certificats }, { status: enEchec ? 500 : 200 });
+  // Les purges en dernier : la plus longue, et la moins urgente.
+  type Purges = {
+    cartes: Awaited<ReturnType<typeof purgerCartesInactives>> | { erreur: string };
+    commerces: Awaited<ReturnType<typeof purgerCommercesResilies>> | { erreur: string };
+  };
+  const purges = {} as Purges;
+  try {
+    purges.cartes = await purgerCartesInactives();
+  } catch (e) {
+    console.error("[Purge RGPD] cartes inactives en échec :", (e as Error).message);
+    purges.cartes = { erreur: (e as Error).message };
+  }
+  try {
+    purges.commerces = await purgerCommercesResilies();
+  } catch (e) {
+    console.error("[Purge RGPD] commerces résiliés en échec :", (e as Error).message);
+    purges.commerces = { erreur: (e as Error).message };
+  }
+
+  const enEchec =
+    "erreur" in promos ||
+    "erreur" in certificats ||
+    "erreur" in purges.cartes ||
+    "erreur" in purges.commerces;
+  return NextResponse.json({ promos, certificats, purges }, { status: enEchec ? 500 : 200 });
 }
 
 async function retirerPromosExpirees(): Promise<{ commerces: number; promos: number }> {

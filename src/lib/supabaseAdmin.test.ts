@@ -19,6 +19,7 @@ function buildMerchant(subscriptionStatus: Merchant["subscription_status"]): Mer
     subscription_status: subscriptionStatus,
     cgv_accepted_at: null,
     cgv_version: null,
+    resiliated_at: null,
   };
 }
 
