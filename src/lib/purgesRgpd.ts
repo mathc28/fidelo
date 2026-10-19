@@ -1,5 +1,6 @@
 import { db, type Merchant } from "./supabaseAdmin";
 import { gerant, supprimerCommerceComplet } from "./suppressionCommerce";
+import { expireLoyaltyObjects } from "./googleWallet";
 import {
   cartesAPurger,
   commercesAPurger,
@@ -25,20 +26,22 @@ function lots<T>(liste: T[], taille = 200): T[][] {
 }
 
 /**
- * Cartes de fidélité inutilisées depuis 3 ans. Supprimer la carte supprime
- * aussi, par cascade dans la même requête, ses transactions et ses
- * enregistrements d'iPhone. Les récompenses ne sont pas touchées : elles
- * appartiennent au commerce, pas au client.
+ * Cartes de fidélité inutilisées depuis 3 ans. Avant la suppression, la
+ * carte Google du client passe à l'état EXPIRED (comme lors de la
+ * suppression d'un commerce) ; si Google échoue, on le logge et on supprime
+ * quand même. Supprimer la carte supprime aussi, par cascade dans la même
+ * requête, ses transactions et ses enregistrements d'iPhone. Les récompenses
+ * ne sont pas touchées : elles appartiennent au commerce, pas au client.
  */
 export async function purgerCartesInactives(maintenant = new Date()) {
   const limite = limiteInactivite(maintenant);
 
   // Candidates : seules les cartes créées avant la limite peuvent être inactives.
-  const candidates: { id: string; created_at: string }[] = [];
+  const candidates: { id: string; serial_number: string; created_at: string }[] = [];
   for (let page = 0; ; page++) {
     const { data, error } = await db
       .from("customers")
-      .select("id, created_at")
+      .select("id, serial_number, created_at")
       .lt("created_at", limite.toISOString())
       .order("id")
       .range(page * 1000, page * 1000 + 999);
@@ -60,9 +63,32 @@ export async function purgerCartesInactives(maintenant = new Date()) {
   }
 
   const aPurger = cartesAPurger(candidates, utilisees, limite);
-  const bilan = { cartes: 0, transactions: 0, enregistrementsApple: 0 };
+  const serialParId = new Map(candidates.map((c) => [c.id, c.serial_number]));
+  const bilan = {
+    cartes: 0,
+    transactions: 0,
+    enregistrementsApple: 0,
+    google: { expirees: 0, absentes: 0, echecs: 0 },
+  };
 
   for (const lot of lots(aPurger)) {
+    // 1. Google Wallet d'abord : une fois la carte supprimée en base, son
+    //    numéro de série serait perdu. Un échec n'empêche pas la suppression.
+    const serials = lot.map((id) => serialParId.get(id)).filter((s): s is string => !!s);
+    try {
+      const g = await expireLoyaltyObjects(serials);
+      bilan.google.expirees += g.expirees;
+      bilan.google.absentes += g.absentes;
+      bilan.google.echecs += g.echecs;
+      if (g.echecs)
+        log(`${g.echecs} carte(s) Google non expirée(s), supprimées en base quand même`);
+    } catch (e) {
+      bilan.google.echecs += serials.length;
+      log(
+        `expiration Google impossible pour ${serials.length} carte(s), supprimées en base quand même : ${(e as Error).message}`
+      );
+    }
+
     // Comptées avant que la cascade les emporte, pour le log.
     const [{ count: nTx }, { count: nApple }] = await Promise.all([
       db.from("transactions").select("id", { count: "exact", head: true }).in("customer_id", lot),
@@ -85,7 +111,9 @@ export async function purgerCartesInactives(maintenant = new Date()) {
   log(
     `cartes inutilisées depuis le ${limite.toISOString().slice(0, 10)} : ` +
       `${bilan.cartes} carte(s), ${bilan.transactions} transaction(s), ` +
-      `${bilan.enregistrementsApple} enregistrement(s) Apple supprimés`
+      `${bilan.enregistrementsApple} enregistrement(s) Apple supprimés ; ` +
+      `Google : ${bilan.google.expirees} expirée(s), ${bilan.google.absentes} absente(s), ` +
+      `${bilan.google.echecs} échec(s)`
   );
   return bilan;
 }

@@ -15,6 +15,7 @@ import {
 import WalletPreview from "@/components/WalletPreview";
 import { separerRecompense, texteRecompense } from "@/lib/wallet/rewardText";
 import { EMAIL_CONTACT } from "@/lib/site";
+import { cgvRequise } from "@/lib/cgvClient";
 import {
   DUREES_PROMO,
   DUREE_PROMO_DEFAUT,
@@ -465,6 +466,7 @@ export default function DashboardPage() {
         },
         body: JSON.stringify({ name, themeId, address }),
       });
+      if (await cgvRequise(res)) return;
       if (!res.ok) {
         accuser(await res.text(), true);
         return;
@@ -501,6 +503,10 @@ export default function DashboardPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
         body: form,
       });
+      if (await cgvRequise(res)) {
+        clearLogoPreview();
+        return;
+      }
       if (!res.ok) {
         // Le logo refusé ne doit pas rester affiché sur l'aperçu.
         clearLogoPreview();
@@ -548,6 +554,7 @@ export default function DashboardPage() {
         },
         body: JSON.stringify({ title: null, message: promoText.trim(), dureeJours: promoDuree }),
       });
+      if (await cgvRequise(res)) return;
       if (!res.ok) {
         accuser(await res.text(), true);
         return;
@@ -575,6 +582,7 @@ export default function DashboardPage() {
         method: "POST",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
+      if (await cgvRequise(res)) return;
       if (!res.ok) throw new Error();
       const data = await res.json();
       devicesAtCode.current = devices.length;
@@ -588,11 +596,15 @@ export default function DashboardPage() {
   }
 
   async function revokeDevice(d: Device) {
-    const { error } = await supabase
-      .from("devices")
-      .update({ revoked_at: new Date().toISOString() })
-      .eq("id", d.id);
-    if (error) {
+    if (!session) return;
+    try {
+      const res = await fetch(`/api/dashboard/caisses/${d.id}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      if (await cgvRequise(res)) return;
+      if (!res.ok) throw new Error();
+    } catch {
       accuser(`${d.label} n'a pas pu être retirée. Réessayez.`, true);
       return;
     }
@@ -601,9 +613,8 @@ export default function DashboardPage() {
   }
 
   /**
-   * Le commerce n'a qu'une récompense : on met à jour la ligne existante, ou on
-   * la crée à la première sauvegarde. L'index unique partiel en base garantit
-   * qu'il ne peut jamais y en avoir deux actives.
+   * Le commerce n'a qu'une récompense : la route serveur met à jour la ligne
+   * existante, ou la crée à la première sauvegarde.
    */
   async function saveReward(e: FormEvent) {
     e.preventDefault();
@@ -620,27 +631,33 @@ export default function DashboardPage() {
       return;
     }
 
+    if (!session) return;
     setSavingReward(true);
-    const { data, error } = reward
-      ? await supabase
-          .from("rewards")
-          .update({ label, cost_points: cost })
-          .eq("id", reward.id)
-          .select()
-          .single()
-      : await supabase
-          .from("rewards")
-          .insert({ merchant_id: merchant.id, label, cost_points: cost })
-          .select()
-          .single();
-    setSavingReward(false);
-
-    if (error || !data) {
-      accuser("Enregistrement impossible. Réessayez dans un instant.", true);
-      return;
+    try {
+      const res = await fetch("/api/dashboard/recompense", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ label, cost_points: cost }),
+      });
+      if (await cgvRequise(res)) return;
+      if (!res.ok) {
+        accuser(
+          (await res.text()) || "Enregistrement impossible. Réessayez dans un instant.",
+          true
+        );
+        return;
+      }
+      const { reward: enregistree } = await res.json();
+      setReward(enregistree);
+      accuser("Récompense enregistrée.");
+    } catch {
+      accuser("Pas de connexion : la récompense n'a pas été enregistrée.", true);
+    } finally {
+      setSavingReward(false);
     }
-    setReward(data);
-    accuser("Récompense enregistrée.");
   }
 
   const filteredClients = useMemo(() => {

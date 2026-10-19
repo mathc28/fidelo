@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireMerchant } from "@/lib/dashboardAuth";
+import { exigerCommercantAJour } from "@/lib/cgvServeur";
 import { db, merchantActive } from "@/lib/supabaseAdmin";
 import { pushMerchantPasses } from "@/lib/apns";
 import { broadcastMerchantPromo } from "@/lib/googleWallet";
@@ -13,8 +13,9 @@ import {
 
 /** Giga promo du merchant connecté : push Apple + Google, avec anti-spam. */
 export async function POST(req: NextRequest) {
-  const merchant = await requireMerchant(req);
-  if (!merchant) return new NextResponse("Non autorisé", { status: 401 });
+  const garde = await exigerCommercantAJour(req);
+  if ("reponse" in garde) return garde.reponse;
+  const { merchant } = garde;
   if (!merchantActive(merchant)) return new NextResponse("Abonnement inactif", { status: 402 });
 
   const { title, message, dureeJours } = await req.json();

@@ -5,6 +5,7 @@ import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseBrowser";
 import { Button, Logo } from "@/components/ui";
 import { CaseCgv } from "@/components/CaseCgv";
+import { EVENEMENT_CGV } from "@/lib/cgvClient";
 
 type Verification = "inutile" | "en-cours" | "a-accepter" | "ok";
 
@@ -32,6 +33,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   }, []);
 
   const jeton = session?.access_token;
+
+  // Une route du dashboard a refusé une action faute d'acceptation (403
+  // cgv_non_acceptees, cf. cgvClient) : on affiche la page d'acceptation.
+  useEffect(() => {
+    const surRefus = () => {
+      setCgv(false);
+      setEtat("a-accepter");
+    };
+    window.addEventListener(EVENEMENT_CGV, surRefus);
+    return () => window.removeEventListener(EVENEMENT_CGV, surRefus);
+  }, []);
 
   useEffect(() => {
     if (session === undefined) return;

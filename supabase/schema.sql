@@ -232,16 +232,16 @@ returns uuid language sql stable as $$
 $$;
 
 create policy merchant_own on merchants
-  for all using (owner_id = auth.uid());
+  for select using (owner_id = auth.uid());
 
 create policy customers_own on customers
   for select using (merchant_id = my_merchant_id());
 
 create policy devices_own on devices
-  for all using (merchant_id = my_merchant_id());
+  for select using (merchant_id = my_merchant_id());
 
 create policy rewards_own on rewards
-  for all using (merchant_id = my_merchant_id());
+  for select using (merchant_id = my_merchant_id());
 
 create policy transactions_own on transactions
   for select using (merchant_id = my_merchant_id());
@@ -267,7 +267,7 @@ create table pairing_codes (
 
 alter table pairing_codes enable row level security;
 create policy pairing_own on pairing_codes
-  for all using (merchant_id = my_merchant_id());
+  for select using (merchant_id = my_merchant_id());
 
 -- ------------------------------------------------------------
 -- 9. RATE_LIMIT_HITS — anti brute-force sur les endpoints publics

@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireMerchant } from "@/lib/dashboardAuth";
+import { exigerCommercantAJour } from "@/lib/cgvServeur";
 import { createPairingCode } from "@/lib/deviceAuth";
 
 /** Génère un code d'appairage pour un nouvel appareil de caisse. */
 export async function POST(req: NextRequest) {
-  const merchant = await requireMerchant(req);
-  if (!merchant) return new NextResponse("Non autorisé", { status: 401 });
+  const garde = await exigerCommercantAJour(req);
+  if ("reponse" in garde) return garde.reponse;
+  const { merchant } = garde;
 
   const code = await createPairingCode(merchant.id);
   return NextResponse.json({ code, expiresInMinutes: 10 });

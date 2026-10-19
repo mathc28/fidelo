@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sharp from "sharp";
-import { requireMerchant } from "@/lib/dashboardAuth";
+import { exigerCommercantAJour } from "@/lib/cgvServeur";
 import { db, getCardTheme } from "@/lib/supabaseAdmin";
 import { invalidatePassImages, touchMerchantPasses } from "@/lib/passAssets";
 import { pushMerchantPasses } from "@/lib/apns";
@@ -23,8 +23,9 @@ const MAX_SIZE = 5 * 1024 * 1024;
  * /m/[slug]/inscription et /compte) ainsi que merchants.is_square_logo.
  */
 export async function POST(req: NextRequest) {
-  const merchant = await requireMerchant(req);
-  if (!merchant) return new NextResponse("Non autorisé", { status: 401 });
+  const garde = await exigerCommercantAJour(req);
+  if ("reponse" in garde) return garde.reponse;
+  const { merchant } = garde;
 
   const form = await req.formData();
   const file = form.get("logo");
