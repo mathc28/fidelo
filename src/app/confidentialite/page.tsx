@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { LegalShell, ACompleter } from "@/components/LegalShell";
-import { DATE_PAGES_LEGALES, EDITEUR, EMAIL_CONTACT } from "@/lib/site";
+import { LegalShell } from "@/components/LegalShell";
+import { DATE_PAGES_LEGALES, EDITEUR, EMAIL_CONTACT, REGION_SUPABASE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
@@ -147,9 +147,7 @@ export default function ConfidentialitePage() {
                   Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapour 049513
                 </td>
                 <td>Base de données et stockage des logos</td>
-                <td>
-                  Serveurs : <ACompleter>région</ACompleter>
-                </td>
+                <td>Serveurs : {REGION_SUPABASE}</td>
               </tr>
               <tr>
                 <td>Vercel Inc.</td>

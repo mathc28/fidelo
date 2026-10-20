@@ -21,7 +21,12 @@ export const EDITEUR = {
   adresse: "90 cours Vitton, 69006 Lyon",
   siret: "942 798 760 00016",
   ape: "62.01Z",
+  tva: "TVA non applicable, art. 293 B du CGI",
+  telephone: "06 26 27 48 03",
 } as const;
+
+/** Région des serveurs Supabase (base de données et fichiers). */
+export const REGION_SUPABASE = "Union européenne (Irlande)";
 
 /** Date de dernière mise à jour des pages légales et d'entrée en vigueur des CGV. */
 export const DATE_PAGES_LEGALES = "20 octobre 2026";

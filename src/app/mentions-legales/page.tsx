@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { LegalShell, ACompleter } from "@/components/LegalShell";
-import { DATE_PAGES_LEGALES, EDITEUR, EMAIL_CONTACT } from "@/lib/site";
+import { LegalShell } from "@/components/LegalShell";
+import { DATE_PAGES_LEGALES, EDITEUR, EMAIL_CONTACT, REGION_SUPABASE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Mentions légales",
@@ -41,17 +41,16 @@ export default function MentionsLegalesPage() {
             <strong>Immatriculation :</strong> Registre national des entreprises (RNE)
           </li>
           <li>
-            <strong>TVA :</strong>{" "}
-            <ACompleter>
-              « TVA non applicable, art. 293 B du CGI » si franchise en base, sinon n° de TVA
-              intracommunautaire
-            </ACompleter>
+            <strong>TVA :</strong> {EDITEUR.tva}
           </li>
           <li>
             <strong>E-mail :</strong> <Email />
           </li>
           <li>
-            <strong>Téléphone :</strong> <ACompleter>téléphone</ACompleter>
+            <strong>Téléphone :</strong>{" "}
+            <a href={`tel:+33${EDITEUR.telephone.replace(/\s/g, "").slice(1)}`}>
+              {EDITEUR.telephone}
+            </a>
           </li>
           <li>
             <strong>Directeur de la publication :</strong> Mathieu Cocu
@@ -70,7 +69,7 @@ export default function MentionsLegalesPage() {
             <strong>Base de données et fichiers :</strong> Supabase Pte. Ltd., 65 Chulia Street
             #38-02/03, OCBC Centre, Singapour 049513 —{" "}
             <a href="https://supabase.com">supabase.com</a>. Serveurs situés dans la région{" "}
-            <ACompleter>ex. « Union européenne (Francfort) »</ACompleter>.
+            {REGION_SUPABASE}.
           </li>
         </ul>
       </section>
