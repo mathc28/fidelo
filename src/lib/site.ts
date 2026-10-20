@@ -12,3 +12,16 @@ export const CTA = "Démarrer";
  * été acceptée, et quand.
  */
 export const CGV_VERSION = "1.0";
+
+/**
+ * Identité de l'éditeur, reprise par les mentions légales, la politique de
+ * confidentialité et les CGV.
+ */
+export const EDITEUR = {
+  adresse: "90 cours Vitton, 69006 Lyon",
+  siret: "942 798 760 00016",
+  ape: "62.01Z",
+} as const;
+
+/** Date de dernière mise à jour des pages légales et d'entrée en vigueur des CGV. */
+export const DATE_PAGES_LEGALES = "20 octobre 2026";

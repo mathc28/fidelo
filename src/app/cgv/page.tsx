@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { LegalShell, ACompleter } from "@/components/LegalShell";
-import { EMAIL_CONTACT } from "@/lib/site";
+import { LegalShell } from "@/components/LegalShell";
+import { CGV_VERSION, DATE_PAGES_LEGALES, EDITEUR, EMAIL_CONTACT } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Conditions générales de vente",
@@ -16,7 +16,7 @@ export default function CgvPage() {
       titre="Conditions générales de vente"
       sousTitre={
         <>
-          Version <ACompleter>ex. 1.0</ACompleter> — en vigueur au <ACompleter>date</ACompleter>
+          Version {CGV_VERSION} — en vigueur au {DATE_PAGES_LEGALES}
         </>
       }
     >
@@ -25,8 +25,8 @@ export default function CgvPage() {
         <p>
           Les présentes conditions générales de vente (« CGV ») régissent l&apos;utilisation du
           service Fiduo (le « Service ») par les professionnels (le « Commerçant »). Fiduo est édité
-          par Mathieu Cocu, Entrepreneur individuel, <ACompleter>adresse</ACompleter>, SIRET{" "}
-          <ACompleter>SIRET</ACompleter> (« Fiduo »).
+          par Mathieu Cocu, Entrepreneur individuel, {EDITEUR.adresse}, SIRET {EDITEUR.siret} («
+          Fiduo »).
         </p>
         <p>
           Le Service permet au Commerçant de proposer à ses clients une carte de fidélité
@@ -50,12 +50,7 @@ export default function CgvPage() {
 
       <section>
         <h2>3. Prix et paiement</h2>
-        <p>
-          <ACompleter>
-            prix de l&apos;abonnement, périodicité (mensuelle/annuelle), modalités de paiement,
-            période d&apos;essai éventuelle, mention TVA.
-          </ACompleter>
-        </p>
+        <p>Tarifs communiqués sur devis.</p>
         <p>
           En cas de retard de paiement, des pénalités au taux de trois fois le taux d&apos;intérêt
           légal ainsi qu&apos;une indemnité forfaitaire de 40 € pour frais de recouvrement sont dues
@@ -66,9 +61,9 @@ export default function CgvPage() {
       <section>
         <h2>4. Durée et résiliation</h2>
         <p>
-          <ACompleter>durée d&apos;engagement, préavis.</ACompleter> Le Commerçant peut résilier son
-          abonnement à tout moment par e-mail à <Email /> ; la résiliation prend effet à la fin de
-          la période en cours.
+          Sans engagement, résiliable à tout moment. Le Commerçant peut résilier son abonnement à
+          tout moment par e-mail à <Email /> ; la résiliation prend effet à la fin de la période en
+          cours.
         </p>
         <p>
           Fiduo peut suspendre ou résilier le compte en cas de manquement grave aux présentes CGV

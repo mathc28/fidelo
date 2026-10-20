@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegalShell, ACompleter } from "@/components/LegalShell";
-import { EMAIL_CONTACT } from "@/lib/site";
+import { DATE_PAGES_LEGALES, EDITEUR, EMAIL_CONTACT } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Mentions légales",
@@ -13,11 +13,7 @@ export default function MentionsLegalesPage() {
   return (
     <LegalShell
       titre="Mentions légales"
-      sousTitre={
-        <>
-          Dernière mise à jour : <ACompleter>date</ACompleter>
-        </>
-      }
+      sousTitre={<>Dernière mise à jour : {DATE_PAGES_LEGALES}</>}
     >
       <p className="legal-chapeau">
         Conformément à l&apos;article 6 de la loi n° 2004-575 du 21 juin 2004 pour la confiance dans
@@ -33,14 +29,13 @@ export default function MentionsLegalesPage() {
             nom commercial « Fiduo »
           </li>
           <li>
-            <strong>Adresse :</strong>{" "}
-            <ACompleter>adresse professionnelle ou de domiciliation</ACompleter>
+            <strong>Adresse :</strong> {EDITEUR.adresse}
           </li>
           <li>
-            <strong>SIRET :</strong> <ACompleter>SIRET</ACompleter>
+            <strong>SIRET :</strong> {EDITEUR.siret}
           </li>
           <li>
-            <strong>Code APE :</strong> <ACompleter>code APE</ACompleter>
+            <strong>Code APE :</strong> {EDITEUR.ape}
           </li>
           <li>
             <strong>Immatriculation :</strong> Registre national des entreprises (RNE)
@@ -68,13 +63,12 @@ export default function MentionsLegalesPage() {
         <h2>Hébergement</h2>
         <ul>
           <li>
-            <strong>Site web :</strong> Vercel Inc. —{" "}
-            <ACompleter>adresse officielle, voir vercel.com/legal</ACompleter> —{" "}
-            <a href="https://vercel.com">vercel.com</a>
+            <strong>Site web :</strong> Vercel Inc. — 440 N Barranca Avenue #4133, Covina, CA 91723,
+            États-Unis — <a href="https://vercel.com">vercel.com</a>
           </li>
           <li>
-            <strong>Base de données et fichiers :</strong> Supabase Inc. —{" "}
-            <ACompleter>adresse officielle, voir supabase.com/legal</ACompleter> —{" "}
+            <strong>Base de données et fichiers :</strong> Supabase Pte. Ltd., 65 Chulia Street
+            #38-02/03, OCBC Centre, Singapour 049513 —{" "}
             <a href="https://supabase.com">supabase.com</a>. Serveurs situés dans la région{" "}
             <ACompleter>ex. « Union européenne (Francfort) »</ACompleter>.
           </li>

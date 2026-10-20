@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegalShell, ACompleter } from "@/components/LegalShell";
-import { EMAIL_CONTACT } from "@/lib/site";
+import { DATE_PAGES_LEGALES, EDITEUR, EMAIL_CONTACT } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
@@ -35,11 +35,7 @@ export default function ConfidentialitePage() {
   return (
     <LegalShell
       titre="Politique de confidentialité"
-      sousTitre={
-        <>
-          Dernière mise à jour : <ACompleter>date</ACompleter>
-        </>
-      }
+      sousTitre={<>Dernière mise à jour : {DATE_PAGES_LEGALES}</>}
     >
       <p className="legal-chapeau">
         Fiduo permet aux commerces de proximité de proposer une carte de fidélité dans Apple Wallet
@@ -62,8 +58,8 @@ export default function ConfidentialitePage() {
           </li>
         </ul>
         <p>
-          Fiduo : Mathieu Cocu, Entrepreneur individuel, <ACompleter>adresse</ACompleter>, SIRET{" "}
-          <ACompleter>SIRET</ACompleter>. Contact : <Email />.
+          Fiduo : Mathieu Cocu, Entrepreneur individuel, {EDITEUR.adresse}, SIRET {EDITEUR.siret}.
+          Contact : <Email />.
         </p>
       </section>
 
@@ -147,7 +143,9 @@ export default function ConfidentialitePage() {
             </thead>
             <tbody>
               <tr>
-                <td>Supabase Inc.</td>
+                <td>
+                  Supabase Pte. Ltd., 65 Chulia Street #38-02/03, OCBC Centre, Singapour 049513
+                </td>
                 <td>Base de données et stockage des logos</td>
                 <td>
                   Serveurs : <ACompleter>région</ACompleter>
