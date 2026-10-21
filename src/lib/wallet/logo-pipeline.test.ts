@@ -7,6 +7,7 @@ import {
   getLogoSizeWarning,
   isSquareLogo,
   normalizeSource,
+  formatLogo,
 } from "./logo-pipeline";
 
 const MARK_COLOR = { r: 20, g: 60, b: 120, alpha: 1 };
@@ -178,5 +179,42 @@ describe("isSquareLogo", () => {
     const input = await fixture({ canvasW: 2000, canvasH: 600, markW: 1800, markH: 300 });
     const normalized = await normalizeSource(input);
     expect(await isSquareLogo(normalized)).toBe(false);
+  });
+});
+
+describe("formatLogo (format lu dans le contenu)", () => {
+  const carre = () =>
+    sharp({ create: { width: 500, height: 500, channels: 4, background: "#123456" } });
+
+  it("accepte PNG, JPEG, WebP et SVG", async () => {
+    expect(await formatLogo(await carre().png().toBuffer())).toBe("png");
+    expect(await formatLogo(await carre().jpeg().toBuffer())).toBe("jpeg");
+    expect(await formatLogo(await carre().webp().toBuffer())).toBe("webp");
+    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"/>');
+    expect(await formatLogo(svg)).toBe("svg");
+  });
+
+  it("refuse un autre format d'image (GIF, TIFF)", async () => {
+    expect(await formatLogo(await carre().gif().toBuffer())).toBeNull();
+    expect(await formatLogo(await carre().tiff().toBuffer())).toBeNull();
+  });
+
+  it("refuse un fichier qui n'est pas une image, quelle que soit son extension", async () => {
+    expect(await formatLogo(Buffer.from("%PDF-1.7 pas une image"))).toBeNull();
+    expect(await formatLogo(Buffer.from("<html><body>logo.png</body></html>"))).toBeNull();
+  });
+});
+
+describe("normalizeSource avec un WebP", () => {
+  it("traite un WebP comme les autres formats", async () => {
+    const webp = await sharp({
+      create: { width: 800, height: 800, channels: 4, background: "#123456" },
+    })
+      .webp()
+      .toBuffer();
+    const normalized = await normalizeSource(webp);
+    const meta = await sharp(normalized).metadata();
+    expect(meta.format).toBe("png");
+    expect(Math.max(meta.width ?? 0, meta.height ?? 0)).toBeGreaterThanOrEqual(400);
   });
 });

@@ -6,6 +6,7 @@ import { invalidatePassImages, touchMerchantPasses } from "@/lib/passAssets";
 import { pushMerchantPasses } from "@/lib/apns";
 import {
   LogoTooSmallError,
+  formatLogo,
   generateAppleLogos,
   generateGoogleLogo,
   getLogoSizeWarning,
@@ -13,7 +14,8 @@ import {
   normalizeSource,
 } from "@/lib/wallet/logo-pipeline";
 
-const MAX_SIZE = 5 * 1024 * 1024;
+/** 4 Mo : sous le plafond de 4,5 Mo que Vercel impose au corps d'une requête. */
+const MAX_SIZE = 4 * 1024 * 1024;
 
 /**
  * Upload du logo du commerçant : génère les images du pass Apple/Google
@@ -22,6 +24,8 @@ const MAX_SIZE = 5 * 1024 * 1024;
  * jour merchants.logo_url (utilisé par les pages publiques
  * /m/[slug]/inscription et /compte) ainsi que merchants.is_square_logo.
  */
+const ERREUR_GENERIQUE = "Le logo n'a pas pu être enregistré. Réessayez dans un instant.";
+
 export async function POST(req: NextRequest) {
   const garde = await exigerCommercantAJour(req);
   if ("reponse" in garde) return garde.reponse;
@@ -30,12 +34,20 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const file = form.get("logo");
   if (!(file instanceof File)) return new NextResponse("Fichier logo requis", { status: 400 });
-  if (file.size > MAX_SIZE)
-    return new NextResponse("Fichier trop volumineux (5 Mo max)", { status: 400 });
-  if (!file.type.startsWith("image/"))
-    return new NextResponse("Le fichier doit être une image", { status: 400 });
+  if (file.size > MAX_SIZE) {
+    return new NextResponse("Fichier trop volumineux : 4 Mo maximum.", { status: 400 });
+  }
 
   const input = Buffer.from(await file.arrayBuffer());
+  // Format lu dans le contenu, pas dans le type déclaré par le navigateur.
+  if (!(await formatLogo(input))) {
+    return new NextResponse(
+      "Format non pris en charge : envoyez un PNG, un JPEG, un WebP ou un SVG.",
+      {
+        status: 400,
+      }
+    );
+  }
   const theme = await getCardTheme(merchant.theme_id);
   const bg = hexToRgba(theme.bg_color);
 
@@ -81,8 +93,10 @@ export async function POST(req: NextRequest) {
     const { error } = await db.storage
       .from("pass-assets")
       .upload(`${merchant.id}/${name}`, buf, { contentType: "image/png", upsert: true });
-    if (error)
-      return new NextResponse(`Upload échoué (${name}) : ${error.message}`, { status: 500 });
+    if (error) {
+      console.error(`[Logo] upload ${name} échoué — commerce ${merchant.slug} :`, error.message);
+      return new NextResponse(ERREUR_GENERIQUE, { status: 500 });
+    }
   }
 
   const { data: pub } = db.storage.from("pass-assets").getPublicUrl(`${merchant.id}/web-icon.png`);
@@ -92,7 +106,10 @@ export async function POST(req: NextRequest) {
     .from("merchants")
     .update({ logo_url: logoUrl, is_square_logo: squareLogo })
     .eq("id", merchant.id);
-  if (updateError) return new NextResponse(updateError.message, { status: 500 });
+  if (updateError) {
+    console.error(`[Logo] mise à jour du commerce ${merchant.slug} échouée :`, updateError.message);
+    return new NextResponse(ERREUR_GENERIQUE, { status: 500 });
+  }
 
   invalidatePassImages(merchant.id);
 

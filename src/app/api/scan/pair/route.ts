@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redeemPairingCode } from "@/lib/deviceAuth";
 import { clientIp, isRateLimited } from "@/lib/rateLimit";
+import { validerLibelleCaisse } from "@/lib/validation";
 
 /** Seuil d'alerte : codes faux sur toute la plateforme, toutes IP confondues. */
 const SEUIL_ALERTE = { max: 100, windowSeconds: 15 * 60, siErreur: "laisser" } as const;
@@ -27,7 +28,10 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Code requis", { status: 400 });
   }
 
-  const result = await redeemPairingCode(corps.code, corps.label);
+  const libelle = validerLibelleCaisse(corps.label);
+  if (!libelle.ok) return new NextResponse(libelle.erreur, { status: 400 });
+
+  const result = await redeemPairingCode(corps.code, libelle.valeur);
   if (!result) {
     if (await isRateLimited("scan-pair-echecs", "global", SEUIL_ALERTE)) {
       console.warn(

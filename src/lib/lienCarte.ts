@@ -3,6 +3,7 @@ import { db, type Merchant } from "./supabaseAdmin";
 import { isRateLimited } from "./rateLimit";
 import { envoyerEmailCarte } from "./emailCarte";
 import { unite } from "./uiText";
+import { validerEmail } from "./validation";
 
 /*
  * Redemande d'une carte existante (espace client, réinscription avec un
@@ -62,9 +63,7 @@ export async function envoyerLienSiCarte(merchant: Merchant, email: string): Pro
   }
 }
 
-/** Email plausible et de longueur raisonnable (RFC 5321 : 254 caractères). */
+/** Email plausible et de longueur raisonnable (règle partagée, voir validation.ts). */
 export function emailAcceptable(email: unknown): email is string {
-  return (
-    typeof email === "string" && email.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-  );
+  return validerEmail(email).ok;
 }

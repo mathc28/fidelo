@@ -524,3 +524,11 @@ end $$;
 revoke all on function rate_limit_hit(text, text, integer, integer, boolean) from public;
 revoke all on function rate_limit_hit(text, text, integer, integer, boolean) from anon, authenticated;
 grant execute on function rate_limit_hit(text, text, integer, integer, boolean) to service_role;
+
+-- ------------------------------------------------------------
+-- COLONNES DE CUSTOMERS LISIBLES PAR LES GÉRANTS
+-- (migrations/20261021_customers_colonnes.sql) : ni auth_token ni serial_number.
+-- ------------------------------------------------------------
+revoke select on customers from anon, authenticated;
+grant select (id, merchant_id, first_name, email, points, created_at, updated_at)
+  on customers to authenticated;

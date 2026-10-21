@@ -39,7 +39,10 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     if (error.code === "23503") return new NextResponse("Thème invalide", { status: 400 });
-    return new NextResponse(error.message, { status: 500 });
+    console.error(`[Profil] mise à jour du commerce ${merchant.slug} échouée :`, error.message);
+    return new NextResponse("La carte n'a pas pu être enregistrée. Réessayez dans un instant.", {
+      status: 500,
+    });
   }
 
   // Nom, couleurs et adresse sont tous rendus sur le pass : mêmes raisons

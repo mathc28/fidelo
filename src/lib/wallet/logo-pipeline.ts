@@ -139,3 +139,23 @@ export async function isSquareLogo(buffer: Buffer): Promise<boolean> {
   if (!width || !height) return true;
   return width / height < LANDSCAPE_RATIO_THRESHOLD;
 }
+
+/** Formats de logo acceptés, lus dans le contenu du fichier (jamais son extension ni son type déclaré). */
+export const FORMATS_LOGO = ["png", "jpeg", "webp", "svg"] as const;
+export type FormatLogo = (typeof FORMATS_LOGO)[number];
+
+/**
+ * Format réel du fichier, d'après ses octets (sharp().metadata()), ou null
+ * si ce n'est pas une image lisible dans l'un des formats acceptés. Un GIF,
+ * un HEIC ou un fichier renommé en .png sont refusés.
+ */
+export async function formatLogo(buffer: Buffer): Promise<FormatLogo | null> {
+  try {
+    const { format } = await sharp(buffer).metadata();
+    return (FORMATS_LOGO as readonly string[]).includes(format ?? "")
+      ? (format as FormatLogo)
+      : null;
+  } catch {
+    return null;
+  }
+}

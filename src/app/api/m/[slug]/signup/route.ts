@@ -3,11 +3,11 @@ import { randomUUID, randomBytes } from "crypto";
 import { db, getMerchantBySlug } from "@/lib/supabaseAdmin";
 import { clientIp, isRateLimited } from "@/lib/rateLimit";
 import { identifiantPourNouvelleCarte } from "@/lib/passCerts";
+import { validerEmail, validerPrenom } from "@/lib/validation";
 import {
   DUREE_REPONSE_MS,
   MESSAGE_NEUTRE,
   avecDureeMinimale,
-  emailAcceptable,
   envoyerLienSiCarte,
 } from "@/lib/lienCarte";
 
@@ -43,14 +43,12 @@ export async function POST(req: NextRequest, { params }: { params: { slug: strin
   // Honeypot anti-bot : champ invisible, un humain ne le remplit jamais
   if (corps?.website) return new NextResponse(null, { status: 204 });
 
-  const prenom = typeof corps?.firstName === "string" ? corps.firstName.trim() : "";
-  const email = typeof corps?.email === "string" ? corps.email.toLowerCase().trim() : "";
-  if (!prenom || prenom.length > 60) {
-    return new NextResponse("Indiquez votre prénom (60 caractères maximum).", { status: 400 });
-  }
-  if (!emailAcceptable(email)) {
-    return new NextResponse("Cette adresse email semble incomplète.", { status: 400 });
-  }
+  const prenomValide = validerPrenom(corps?.firstName);
+  if (!prenomValide.ok) return new NextResponse(prenomValide.erreur, { status: 400 });
+  const emailValide = validerEmail(corps?.email);
+  if (!emailValide.ok) return new NextResponse(emailValide.erreur, { status: 400 });
+  const prenom = prenomValide.valeur;
+  const email = emailValide.valeur;
 
   const reponseNeutre = async () => {
     await avecDureeMinimale(envoyerLienSiCarte(merchant, email), DUREE_REPONSE_MS);

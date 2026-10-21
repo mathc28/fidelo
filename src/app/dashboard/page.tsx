@@ -17,6 +17,7 @@ import { separerRecompense, texteRecompense } from "@/lib/wallet/rewardText";
 import { EMAIL_CONTACT } from "@/lib/site";
 import { cgvRequise } from "@/lib/cgvClient";
 import { formaterCode } from "@/lib/codeAppairage";
+import { LIMITES } from "@/lib/validation";
 import {
   DUREES_PROMO,
   DUREE_PROMO_DEFAUT,
@@ -289,10 +290,12 @@ export default function DashboardPage() {
         .is("revoked_at", null)
         .order("created_at"),
       supabase.from("card_themes").select("*").order("sort_order"),
-      supabase.from("customers").select("*", { count: "exact", head: true }),
+      // Comptages sur « id » : le navigateur n'a le droit de lire que certaines
+      // colonnes de customers (migration 20261021_customers_colonnes.sql).
+      supabase.from("customers").select("id", { count: "exact", head: true }),
       supabase
         .from("customers")
-        .select("*", { count: "exact", head: true })
+        .select("id", { count: "exact", head: true })
         .gte("created_at", debutMois.toISOString()),
       supabase
         .from("transactions")
@@ -1003,7 +1006,7 @@ export default function DashboardPage() {
                 id="cpt-promo"
                 rows={3}
                 value={promoText}
-                onChange={(e) => setPromoText(e.target.value.slice(0, 140))}
+                onChange={(e) => setPromoText(e.target.value.slice(0, LIMITES.promoMessage))}
                 placeholder="Ce samedi, la brioche est à −20 % dès 16 h."
                 className="field-input cpt-promo-saisie"
                 aria-describedby={`cpt-promo-compteur${promoIdentique ? " cpt-promo-identique" : ""}`}
@@ -1030,7 +1033,7 @@ export default function DashboardPage() {
               </fieldset>
               <div className="cpt-promo-pied">
                 <span id="cpt-promo-compteur" className="cpt-compteur">
-                  {promoText.length}/140
+                  {promoText.length}/{LIMITES.promoMessage}
                 </span>
                 <ConfirmButton
                   variant="accent"
@@ -1187,7 +1190,7 @@ export default function DashboardPage() {
                     <input
                       ref={logoInputRef}
                       type="file"
-                      accept="image/png,image/jpeg"
+                      accept="image/png,image/jpeg,image/webp,image/svg+xml"
                       hidden
                       onChange={(e) => {
                         const f = e.target.files?.[0];
@@ -1197,7 +1200,8 @@ export default function DashboardPage() {
                     />
                   </div>
                   <div className="field-hint" id="cpt-logo-aide">
-                    PNG ou JPG, 5 Mo au plus. Sert sur la carte et sur vos pages publiques.
+                    PNG, JPEG, WebP ou SVG, 4 Mo au plus. Sert sur la carte et sur vos pages
+                    publiques.
                   </div>
                 </div>
 

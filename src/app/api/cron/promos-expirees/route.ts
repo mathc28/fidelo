@@ -4,6 +4,7 @@ import { pushMerchantPasses } from "@/lib/apns";
 import { promoActive } from "@/lib/promo";
 import { renouvelerCertificatsProches } from "@/lib/passTypeProvisioning";
 import { purgerCartesInactives, purgerCommercesResilies } from "@/lib/purgesRgpd";
+import { cronAutorise } from "@/lib/cronAuth";
 
 export const maxDuration = 60;
 
@@ -28,8 +29,7 @@ export const maxDuration = 60;
  */
 export async function GET(req: NextRequest) {
   // Vercel envoie `Authorization: Bearer <CRON_SECRET>` à ses tâches planifiées.
-  const secret = process.env.CRON_SECRET;
-  if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!cronAutorise(req.headers.get("authorization"))) {
     return new NextResponse("Non autorisé", { status: 401 });
   }
 

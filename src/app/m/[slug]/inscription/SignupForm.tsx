@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { emailValide } from "@/lib/uiText";
+import { LIMITES } from "@/lib/validation";
 
 type Links = { serial: string; appleUrl: string; googleUrl: string };
 
@@ -101,6 +102,7 @@ export default function SignupForm({ slug }: { slug: string }) {
           name="given-name"
           className="field-input field-input--on-theme"
           autoComplete="given-name"
+          maxLength={LIMITES.prenom}
           autoCapitalize="words"
           enterKeyHint="next"
           value={firstName}

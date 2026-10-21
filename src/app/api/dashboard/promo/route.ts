@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exigerCommercantAJour } from "@/lib/cgvServeur";
+import { validerPromo } from "@/lib/validation";
 import { db, merchantActive } from "@/lib/supabaseAdmin";
 import { pushMerchantPasses } from "@/lib/apns";
 import { broadcastMerchantPromo } from "@/lib/googleWallet";
@@ -18,8 +19,15 @@ export async function POST(req: NextRequest) {
   const { merchant } = garde;
   if (!merchantActive(merchant)) return new NextResponse("Abonnement inactif", { status: 402 });
 
-  const { title, message, dureeJours } = await req.json();
-  if (!message) return new NextResponse("Message requis", { status: 400 });
+  const corps = (await req.json().catch(() => null)) as {
+    title?: unknown;
+    message?: unknown;
+    dureeJours?: unknown;
+  } | null;
+  const saisie = validerPromo(corps?.title, corps?.message);
+  if (!saisie.ok) return new NextResponse(saisie.erreur, { status: 400 });
+  const { titre: title, message } = saisie.valeur;
+  const dureeJours = corps?.dureeJours;
   // Durée d'affichage sur la carte : 3 jours si le client n'en dit rien.
   const duree = dureeJours ?? DUREE_PROMO_DEFAUT;
   if (!dureeValide(duree)) {

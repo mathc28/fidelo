@@ -42,7 +42,7 @@ export async function createPairingCode(merchantId: string): Promise<string> {
  */
 export async function redeemPairingCode(
   saisie: string,
-  label: unknown
+  libelle: string
 ): Promise<{ token: string; merchantName: string } | null> {
   const code = normaliserCode(saisie);
   if (code.length !== LONGUEUR_CODE) return null;
@@ -60,10 +60,10 @@ export async function redeemPairingCode(
   if (!pc) return null;
 
   const token = randomBytes(32).toString("hex");
-  const libelle = typeof label === "string" && label.trim() ? label.trim().slice(0, 40) : "Caisse";
   const { error } = await db.from("devices").insert({
     merchant_id: pc.merchant_id,
-    label: libelle,
+    // Libellé déjà validé par la route (validerLibelleCaisse) ; repli par sécurité.
+    label: libelle.slice(0, 50) || "Caisse",
     token_hash: sha256(token),
   });
   if (error) throw new Error(`Caisse non enregistrée : ${error.message}`);

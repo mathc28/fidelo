@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { messageCarteIntrouvable, requireDevice } from "@/lib/deviceAuth";
 import { db, merchantActive } from "@/lib/supabaseAdmin";
 import { applyTransaction } from "@/lib/loyalty";
+import { validerMontant } from "@/lib/validation";
 
 /**
  * Crédit : mode visits → +1 (pas de montant), mode points → floor(montant).
@@ -26,10 +27,12 @@ export async function POST(req: NextRequest) {
   }
 
   const isVisits = auth.merchant.program_type === "visits";
-  const delta = isVisits ? 1 : Math.floor(Number(amountEuros ?? 0));
-
-  if (!isVisits && (!Number.isFinite(delta) || delta <= 0)) {
-    return new NextResponse("Montant invalide", { status: 400 });
+  let delta = 1;
+  if (!isVisits) {
+    const montant = validerMontant(amountEuros);
+    if (!montant.ok) return new NextResponse(montant.erreur, { status: 400 });
+    delta = Math.floor(montant.valeur);
+    if (delta <= 0) return new NextResponse("Montant invalide", { status: 400 });
   }
 
   const result = await applyTransaction({
