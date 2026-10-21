@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { messageCarteIntrouvable, requireDevice } from "@/lib/deviceAuth";
 import { db } from "@/lib/supabaseAdmin";
 import { getMerchantReward } from "@/lib/loyalty";
+import { isRateLimited } from "@/lib/rateLimit";
 
 /**
  * POST { serial } — après scan du QR
@@ -12,10 +13,30 @@ export async function POST(req: NextRequest) {
   const auth = await requireDevice(req);
   if (!auth) return new NextResponse("Appareil non appairé", { status: 401 });
 
+  // 120 recherches par caisse et par 10 min : largement assez pour un
+  // comptoir, trop peu pour aspirer le fichier clients.
+  if (
+    await isRateLimited(`scan-lookup:${auth.merchant.id}`, auth.deviceId, {
+      max: 120,
+      windowSeconds: 600,
+      siErreur: "bloquer",
+    })
+  ) {
+    return new NextResponse("Trop de recherches, patientez quelques minutes", { status: 429 });
+  }
+
   const { serial, search } = await req.json();
 
   if (search) {
-    const q = String(search).trim();
+    // Le texte est inséré dans un filtre PostgREST : on retire ce qui en
+    // changerait la structure (virgules, parenthèses, jokers) et on borne.
+    const q = String(search)
+      .replace(/[,()%_*\\]/g, " ")
+      .trim()
+      .slice(0, 60);
+    if (q.length < 2) {
+      return NextResponse.json({ results: [], programType: auth.merchant.program_type });
+    }
     const { data } = await db
       .from("customers")
       .select("serial_number, first_name, email, points")

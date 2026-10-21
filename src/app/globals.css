@@ -319,10 +319,11 @@ h3 {
 .field-input--code {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 1.7rem;
+  font-size: 1.5rem;
   text-align: center;
-  letter-spacing: 0.3em;
-  text-indent: 0.3em;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
 }
 /* Champ posé sur le fond coloré d'un commerçant (pages /m). La couleur
    d'accent du thème arrive par --accent. */

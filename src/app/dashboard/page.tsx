@@ -16,6 +16,7 @@ import WalletPreview from "@/components/WalletPreview";
 import { separerRecompense, texteRecompense } from "@/lib/wallet/rewardText";
 import { EMAIL_CONTACT } from "@/lib/site";
 import { cgvRequise } from "@/lib/cgvClient";
+import { formaterCode } from "@/lib/codeAppairage";
 import {
   DUREES_PROMO,
   DUREE_PROMO_DEFAUT,
@@ -1317,7 +1318,7 @@ export default function DashboardPage() {
               {pairingCode ? (
                 <div className="cpt-code" aria-live="polite">
                   <div className="cpt-code-consigne">Saisissez ce code sur le téléphone</div>
-                  <div className="cpt-code-valeur">{pairingCode}</div>
+                  <div className="cpt-code-valeur">{formaterCode(pairingCode)}</div>
                   <div className="cpt-code-reste">
                     valable {mm} min {ss} s · en attente de la caisse
                   </div>

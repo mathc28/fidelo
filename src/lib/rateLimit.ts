@@ -7,31 +7,48 @@ export function clientIp(req: NextRequest): string {
   return fwd ? fwd.split(",")[0].trim() : (req.headers.get("x-real-ip") ?? "unknown");
 }
 
+export type OptionsLimite = {
+  max: number;
+  windowSeconds: number;
+  /**
+   * Que faire si la limitation est indisponible (fonction SQL absente, base
+   * injoignable) ?
+   * - "bloquer" : refuser — pour les routes qu'on ne doit jamais laisser
+   *   ouvertes au brute force (appairage de caisse, recherches) ;
+   * - "laisser" : accepter — pour celles dont l'indisponibilité gênerait
+   *   des clients légitimes (téléchargement des cartes, journaux Apple).
+   */
+  siErreur: "bloquer" | "laisser";
+  /** false : vérifie sans compter ce passage (consultation d'un compteur). */
+  enregistrer?: boolean;
+};
+
 /**
- * Anti brute-force générique, appuyé sur la table rate_limit_hits (pas de
- * nouveau service — cohérent avec le reste de l'infra, déjà sur Supabase).
- * Renvoie true si la limite est dépassée pour ce (bucket, ip).
+ * Anti brute-force, appuyé sur la fonction SQL atomique rate_limit_hit
+ * (migration 20261021_rate_limit.sql). Renvoie true si la limite est
+ * atteinte pour ce (bucket, identifiant). L'identifiant est en général l'IP,
+ * mais peut être un email ou « global ».
  */
 export async function isRateLimited(
   bucket: string,
-  ip: string,
-  { max, windowSeconds }: { max: number; windowSeconds: number }
+  identifiant: string,
+  { max, windowSeconds, siErreur, enregistrer = true }: OptionsLimite
 ): Promise<boolean> {
-  const since = new Date(Date.now() - windowSeconds * 1000).toISOString();
-
-  // Auto-nettoyage : purge les entrées hors fenêtre à chaque appel,
-  // la table ne grossit jamais au-delà du trafic récent.
-  await db.from("rate_limit_hits").delete().lt("created_at", since);
-
-  const { count } = await db
-    .from("rate_limit_hits")
-    .select("*", { count: "exact", head: true })
-    .eq("bucket", bucket)
-    .eq("ip", ip)
-    .gte("created_at", since);
-
-  if ((count ?? 0) >= max) return true;
-
-  await db.from("rate_limit_hits").insert({ bucket, ip });
-  return false;
+  try {
+    const { data, error } = await db.rpc("rate_limit_hit", {
+      p_bucket: bucket,
+      p_ip: identifiant,
+      p_max: max,
+      p_fenetre_secondes: windowSeconds,
+      p_enregistrer: enregistrer,
+    });
+    if (error) throw new Error(error.message);
+    return data === true;
+  } catch (e) {
+    console.error(
+      `[Rate limit] ${bucket} indisponible (${siErreur === "bloquer" ? "requête bloquée" : "requête laissée passer"}) :`,
+      (e as Error).message
+    );
+    return siErreur === "bloquer";
+  }
 }

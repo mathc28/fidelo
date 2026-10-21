@@ -9,6 +9,8 @@ export default function SignupForm({ slug }: { slug: string }) {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [links, setLinks] = useState<Links | null>(null);
+  // Email déjà inscrit : le serveur n'en dit pas plus et envoie le lien par email.
+  const [messageNeutre, setMessageNeutre] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [forceOther, setForceOther] = useState(false);
@@ -48,12 +50,23 @@ export default function SignupForm({ slug }: { slug: string }) {
         return;
       }
       if (!res.ok) throw new Error();
-      setLinks(await res.json());
+      const data = (await res.json()) as Links | { message: string };
+      if ("message" in data) setMessageNeutre(data.message);
+      else setLinks(data);
     } catch {
       setError("La création a échoué. Vérifiez votre connexion et réessayez.");
     } finally {
       setLoading(false);
     }
+  }
+
+  if (messageNeutre) {
+    return (
+      <div role="status">
+        <p className="m-success">Vérifiez votre boîte mail</p>
+        <p className="m-lede m-muted">{messageNeutre}</p>
+      </div>
+    );
   }
 
   if (links) {

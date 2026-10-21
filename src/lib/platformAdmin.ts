@@ -16,11 +16,16 @@ export function isPlatformAdminEmail(email: string | undefined): boolean {
   return admins.includes(email.toLowerCase());
 }
 
-/** Vérifie le JWT et l'appartenance à la liste des admins plateforme. */
+/**
+ * Vérifie le JWT, l'email confirmé et l'appartenance à la liste des admins
+ * plateforme. L'email doit être confirmé : sinon un compte créé avec
+ * l'adresse d'un admin (qui n'en aurait pas encore) ouvrirait /admin.
+ */
 export async function requirePlatformAdmin(req: NextRequest) {
   const token = req.headers.get("authorization")?.replace("Bearer ", "");
   if (!token) return null;
   const { data, error } = await db.auth.getUser(token);
   if (error || !data.user) return null;
+  if (!data.user.email_confirmed_at) return null;
   return isPlatformAdminEmail(data.user.email) ? data.user : null;
 }

@@ -830,9 +830,10 @@
 .cpt-code-valeur {
   font-family: var(--font-mono), ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-  font-size: clamp(2.2rem, 7vw, 3rem);
+  /* 8 caractères et un tiret : tient sur la largeur d'un téléphone. */
+  font-size: clamp(1.8rem, 6.5vw, 2.6rem);
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.12em;
   line-height: 1.25;
   color: var(--color-paper);
   /* La lettre-espacement pousse le bloc à droite : on le recentre. */

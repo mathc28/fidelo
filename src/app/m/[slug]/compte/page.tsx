@@ -12,10 +12,12 @@ export default async function ComptePage({ params }: { params: { slug: string } 
 
   return (
     <MerchantShell theme={theme} name={merchant.name} logoUrl={merchant.logo_url}>
-      <h1 className="m-title" style={{ marginBottom: 24 }}>
-        Où en sont mes {merchant.program_type === "visits" ? "passages" : "points"} ?
-      </h1>
-      <AccountLookup slug={merchant.slug} programType={merchant.program_type} />
+      <h1 className="m-title">Retrouver ma carte</h1>
+      <p className="m-lede m-muted" style={{ marginBottom: 24 }}>
+        Indiquez votre email : nous vous envoyons le lien de votre carte et votre nombre de{" "}
+        {merchant.program_type === "visits" ? "passages" : "points"}.
+      </p>
+      <AccountLookup slug={merchant.slug} />
     </MerchantShell>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Button, ConfirmButton, Field, Logo } from "@/components/ui";
 import { unite } from "@/lib/uiText";
+import { LONGUEUR_CODE, formaterCode, normaliserCode } from "@/lib/codeAppairage";
 import "./scan.css";
 
 type ProgramType = "visits" | "points";
@@ -300,22 +301,30 @@ export default function ScanPage() {
         <Logo height={32} />
         <h1 className="auth-title">Associer cette caisse</h1>
         <p className="auth-lede">
-          Saisissez le code à 6 chiffres affiché dans votre espace commerçant, section « Mes caisses
-          ».
+          Saisissez le code de 8 caractères affiché dans votre espace commerçant, section « Mes
+          caisses ». Majuscules ou minuscules, avec ou sans tiret.
         </p>
         <form onSubmit={pair}>
           <Field
             label="Code d'association"
             className="field-input--code"
-            inputMode="numeric"
+            inputMode="text"
             autoComplete="one-time-code"
-            maxLength={6}
-            placeholder="000000"
-            value={pairCode}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={LONGUEUR_CODE + 1}
+            placeholder="ABCD-2345"
+            value={formaterCode(pairCode)}
             error={pairError || undefined}
-            onChange={(e) => setPairCode(e.target.value.replace(/\D/g, ""))}
+            onChange={(e) => setPairCode(normaliserCode(e.target.value))}
           />
-          <Button type="submit" size="lg" block disabled={pairCode.length !== 6 || pairing}>
+          <Button
+            type="submit"
+            size="lg"
+            block
+            disabled={pairCode.length !== LONGUEUR_CODE || pairing}
+          >
             {pairing ? "Association…" : "Associer cette caisse"}
           </Button>
         </form>

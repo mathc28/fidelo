@@ -34,7 +34,8 @@ export async function middleware(req: NextRequest) {
   }
 
   const user = await userRes.json();
-  if (!isPlatformAdminEmail(user.email)) {
+  // Même règle que requirePlatformAdmin : email confirmé obligatoire.
+  if (!user.email_confirmed_at || !isPlatformAdminEmail(user.email)) {
     return new NextResponse("Non autorisé", { status: 401 });
   }
 
