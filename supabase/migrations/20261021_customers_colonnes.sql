@@ -13,6 +13,10 @@
 begin;
 
 revoke select on customers from anon, authenticated;
+-- Le navigateur n'écrit jamais dans customers (inscription, scans et purges
+-- passent par le serveur) : on retire aussi ces droits, en plus de la RLS
+-- qui les bloque déjà faute de policy.
+revoke insert, update, delete on customers from anon, authenticated;
 
 grant select (id, merchant_id, first_name, email, points, created_at, updated_at)
   on customers to authenticated;
