@@ -1,10 +1,25 @@
 import { NextRequest } from "next/server";
 import { db } from "./supabaseAdmin";
 
-/** IP du client, en tenant compte d'un éventuel proxy devant l'app. */
+/** Clé commune aux requêtes sans IP identifiable : limitées ensemble, jamais exemptées. */
+export const IP_INCONNUE = "inconnu";
+
+/**
+ * IP du client, pour la limitation de débit.
+ *
+ * 1. x-real-ip : posé par Vercel avec l'IP réelle de la connexion. Un client
+ *    ne peut pas le forger : Vercel l'écrase. C'est la source de confiance.
+ * 2. À défaut, la première valeur de x-forwarded-for. Fiable sur Vercel, qui
+ *    réécrit entièrement cet en-tête. Derrière un proxy classique, ce serait
+ *    l'inverse : chaque proxy AJOUTE l'IP vue en fin de chaîne, et c'est le
+ *    début qui peut venir du client — d'où x-real-ip en priorité.
+ * 3. Rien d'exploitable : le bucket commun « inconnu », lui aussi limité.
+ */
 export function clientIp(req: NextRequest): string {
-  const fwd = req.headers.get("x-forwarded-for");
-  return fwd ? fwd.split(",")[0].trim() : (req.headers.get("x-real-ip") ?? "unknown");
+  const reelle = req.headers.get("x-real-ip")?.trim();
+  if (reelle) return reelle;
+  const premiere = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  return premiere || IP_INCONNUE;
 }
 
 export type OptionsLimite = {

@@ -5,7 +5,7 @@ vi.mock("./supabaseAdmin", () => ({ db: { rpc: vi.fn() } }));
 vi.spyOn(console, "error").mockImplementation(() => {});
 
 import { db } from "./supabaseAdmin";
-import { clientIp, isRateLimited } from "./rateLimit";
+import { IP_INCONNUE, clientIp, isRateLimited } from "./rateLimit";
 
 const rpc = vi.mocked(db.rpc);
 
@@ -14,19 +14,35 @@ function requestWithHeaders(headers: Record<string, string>): NextRequest {
 }
 
 describe("clientIp", () => {
-  it("uses the first entry of x-forwarded-for", () => {
-    const req = requestWithHeaders({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" });
-    expect(clientIp(req)).toBe("1.2.3.4");
-  });
-
-  it("falls back to x-real-ip when there is no proxy chain", () => {
-    const req = requestWithHeaders({ "x-real-ip": "9.9.9.9" });
+  it("prend x-real-ip, posé par Vercel, en priorité", () => {
+    const req = requestWithHeaders({ "x-real-ip": "9.9.9.9", "x-forwarded-for": "1.2.3.4" });
     expect(clientIp(req)).toBe("9.9.9.9");
   });
 
-  it("returns unknown when no IP header is present", () => {
-    const req = requestWithHeaders({});
-    expect(clientIp(req)).toBe("unknown");
+  it("à défaut, la PREMIÈRE valeur de x-forwarded-for", () => {
+    const req = requestWithHeaders({ "x-forwarded-for": " 1.2.3.4 , 5.6.7.8" });
+    expect(clientIp(req)).toBe("1.2.3.4");
+  });
+
+  it("ignore un x-forwarded-for forgé par le client quand x-real-ip est présent", () => {
+    // Le client envoie son propre « 6.6.6.6 » ; Vercel pose l'IP réelle dans x-real-ip.
+    const req = requestWithHeaders({
+      "x-real-ip": "1.2.3.4",
+      "x-forwarded-for": "6.6.6.6, 1.2.3.4",
+    });
+    expect(clientIp(req)).toBe("1.2.3.4");
+  });
+
+  it("n'utilise jamais une valeur de fin de chaîne de x-forwarded-for", () => {
+    expect(clientIp(requestWithHeaders({ "x-forwarded-for": "1.2.3.4, 6.6.6.6" }))).toBe("1.2.3.4");
+  });
+
+  it("sans IP exploitable : bucket commun « inconnu », pas une exemption", () => {
+    expect(clientIp(requestWithHeaders({}))).toBe(IP_INCONNUE);
+    expect(clientIp(requestWithHeaders({ "x-real-ip": "  ", "x-forwarded-for": " , " }))).toBe(
+      IP_INCONNUE
+    );
+    expect(IP_INCONNUE).toBe("inconnu");
   });
 });
 
