@@ -8,6 +8,7 @@ import {
   isSquareLogo,
   normalizeSource,
   formatLogo,
+  densiteSvg,
 } from "./logo-pipeline";
 
 const MARK_COLOR = { r: 20, g: 60, b: 120, alpha: 1 };
@@ -216,5 +217,41 @@ describe("normalizeSource avec un WebP", () => {
     const meta = await sharp(normalized).metadata();
     expect(meta.format).toBe("png");
     expect(Math.max(meta.width ?? 0, meta.height ?? 0)).toBeGreaterThanOrEqual(400);
+  });
+});
+
+describe("SVG de toutes tailles", () => {
+  const rond = (attrs: string, vb: number) =>
+    Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" ${attrs} viewBox="0 0 ${vb} ${vb}"><circle cx="${vb / 2}" cy="${vb / 2}" r="${vb * 0.4}" fill="#123456"/></svg>`
+    );
+
+  it.each([
+    ["icône de 24 px", rond('width="24" height="24"', 24)],
+    ["logo de 512 px", rond('width="512" height="512"', 512)],
+    ["grand logo de 2000 px", rond('width="2000" height="2000"', 2000)],
+    ["viewBox seul", rond("", 100)],
+  ])("rastérise un SVG déclaré en %s, net et sous la limite de pixels", async (_nom, svg) => {
+    const normalized = await normalizeSource(svg);
+    const { width, height } = await sharp(normalized).metadata();
+    expect(Math.max(width ?? 0, height ?? 0)).toBeGreaterThanOrEqual(400);
+    expect(Math.max(width ?? 0, height ?? 0)).toBeLessThanOrEqual(2400);
+  });
+
+  it("reconnaît un SVG précédé d'un long en-tête XML (export Illustrator)", async () => {
+    const entete = `<?xml version="1.0" encoding="UTF-8"?>\n<!-- ${"Generator: Adobe Illustrator 27.0.0. ".repeat(60)} -->\n`;
+    const svg = Buffer.from(
+      `${entete}<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><rect width="300" height="300" fill="#123456"/></svg>`
+    );
+    const normalized = await normalizeSource(svg);
+    const { width } = await sharp(normalized).metadata();
+    expect(width).toBeGreaterThanOrEqual(400);
+  });
+
+  it("densité bornée entre 72 et 2400 dpi", () => {
+    expect(densiteSvg(24, 24)).toBe(2400);
+    expect(densiteSvg(512, 512)).toBeCloseTo(337.5);
+    expect(densiteSvg(10000, 400)).toBe(72);
+    expect(densiteSvg(undefined, undefined)).toBe(1728);
   });
 });

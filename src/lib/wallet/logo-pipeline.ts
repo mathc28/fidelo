@@ -34,8 +34,19 @@ export class LogoTooSmallError extends Error {
 
 export type AppleLogos = { logo: Buffer; logo2x: Buffer; logo3x: Buffer };
 
-function isSvg(buffer: Buffer): boolean {
-  return buffer.subarray(0, 1000).toString("utf-8").toLowerCase().includes("<svg");
+/** Grand côté visé quand on rastérise un SVG : net, et loin de la limite de pixels de sharp. */
+const COTE_CIBLE_SVG = 2400;
+
+/**
+ * Densité de rastérisation d'un SVG, calculée d'après sa taille déclarée
+ * (width/height, sinon viewBox), que sharp lit à 72 dpi. Une densité fixe ne
+ * convient à aucun cas : trop basse, un SVG de 24 px sort flou et refusé
+ * comme trop petit ; trop haute, un SVG de 512 px dépasse la limite de
+ * pixels de sharp et devient « illisible ».
+ */
+export function densiteSvg(largeur: number | undefined, hauteur: number | undefined): number {
+  const cote = Math.max(largeur ?? 0, hauteur ?? 0) || 100;
+  return Math.min(2400, Math.max(72, (72 * COTE_CIBLE_SVG) / cote));
 }
 
 /**
@@ -44,9 +55,13 @@ function isSvg(buffer: Buffer): boolean {
  * on n'upscale jamais un logo commerçant.
  */
 export async function normalizeSource(buffer: Buffer): Promise<Buffer> {
-  // Densité élevée pour les SVG : sans ça, sharp rastérise sur le viewBox
-  // (souvent 24x24 ou 100x100), ce qui rejetterait à tort un vecteur net.
-  const source = isSvg(buffer) ? sharp(buffer, { density: 2400 }) : sharp(buffer);
+  // Format lu par sharp, pas deviné sur les premiers octets : un SVG exporté
+  // d'Illustrator commence souvent par un long en-tête XML.
+  const meta = await sharp(buffer).metadata();
+  const source =
+    meta.format === "svg"
+      ? sharp(buffer, { density: densiteSvg(meta.width, meta.height) })
+      : sharp(buffer);
 
   const { data, info } = await source
     .trim()

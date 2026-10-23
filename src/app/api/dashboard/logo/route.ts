@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
 
   const input = Buffer.from(await file.arrayBuffer());
   // Format lu dans le contenu, pas dans le type déclaré par le navigateur.
-  if (!(await formatLogo(input))) {
+  const format = await formatLogo(input);
+  if (!format) {
     return new NextResponse(
       "Format non pris en charge : envoyez un PNG, un JPEG, un WebP ou un SVG.",
       {
@@ -61,18 +62,22 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Image illisible : essayez un autre fichier.", { status: 400 });
   }
 
+  // Icônes : depuis la version déjà rastérisée pour un SVG (sinon un SVG de
+  // 24 px serait agrandi à 72 dpi, flou) ; depuis le fichier d'origine sinon.
+  const base = format === "svg" ? normalized : input;
+
   const [icon, icon2x, webIcon, appleLogos, googleLogo, squareLogo, warning] = await Promise.all([
-    sharp(input)
+    sharp(base)
       .resize(29, 29, { fit: "contain", background: bg })
       .flatten({ background: bg })
       .png()
       .toBuffer(),
-    sharp(input)
+    sharp(base)
       .resize(58, 58, { fit: "contain", background: bg })
       .flatten({ background: bg })
       .png()
       .toBuffer(),
-    sharp(input).resize(128, 128, { fit: "cover" }).png().toBuffer(),
+    sharp(base).resize(128, 128, { fit: "cover" }).png().toBuffer(),
     generateAppleLogos(normalized),
     generateGoogleLogo(normalized),
     isSquareLogo(normalized),
