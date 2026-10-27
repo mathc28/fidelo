@@ -91,3 +91,5 @@ transaction, `lib/loyalty.ts` pousse la mise à jour vers les deux wallets.
 - Page /dashboard : gestion des récompenses et liste des devices avec révocation
 
 # fiduo
+
+Licence : tous droits réservés, voir LICENSE
