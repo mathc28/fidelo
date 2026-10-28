@@ -2,14 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/supabaseAdmin";
 import { authentifier, bonPassType, court, log } from "@/lib/appleWebService";
 
-type Params = { params: { deviceId: string; passTypeId: string; serial: string } };
+type Params = { params: Promise<{ deviceId: string; passTypeId: string; serial: string }> };
 
 /**
  * Un iPhone enregistre une carte : il vient de l'ajouter à Wallet (ou de la
  * réactiver) et donne le jeton APNs sur lequel le prévenir des mises à jour.
  * 201 = nouvel enregistrement, 200 = déjà connu (jeton rafraîchi).
  */
-export async function POST(req: NextRequest, { params }: Params) {
+export async function POST(req: NextRequest, props: Params) {
+  const params = await props.params;
   const quoi = `appareil ${court(params.deviceId)} · carte ${court(params.serial)}`;
 
   if (!(await bonPassType(params.passTypeId))) {
@@ -53,7 +54,8 @@ export async function POST(req: NextRequest, { params }: Params) {
 }
 
 /** L'iPhone ne veut plus de mises à jour : la carte a été supprimée de Wallet. */
-export async function DELETE(req: NextRequest, { params }: Params) {
+export async function DELETE(req: NextRequest, props: Params) {
+  const params = await props.params;
   const quoi = `appareil ${court(params.deviceId)} · carte ${court(params.serial)}`;
 
   if (!(await bonPassType(params.passTypeId))) {

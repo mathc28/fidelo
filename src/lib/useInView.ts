@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
  * true dès que l'élément entre dans le viewport, une seule fois
  * (n'observe plus après le premier déclenchement — pas de re-jeu au scroll arrière).
  */
-export function useInView<T extends HTMLElement>(): [RefObject<T>, boolean] {
+export function useInView<T extends HTMLElement>(): [RefObject<T | null>, boolean] {
   const ref = useRef<T>(null);
   const [inView, setInView] = useState(false);
 

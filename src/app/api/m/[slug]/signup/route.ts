@@ -19,7 +19,8 @@ import {
  *   Réponse neutre (« si une carte existe… ») et lien envoyé par email au
  *   titulaire, comme depuis l'espace client.
  */
-export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const merchant = await getMerchantBySlug(params.slug);
   if (!merchant) return new NextResponse("Commerce introuvable", { status: 404 });
 

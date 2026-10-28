@@ -5,7 +5,8 @@ import { MerchantShell } from "../MerchantShell";
 
 export const revalidate = 300;
 
-export default async function ComptePage({ params }: { params: { slug: string } }) {
+export default async function ComptePage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const merchant = await getMerchantBySlug(params.slug);
   if (!merchant) notFound();
   const theme = await getCardTheme(merchant.theme_id);

@@ -10,7 +10,8 @@ export const revalidate = 300;
  * Page d'inscription publique, habillée aux couleurs du commerce.
  * Server Component : la config merchant est chargée côté serveur et cachée.
  */
-export default async function InscriptionPage({ params }: { params: { slug: string } }) {
+export default async function InscriptionPage(props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const merchant = await getMerchantBySlug(params.slug);
   if (!merchant) notFound();
   const theme = await getCardTheme(merchant.theme_id);

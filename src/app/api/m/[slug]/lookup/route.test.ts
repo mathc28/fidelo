@@ -43,7 +43,7 @@ function appel(email: string) {
     method: "POST",
     body: JSON.stringify({ email }),
   });
-  return POST(req, { params: { slug: "boulangerie-martin" } });
+  return POST(req, { params: Promise.resolve({ slug: "boulangerie-martin" }) });
 }
 
 /** Lance l'appel et fait avancer l'horloge simulée jusqu'à la réponse. */

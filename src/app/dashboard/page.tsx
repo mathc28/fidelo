@@ -242,7 +242,7 @@ export default function DashboardPage() {
 
   const [search, setSearch] = useState("");
   const [recu, setRecu] = useState<Recu | null>(null);
-  const recuTimer = useRef<ReturnType<typeof setTimeout>>();
+  const recuTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [previewPlatform, setPreviewPlatform] = useState<"apple" | "google">("apple");
   const [framed, setFramed] = useState(false);
   const [logoPreviewUrl, setLogoPreviewUrl] = useState<string | null>(null);

@@ -16,7 +16,8 @@ import {
  * est identique qu'une carte existe ou non (même message, même code, durée
  * comparable) ; si elle existe, son lien part par email au titulaire.
  */
-export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const merchant = await getMerchantBySlug(params.slug);
   if (!merchant) return new NextResponse("Commerce introuvable", { status: 404 });
 

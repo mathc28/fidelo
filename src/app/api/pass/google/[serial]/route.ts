@@ -4,7 +4,8 @@ import { ensureLoyaltyObject, buildSaveUrl } from "@/lib/googleWallet";
 import { getMerchantReward } from "@/lib/loyalty";
 import { clientIp, isRateLimited } from "@/lib/rateLimit";
 
-export async function GET(req: NextRequest, { params }: { params: { serial: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ serial: string }> }) {
+  const params = await props.params;
   // Téléchargement de carte : 60 par IP et par 10 min. Le wifi d'une
   // boutique peut regrouper beaucoup de clients légitimes derrière une IP,
   // et une indisponibilité de la limite ne doit pas bloquer les cartes.

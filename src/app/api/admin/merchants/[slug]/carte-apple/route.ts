@@ -37,7 +37,8 @@ async function etat(merchantId: string) {
   };
 }
 
-export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   if (!(await requirePlatformAdmin(req))) {
     return new NextResponse("Non autorisé", { status: 401 });
   }
@@ -46,7 +47,8 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   return NextResponse.json(await etat(merchant.id));
 }
 
-export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   if (!(await requirePlatformAdmin(req))) {
     return new NextResponse("Non autorisé", { status: 401 });
   }

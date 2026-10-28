@@ -38,7 +38,8 @@ async function inventaire(merchantId: string) {
   return { clients, cartesApple, transactions, promos, caisses, recompenses };
 }
 
-export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   if (!(await requirePlatformAdmin(req))) {
     return new NextResponse("Non autorisé", { status: 401 });
   }
@@ -49,7 +50,8 @@ export async function GET(req: NextRequest, { params }: { params: { slug: string
   return NextResponse.json({ gerant: compte, donnees });
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   const admin = await requirePlatformAdmin(req);
   if (!admin) return new NextResponse("Non autorisé", { status: 401 });
 

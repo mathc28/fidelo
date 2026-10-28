@@ -3,7 +3,8 @@ import { exigerCommercantAJour } from "@/lib/cgvServeur";
 import { db } from "@/lib/supabaseAdmin";
 
 /** DELETE — retire une caisse du commerce : son jeton est révoqué. */
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const garde = await exigerCommercantAJour(req);
   if ("reponse" in garde) return garde.reponse;
   const { merchant } = garde;

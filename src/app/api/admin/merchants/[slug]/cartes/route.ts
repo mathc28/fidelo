@@ -9,7 +9,8 @@ export const maxDuration = 60;
  * POST — « Mettre à jour toutes les cartes » d'un commerce : chaque iPhone
  * retélécharge sa carte, sans notification. Back-office plateforme seulement.
  */
-export async function POST(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   if (!(await requirePlatformAdmin(req))) {
     return new NextResponse("Non autorisé", { status: 401 });
   }

@@ -4,7 +4,8 @@ import { db, getMerchantBySlug } from "@/lib/supabaseAdmin";
 import { PROMO_WINDOW_MS } from "@/lib/promo";
 
 /** GET — vue en lecture seule d'un commerçant pour le back-office plateforme. */
-export async function GET(req: NextRequest, { params }: { params: { slug: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ slug: string }> }) {
+  const params = await props.params;
   if (!(await requirePlatformAdmin(req))) {
     return new NextResponse("Non autorisé", { status: 401 });
   }

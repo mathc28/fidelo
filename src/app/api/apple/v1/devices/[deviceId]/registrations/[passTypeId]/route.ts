@@ -15,8 +15,9 @@ import { identifiantEffectif } from "@/lib/passCerts";
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { deviceId: string; passTypeId: string } }
+  props: { params: Promise<{ deviceId: string; passTypeId: string }> }
 ) {
+  const params = await props.params;
   const appareil = `appareil ${court(params.deviceId)}`;
   if (!(await bonPassType(params.passTypeId))) {
     log(`liste refusée, Pass Type ID inconnu (${params.passTypeId}) — ${appareil} → 404`);

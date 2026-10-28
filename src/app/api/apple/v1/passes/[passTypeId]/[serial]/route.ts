@@ -7,8 +7,9 @@ import { authentifier, bonPassType, court, log } from "@/lib/appleWebService";
 /** L'iPhone télécharge la version à jour d'une carte qu'on lui a signalée. */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { passTypeId: string; serial: string } }
+  props: { params: Promise<{ passTypeId: string; serial: string }> }
 ) {
+  const params = await props.params;
   const carte = `carte ${court(params.serial)}`;
 
   if (!(await bonPassType(params.passTypeId))) {

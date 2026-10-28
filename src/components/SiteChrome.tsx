@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Logo } from "@/components/ui";
 import { CONTACT, CTA } from "@/lib/site";
 import "@/app/landing.css";
@@ -15,22 +16,22 @@ export function SiteHeader() {
   return (
     <header className="landing-header">
       <div className="landing-wrap landing-header-inner">
-        <a href="/" className="landing-logo-lien" aria-label="Fiduo, retour à l'accueil">
+        <Link href="/" className="landing-logo-lien" aria-label="Fiduo, retour à l'accueil">
           <Logo variant="full" height={40} />
-        </a>
+        </Link>
         <nav className="landing-nav">
-          <a href="/#gestes" className="landing-nav-link">
+          <Link href="/#gestes" className="landing-nav-link">
             Comment ça marche
-          </a>
-          <a href="/#formules" className="landing-nav-link">
+          </Link>
+          <Link href="/#formules" className="landing-nav-link">
             Formules
-          </a>
-          <a href="/#personnalisation" className="landing-nav-link">
+          </Link>
+          <Link href="/#personnalisation" className="landing-nav-link">
             Personnalisation
-          </a>
-          <a href="/#tarif" className="landing-nav-link">
+          </Link>
+          <Link href="/#tarif" className="landing-nav-link">
             Tarif
-          </a>
+          </Link>
           <a href="/dashboard" className="landing-nav-link landing-nav-link--toujours">
             Se connecter
           </a>
