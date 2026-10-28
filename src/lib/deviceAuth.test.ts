@@ -6,7 +6,9 @@ import { ALPHABET_CODE, formaterCode, genererCode, normaliserCode } from "./code
  * applique les filtres eq / is / gt / lt et l'unicité de la clé « code ».
  */
 type Ligne = Record<string, unknown>;
-const tables: Record<string, Ligne[]> = { pairing_codes: [], devices: [] };
+const tables: Record<string, Ligne[]> = { pairing_codes: [], devices: [], merchants: [] };
+/** Tables en panne : leurs lectures échouent, comme une base injoignable. */
+const pannes = new Set<string>();
 
 class Requete {
   private filtres: ((l: Ligne) => boolean)[] = [];
@@ -57,15 +59,18 @@ class Requete {
     return touchees;
   }
   maybeSingle() {
+    if (pannes.has(this.table)) {
+      return Promise.resolve({ data: null, error: { message: "connexion perdue" } });
+    }
     const [l] = this.executer();
     return Promise.resolve({
       data: l ? { ...l, merchants: { name: "Boulangerie Martin" } } : null,
       error: null,
     });
   }
-  then(resoudre: (r: { error: null }) => void) {
+  then(resoudre?: (r: { error: null }) => void) {
     this.executer();
-    resoudre({ error: null });
+    resoudre?.({ error: null });
   }
 }
 
@@ -80,14 +85,16 @@ vi.mock("crypto", async (original) => {
 
 vi.mock("./supabaseAdmin", () => ({
   db: { from: (t: string) => new Requete(t) },
-  getMerchantById: vi.fn(),
 }));
 
-import { createPairingCode, redeemPairingCode } from "./deviceAuth";
+import { NextRequest } from "next/server";
+import { createPairingCode, redeemPairingCode, requireDevice } from "./deviceAuth";
 
 beforeEach(() => {
   tables.pairing_codes = [];
   tables.devices = [];
+  tables.merchants = [{ id: "m1", name: "Boulangerie Martin" }];
+  pannes.clear();
 });
 
 describe("format des codes", () => {
@@ -148,5 +155,37 @@ describe("utilisation d'un code", () => {
     expect(await redeemPairingCode("ZZZZ9999", "")).toBeNull();
     expect(await redeemPairingCode("123456", "")).toBeNull();
     expect(tables.devices).toHaveLength(0);
+  });
+});
+
+describe("authentification d'une caisse", () => {
+  async function caisseAppairee(): Promise<string> {
+    const appairage = await redeemPairingCode(await createPairingCode("m1"), "Caisse");
+    return appairage!.token;
+  }
+  const requete = (jeton: string) =>
+    new NextRequest("https://fiduo.app/api/scan/caisse", {
+      headers: { Authorization: `Device ${jeton}` },
+    });
+
+  it("reconnaît une caisse appairée et renvoie son commerce", async () => {
+    const auth = await requireDevice(requete(await caisseAppairee()));
+    expect(auth?.merchant).toMatchObject({ id: "m1", name: "Boulangerie Martin" });
+  });
+
+  it("refuse un jeton inconnu ou révoqué (→ 401, la caisse redemande un code)", async () => {
+    const jeton = await caisseAppairee();
+    expect(await requireDevice(requete("inconnu"))).toBeNull();
+    tables.devices[0].revoked_at = new Date().toISOString();
+    expect(await requireDevice(requete(jeton))).toBeNull();
+  });
+
+  it("lève sur une panne de base au lieu de refuser : la caisse garde son jeton", async () => {
+    const jeton = await caisseAppairee();
+    pannes.add("devices");
+    await expect(requireDevice(requete(jeton))).rejects.toThrow("connexion perdue");
+    pannes.clear();
+    pannes.add("merchants");
+    await expect(requireDevice(requete(jeton))).rejects.toThrow("connexion perdue");
   });
 });

@@ -1,6 +1,6 @@
 import { createHash, randomBytes, randomInt } from "crypto";
 import { NextRequest } from "next/server";
-import { db, Merchant, getMerchantById } from "./supabaseAdmin";
+import { db, Merchant } from "./supabaseAdmin";
 import { LONGUEUR_CODE, genererCode, normaliserCode } from "./codeAppairage";
 
 function sha256(s: string): string {
@@ -83,16 +83,24 @@ export async function requireDevice(
   const token = req.headers.get("authorization")?.replace("Device ", "");
   if (!token) return null;
 
-  const { data: device } = await db
+  // Une panne de la base n'est pas un refus : on lève (→ 500) au lieu de
+  // renvoyer null (→ 401), que /scan prendrait pour une révocation et qui
+  // lui ferait oublier son jeton.
+  const { data: device, error } = await db
     .from("devices")
     .select("id, merchant_id")
     .eq("token_hash", sha256(token))
     .is("revoked_at", null)
-    .single();
-
+    .maybeSingle();
+  if (error) throw new Error(`Caisse non vérifiée : ${error.message}`);
   if (!device) return null;
 
-  const merchant = await getMerchantById(device.merchant_id);
+  const { data: merchant, error: erreurCommerce } = await db
+    .from("merchants")
+    .select("*")
+    .eq("id", device.merchant_id)
+    .maybeSingle();
+  if (erreurCommerce) throw new Error(`Commerce de la caisse non lu : ${erreurCommerce.message}`);
   if (!merchant) return null;
 
   db.from("devices").update({ last_seen_at: new Date().toISOString() }).eq("id", device.id).then();

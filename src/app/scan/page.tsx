@@ -24,6 +24,12 @@ type Flash = { kind: "success" | "error" | "reward"; title?: string; text: strin
 const TOKEN_KEY = "fidelite_device_token";
 const NAME_KEY = "fidelite_merchant_name";
 const NETWORK_ERROR = "Pas de connexion. Vérifiez le réseau et réessayez.";
+const SERVER_ERROR = "Le service ne répond pas. Réessayez dans un instant.";
+
+/** Message d'erreur du serveur, ou un message générique s'il n'en donne pas (500). */
+async function messageErreur(res: Response): Promise<string> {
+  return (await res.text().catch(() => "")) || SERVER_ERROR;
+}
 
 export default function ScanPage() {
   const [token, setToken] = useState<string | null>(null);
@@ -174,7 +180,7 @@ export default function ScanPage() {
         return;
       }
       if (!res.ok) {
-        setFlash({ kind: "error", text: await res.text() });
+        setFlash({ kind: "error", text: await messageErreur(res) });
         return;
       }
       const data = await res.json();
@@ -211,7 +217,7 @@ export default function ScanPage() {
         body: JSON.stringify({ serial: lookup.customer.serial, amountEuros }),
       });
       if (!res.ok) {
-        setFlash({ kind: "error", text: await res.text() });
+        setFlash({ kind: "error", text: await messageErreur(res) });
         return;
       }
       const data = await res.json();
@@ -240,7 +246,7 @@ export default function ScanPage() {
         body: JSON.stringify({ serial: lookup.customer.serial }),
       });
       if (!res.ok) {
-        setFlash({ kind: "error", text: await res.text() });
+        setFlash({ kind: "error", text: await messageErreur(res) });
         return;
       }
       const data = await res.json();
@@ -283,7 +289,7 @@ export default function ScanPage() {
         oublierCaisse();
         return;
       }
-      setFlash({ kind: "error", text: await res.text() });
+      setFlash({ kind: "error", text: await messageErreur(res) });
     } catch {
       setFlash({
         kind: "error",
