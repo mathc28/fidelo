@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Logo } from "@/components/ui";
 import { IOSDevice } from "@/components/IOSFrame";
 import { Reveal } from "@/components/Reveal";
-import WalletPreview, { type Theme } from "@/components/WalletPreview";
 import { MAX_PROMOS } from "@/lib/promo";
 import { CTA } from "@/lib/site";
 import { SiteHeader, SiteFooter } from "@/components/SiteChrome";
@@ -12,8 +12,6 @@ import { Personnalisation } from "./Personnalisation";
 import { Promos } from "./Promos";
 import { ContactForm } from "./ContactForm";
 import "./landing.css";
-
-const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
 
 /** Le carton d'aujourd'hui, tenu en registre : trois constats, pas trois tuiles. */
 const CONSTATS = [
@@ -219,15 +217,17 @@ export default function LandingPage() {
                       <span className="landing-wallet-titre">Wallet</span>
                       <span className="landing-wallet-rond">···</span>
                     </div>
-                    <WalletPreview
-                      theme={HERO_THEME}
-                      merchantName="Boulangerie Martin"
-                      programType="visits"
-                      points={8}
-                      threshold={10}
-                      rewardLabel="Plus que 2 avant : Un café offert"
-                      firstName="Léa"
-                      platform="apple"
+                    {/* Une vraie carte, capturée dans Apple Wallet. Le téléphone
+                        est réduit (× 0,62, × 0,5 sous 940 px) : l'image
+                        s'affiche sur environ 215 px, puis 175 px. */}
+                    <Image
+                      src="/landing/carte-wallet.png"
+                      alt="Carte de fidélité Café Cosi dans Apple Wallet : 18 points sur 25, plus que 7 avant -10 % sur le prochain achat"
+                      width={1084}
+                      height={1510}
+                      priority
+                      sizes="(max-width: 940px) 175px, 215px"
+                      className="landing-wallet-carte"
                     />
                     <div className="landing-cale" />
                     <div className="landing-wallet-note">

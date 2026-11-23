@@ -532,6 +532,14 @@
   }
 }
 
+/* Sous 600 px, le téléphone couvre presque tout le carton décoratif : il n'en
+   dépassait qu'un bout coupé, qui faisait accident. */
+@media (max-width: 599px) {
+  .landing-carton {
+    display: none;
+  }
+}
+
 /* Écran Wallet dans le téléphone : couleurs système d'iOS, par mimétisme. */
 .landing-wallet {
   height: 100%;
@@ -563,6 +571,14 @@
   place-items: center;
   font-size: 12px;
   color: #3c3c43;
+}
+
+/* Capture de la vraie carte : même marge à gauche et à droite que la barre
+   et la note (le padding de .landing-wallet). */
+.landing-wallet-carte {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 
 .landing-wallet-note {
