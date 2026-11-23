@@ -4,6 +4,7 @@ import { isRateLimited } from "./rateLimit";
 import { envoyerEmailCarte } from "./emailCarte";
 import { unite } from "./uiText";
 import { validerEmail } from "./validation";
+import { liensCarte } from "./signatureCarte";
 
 /*
  * Redemande d'une carte existante (espace client, réinscription avec un
@@ -47,12 +48,13 @@ export async function envoyerLienSiCarte(merchant: Merchant, email: string): Pro
       return;
     }
 
+    const liens = liensCarte(client.serial_number, config.baseUrl);
     await envoyerEmailCarte(email, {
       prenom: client.first_name,
       commerce: merchant.name,
       solde: unite(client.points, merchant.program_type === "visits"),
-      lienApple: `${config.baseUrl}/api/pass/apple/${client.serial_number}`,
-      lienGoogle: `${config.baseUrl}/api/pass/google/${client.serial_number}`,
+      lienApple: liens.apple,
+      lienGoogle: liens.google,
     });
     console.log(`[Lien carte] envoyé — commerce ${merchant.slug}`);
   } catch (e) {

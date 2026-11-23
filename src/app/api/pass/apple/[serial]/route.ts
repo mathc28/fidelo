@@ -3,6 +3,7 @@ import { db, getMerchantById } from "@/lib/supabaseAdmin";
 import { buildApplePass } from "@/lib/applePass";
 import { getMerchantReward } from "@/lib/loyalty";
 import { clientIp, isRateLimited } from "@/lib/rateLimit";
+import { signatureValide } from "@/lib/signatureCarte";
 
 export async function GET(req: NextRequest, props: { params: Promise<{ serial: string }> }) {
   const params = await props.params;
@@ -17,6 +18,12 @@ export async function GET(req: NextRequest, props: { params: Promise<{ serial: s
     })
   ) {
     return new NextResponse("Trop de demandes, réessayez dans quelques minutes", { status: 429 });
+  }
+
+  // Lien signé obligatoire (voir signatureCarte.ts) : sans signature valide,
+  // même réponse qu'un serial inconnu.
+  if (!signatureValide(params.serial, req.nextUrl.searchParams.get("t"))) {
+    return new NextResponse("Carte introuvable", { status: 404 });
   }
 
   const { data: customer } = await db

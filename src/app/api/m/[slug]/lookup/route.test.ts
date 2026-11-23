@@ -37,6 +37,7 @@ vi.mock("@/lib/supabaseAdmin", () => ({
 
 import { POST } from "./route";
 import { DUREE_REPONSE_MS } from "@/lib/lienCarte";
+import { signerSerial } from "@/lib/signatureCarte";
 
 function appel(email: string) {
   const req = new NextRequest("https://fiduo.app/api/m/boulangerie-martin/lookup", {
@@ -58,6 +59,7 @@ async function repondre(email: string) {
 describe("POST /api/m/[slug]/lookup", () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.stubEnv("PASS_LINK_SECRET", "secret-de-test");
     clients.clear();
     clients.set("lea@example.com", {
       serial_number: "SERIE-SECRETE",
@@ -67,6 +69,7 @@ describe("POST /api/m/[slug]/lookup", () => {
   });
   afterEach(() => {
     vi.useRealTimers();
+    vi.unstubAllEnvs();
     envoyer.mockReset();
   });
 
@@ -93,7 +96,8 @@ describe("POST /api/m/[slug]/lookup", () => {
       "lea@example.com",
       expect.objectContaining({
         commerce: "Boulangerie Martin",
-        lienApple: "https://fiduo.app/api/pass/apple/SERIE-SECRETE",
+        // Lien signé : le serial seul ne suffit pas à télécharger la carte.
+        lienApple: `https://fiduo.app/api/pass/apple/SERIE-SECRETE?t=${signerSerial("SERIE-SECRETE")}`,
       })
     );
   });

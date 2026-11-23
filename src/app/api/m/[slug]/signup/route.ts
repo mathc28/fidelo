@@ -4,6 +4,7 @@ import { db, getMerchantBySlug } from "@/lib/supabaseAdmin";
 import { clientIp, isRateLimited } from "@/lib/rateLimit";
 import { identifiantPourNouvelleCarte } from "@/lib/passCerts";
 import { validerEmail, validerPrenom } from "@/lib/validation";
+import { liensCarte } from "@/lib/signatureCarte";
 import {
   DUREE_REPONSE_MS,
   MESSAGE_NEUTRE,
@@ -65,6 +66,9 @@ export async function POST(req: NextRequest, props: { params: Promise<{ slug: st
   if (existant) return reponseNeutre();
 
   const serial = randomUUID();
+  // Signés avant l'insertion : sans PASS_LINK_SECRET, l'erreur survient ici,
+  // sans laisser derrière elle une carte que le client ne pourrait pas ouvrir.
+  const liens = liensCarte(serial);
   const { error } = await db.from("customers").insert({
     merchant_id: merchant.id,
     serial_number: serial,
@@ -82,7 +86,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ slug: st
 
   return NextResponse.json({
     serial,
-    appleUrl: `/api/pass/apple/${serial}`,
-    googleUrl: `/api/pass/google/${serial}`,
+    appleUrl: liens.apple,
+    googleUrl: liens.google,
   });
 }
