@@ -169,6 +169,27 @@
   opacity: 0.85;
 }
 
+/* Mention sous l'action : discrète, mais lisible (72 % du texte du thème). */
+.m-note {
+  margin: 12px 0 0;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.m-note a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* La pastille « Propulsé par Fiduo » mène au site, sans changer d'allure. */
+.m-propulse {
+  display: inline-flex;
+  border-radius: var(--radius-xs);
+  text-decoration: none;
+}
+
 .m-success {
   font-size: 1.1rem;
   font-weight: 600;

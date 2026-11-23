@@ -6,7 +6,7 @@ import { LIMITES } from "@/lib/validation";
 
 type Links = { serial: string; appleUrl: string; googleUrl: string };
 
-export default function SignupForm({ slug }: { slug: string }) {
+export default function SignupForm({ slug, merchantName }: { slug: string; merchantName: string }) {
   const [firstName, setFirstName] = useState("");
   const [email, setEmail] = useState("");
   const [links, setLinks] = useState<Links | null>(null);
@@ -105,6 +105,7 @@ export default function SignupForm({ slug }: { slug: string }) {
           maxLength={LIMITES.prenom}
           autoCapitalize="words"
           enterKeyHint="next"
+          required
           value={firstName}
           onChange={(e) => setFirstName(e.target.value)}
         />
@@ -123,6 +124,7 @@ export default function SignupForm({ slug }: { slug: string }) {
           autoCorrect="off"
           spellCheck={false}
           enterKeyHint="go"
+          required
           className={`field-input field-input--on-theme${error ? " has-error" : ""}`}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? "signup-erreur" : undefined}
@@ -146,6 +148,13 @@ export default function SignupForm({ slug }: { slug: string }) {
       <button type="submit" className="m-action" disabled={loading}>
         {loading ? "Création…" : "Créer ma carte"}
       </button>
+      <p className="m-note m-muted">
+        Votre email sert uniquement à votre carte {merchantName}.{" "}
+        <a href="/confidentialite">Confidentialité</a>
+      </p>
+      <a href={`/m/${slug}/compte`} className="m-link m-muted" style={{ marginTop: 8 }}>
+        Déjà une carte ? La retrouver
+      </a>
     </form>
   );
 }

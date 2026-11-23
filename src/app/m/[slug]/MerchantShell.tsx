@@ -36,7 +36,15 @@ export function MerchantShell({
         </div>
         {children}
         <div className="m-foot">
-          <PoweredByBadge variant="pill" />
+          <a
+            href="https://fiduo.app"
+            target="_blank"
+            rel="noopener"
+            className="m-propulse"
+            aria-label="Propulsé par Fiduo (nouvel onglet)"
+          >
+            <PoweredByBadge variant="pill" />
+          </a>
         </div>
       </div>
     </main>

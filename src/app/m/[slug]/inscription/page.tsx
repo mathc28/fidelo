@@ -31,7 +31,7 @@ export default async function InscriptionPage(props: { params: Promise<{ slug: s
         écran verrouillé quand vous passez à côté.
       </p>
 
-      <SignupForm slug={merchant.slug} />
+      <SignupForm slug={merchant.slug} merchantName={merchant.name} />
     </MerchantShell>
   );
 }
