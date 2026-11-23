@@ -252,6 +252,9 @@ export default function DashboardPage() {
   const [qrFailed, setQrFailed] = useState(false);
 
   const [activeSection, setActiveSection] = useState<string>("registre");
+  // Ruban d'onglets (mobile) : reste-t-il des onglets cachés à droite ?
+  const navRef = useRef<HTMLElement>(null);
+  const [navSuite, setNavSuite] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -433,6 +436,34 @@ export default function DashboardPage() {
     });
     return () => obs.disconnect();
   }, [merchant]);
+
+  const majNavSuite = useCallback(() => {
+    const nav = navRef.current;
+    if (nav) setNavSuite(nav.scrollLeft + nav.clientWidth < nav.scrollWidth - 1);
+  }, []);
+
+  useEffect(() => {
+    majNavSuite();
+    window.addEventListener("resize", majNavSuite);
+    return () => window.removeEventListener("resize", majNavSuite);
+  }, [majNavSuite, merchant]);
+
+  // L'onglet actif reste visible dans le ruban. Équivalent de
+  // scrollIntoView({ inline: "nearest" }), mais limité au ruban :
+  // scrollIntoView ferait aussi défiler la page et couperait le défilement
+  // en cours, qui est justement ce qui change l'onglet actif.
+  useEffect(() => {
+    const nav = navRef.current;
+    const lien = nav?.querySelector<HTMLElement>("[aria-current]");
+    if (!nav || !lien || nav.scrollWidth <= nav.clientWidth) return;
+    const marge = 16;
+    const debut = lien.offsetLeft - marge;
+    const fin = lien.offsetLeft + lien.offsetWidth + marge - nav.clientWidth;
+    const cible = debut < nav.scrollLeft ? debut : fin > nav.scrollLeft ? fin : null;
+    if (cible === null) return;
+    const doux = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    nav.scrollTo({ left: cible, behavior: doux ? "smooth" : "auto" });
+  }, [activeSection, merchant]);
 
   function downloadQr() {
     if (!qrDataUrl || !merchant) return;
@@ -824,8 +855,10 @@ export default function DashboardPage() {
         <div className="cpt-barre-inner">
           <Logo variant="symbol" height={26} />
           <span className="cpt-filet" />
-          <span className="cpt-enseigne">{merchant.name}</span>
-          <Statut status={merchant.subscription_status} />
+          <div className="cpt-identite">
+            <span className="cpt-enseigne">{merchant.name}</span>
+            <Statut status={merchant.subscription_status} />
+          </div>
           {statut.variant === "error" && (
             <a
               className="cpt-regulariser"
@@ -847,23 +880,30 @@ export default function DashboardPage() {
       </header>
 
       <div className="cpt-corps">
-        <nav className="cpt-nav" aria-label="Sections du tableau de bord">
-          {SOMMAIRE.map((groupe) => (
-            <div key={groupe.zone} className="cpt-nav-groupe">
-              <span className="cpt-nav-titre">{groupe.zone}</span>
-              {groupe.liens.map((l) => (
-                <a
-                  key={l.id}
-                  href={`#${l.id}`}
-                  className="cpt-nav-lien"
-                  aria-current={activeSection === l.id ? "location" : undefined}
-                >
-                  {l.label}
-                </a>
-              ))}
-            </div>
-          ))}
-        </nav>
+        <div className={`cpt-nav-cadre${navSuite ? " cpt-nav-cadre--suite" : ""}`}>
+          <nav
+            ref={navRef}
+            className="cpt-nav"
+            aria-label="Sections du tableau de bord"
+            onScroll={majNavSuite}
+          >
+            {SOMMAIRE.map((groupe) => (
+              <div key={groupe.zone} className="cpt-nav-groupe">
+                <span className="cpt-nav-titre">{groupe.zone}</span>
+                {groupe.liens.map((l) => (
+                  <a
+                    key={l.id}
+                    href={`#${l.id}`}
+                    className="cpt-nav-lien"
+                    aria-current={activeSection === l.id ? "location" : undefined}
+                  >
+                    {l.label}
+                  </a>
+                ))}
+              </div>
+            ))}
+          </nav>
+        </div>
 
         <main>
           <section id="registre" className="cpt-registre" aria-labelledby="registre-titre">

@@ -80,7 +80,17 @@
   flex: none;
 }
 
+/* Nom du commerce et statut. Le nom prend toute la place libre : il n'est
+   tronqué (ellipse) que s'il est vraiment trop long. */
+.cpt-identite {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
 .cpt-enseigne {
+  min-width: 0;
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 600;
   font-size: var(--text-lg);
@@ -88,6 +98,37 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* Sur téléphone, le statut passe sous le nom plutôt que de lui voler sa place. */
+@media (max-width: 720px) {
+  .cpt-identite {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+  }
+
+  /* En colonne, le nom prendrait sa largeur naturelle : on le borne à
+     celle du bloc pour que l'ellipse joue. */
+  .cpt-identite .cpt-enseigne {
+    max-width: 100%;
+  }
+
+  .cpt-identite .cpt-statut {
+    padding: 1px 6px;
+  }
+}
+
+/* Très petits écrans : la mention de statut et « Se déconnecter » tiennent
+   à côté du logo en resserrant un peu. */
+@media (max-width: 360px) {
+  .cpt-barre-inner {
+    gap: 10px;
+  }
+
+  .cpt-identite .cpt-statut {
+    letter-spacing: 0.04em;
+  }
 }
 
 /* Statut d'abonnement : une mention tamponnée, pas une pastille colorée. */
@@ -183,9 +224,14 @@
 
 /* ---------- Sommaire : classé par fréquence, pas par importance ---------- */
 
-.cpt-nav {
+.cpt-nav-cadre {
   position: sticky;
   top: 88px;
+}
+
+.cpt-nav {
+  /* Repère des offsetLeft des onglets (défilement du ruban). */
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 22px;
@@ -240,17 +286,37 @@
   }
 
   /* Le sommaire reste sous la barre en défilant : un ruban d'onglets. */
-  .cpt-nav {
-    position: sticky;
+  .cpt-nav-cadre {
     top: 62px;
     z-index: 20;
+    margin: 0 calc(-1 * clamp(16px, 3vw, 32px));
+    background: var(--color-kraft);
+    border-bottom: 1px solid var(--color-rule-soft);
+  }
+
+  /* Fondu sur le bord droit, tant qu'il reste des onglets de ce côté. */
+  .cpt-nav-cadre::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 48px;
+    background: linear-gradient(to right, transparent, var(--color-kraft) 85%);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+
+  .cpt-nav-cadre--suite::after {
+    opacity: 1;
+  }
+
+  .cpt-nav {
     flex-direction: row;
     gap: 18px;
     overflow-x: auto;
-    margin: 0 calc(-1 * clamp(16px, 3vw, 32px));
     padding: 0 clamp(16px, 3vw, 32px);
-    background: var(--color-kraft);
-    border-bottom: 1px solid var(--color-rule-soft);
     scrollbar-width: none;
   }
 
