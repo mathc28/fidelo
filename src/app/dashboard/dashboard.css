@@ -920,6 +920,53 @@
   padding: 34px 0;
 }
 
+/* ---------- Accès à la caisse (/scan) ---------- */
+
+/* Bureau : en évidence dans la barre. Téléphone : barre fixe en bas. */
+.cpt-scan-barre {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .comptoir {
+    /* Bouton de 52 px + 10 px de marge de chaque côté, plus la zone du
+       geste d'accueil des iPhone. */
+    --cpt-scan-barre: calc(72px + env(safe-area-inset-bottom, 0px));
+    /* Le bas de page reste lisible au-dessus de la barre. */
+    padding-bottom: var(--cpt-scan-barre);
+  }
+
+  .cpt-scan-entete {
+    display: none;
+  }
+
+  .cpt-scan-barre {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+    background: var(--color-kraft);
+    border-top: 1px solid var(--color-rule-soft);
+  }
+
+  .cpt-scan-fixe {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 52px;
+    font-size: var(--text-md);
+  }
+
+  /* L'accusé de réception s'affiche au-dessus de la barre, pas dessous. */
+  .cpt-recu {
+    bottom: calc(var(--cpt-scan-barre) + 12px);
+  }
+}
+
 /* ---------- Accusé de réception ---------- */
 
 .cpt-recu {

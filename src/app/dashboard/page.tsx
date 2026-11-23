@@ -835,6 +835,9 @@ export default function DashboardPage() {
             </a>
           )}
           <div className="cpt-barre-fin">
+            <a href="/scan" className="btn btn-primary btn-sm cpt-scan-entete">
+              Scanner une carte
+            </a>
             <span className="cpt-compte">{session.user.email}</span>
             <button className="cpt-sortir" onClick={() => supabase.auth.signOut()}>
               Se déconnecter
@@ -1358,6 +1361,14 @@ export default function DashboardPage() {
             <PoweredByBadge />
           </div>
         </main>
+      </div>
+
+      {/* Sur téléphone, la caisse est le geste du quotidien : toujours à
+          portée de pouce, au lieu d'un lien tout en bas de la page. */}
+      <div className="cpt-scan-barre">
+        <a href="/scan" className="btn btn-primary cpt-scan-fixe">
+          Scanner une carte
+        </a>
       </div>
 
       {recu && (
