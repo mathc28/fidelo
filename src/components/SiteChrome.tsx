@@ -17,7 +17,12 @@ export function SiteHeader() {
     <header className="landing-header">
       <div className="landing-wrap landing-header-inner">
         <Link href="/" className="landing-logo-lien" aria-label="Fiduo, retour à l'accueil">
-          <Logo variant="full" height={40} />
+          {/* Sous 420 px, le symbole seul : le logo complet ne laisse plus
+              de place à « Se connecter » et « Démarrer ». */}
+          <picture>
+            <source media="(max-width: 420px)" srcSet="/brand/logo-symbol.png" />
+            <img src="/brand/logo-full.png" alt="Fiduo" className="landing-logo" />
+          </picture>
         </Link>
         <nav className="landing-nav">
           <Link href="/#gestes" className="landing-nav-link">

@@ -178,6 +178,13 @@
    espace de ligne sous l'image. */
 .landing-logo-lien {
   display: flex;
+  flex-shrink: 0;
+}
+
+.landing-logo {
+  display: block;
+  height: 40px;
+  width: auto;
 }
 
 .landing-nav {
@@ -218,6 +225,15 @@
 }
 
 @media (max-width: 420px) {
+  .landing-header-inner {
+    gap: 12px;
+  }
+  .landing-logo {
+    height: 34px;
+  }
+  .landing-nav {
+    gap: 12px;
+  }
   .landing-header .landing-action--sm {
     padding: 9px 12px;
     font-size: var(--text-xs);
