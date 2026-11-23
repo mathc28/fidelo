@@ -2,7 +2,7 @@ import { PKPass } from "passkit-generator";
 import { config } from "./config";
 import { Customer, Merchant, Reward, db, getCardTheme } from "./supabaseAdmin";
 import { getPassImages } from "./passAssets";
-import { separerRecompense, texteCompteur, texteRecompense } from "./wallet/rewardText";
+import { champsCarte } from "./wallet/champsCarte";
 import { promoActive } from "./promo";
 import { identiteCarte } from "./passCerts";
 
@@ -26,8 +26,15 @@ export async function buildApplePass(
   ]);
   const isVisits = merchant.program_type === "visits";
 
-  // Même découpe que l'aperçu du dashboard : source unique dans wallet/rewardText.
-  const { reachedReward, nextReward } = separerRecompense(reward, customer.points);
+  // Face avant : mêmes champs que l'aperçu (WalletPreview), source unique
+  // dans wallet/champsCarte.
+  const face = champsCarte({
+    programType: merchant.program_type,
+    points: customer.points,
+    reward,
+    firstName: customer.first_name,
+    serial: customer.serial_number,
+  });
 
   const pass = new PKPass(
     images,
@@ -84,45 +91,9 @@ export async function buildApplePass(
     });
   }
 
-  // En-tête — le prénom à droite du logo et du nom du commerce. Ce champ
-  // prend sur la largeur de `logoText` : sur un nom long, c'est lui qui
-  // reviendra tronquer « Boulangerie Michel ».
-  pass.headerFields.push({
-    key: "member",
-    label: "MEMBRE",
-    value: customer.first_name,
-  });
-
-  // `primaryFields` volontairement vide : disposition à l'essai, la zone
-  // principale reste libre et les deux informations descendent d'une rangée.
-
-  // Rangée secondaire — le compteur et la récompense côte à côte. Le libellé
-  // y est au-dessus de la valeur et prend la `labelColor` du thème, ce que la
-  // rangée principale ne permet pas.
-  //
-  // Pas de `changeMessage` ici, volontairement : ces champs changent à chaque
-  // passage en caisse, quand le client a son téléphone en main. Une
-  // notification à chaque scan l'inciterait à couper celles de la carte, et
-  // avec elles les promos. La carte se met à jour en silence.
-  pass.secondaryFields.push(
-    {
-      key: "balance",
-      label: isVisits ? "VOS PASSAGES" : "VOS POINTS",
-      // Sans objectif, la valeur reste un nombre et non une chaîne : Apple lui
-      // applique alors le formatage local, donc l'espace des milliers.
-      value: nextReward
-        ? texteCompteur(customer.points, nextReward.cost_points, isVisits)
-        : customer.points,
-    },
-    {
-      key: "reward",
-      label: "RÉCOMPENSE",
-      value: texteRecompense(reachedReward, nextReward, customer.points),
-      // Calé à droite pour fermer la rangée : le compteur garde l'alignement
-      // à gauche par défaut, les deux champs s'appuient sur les bords.
-      textAlignment: "PKTextAlignmentRight",
-    }
-  );
+  pass.headerFields.push(...face.headerFields);
+  pass.primaryFields.push(...face.primaryFields);
+  pass.secondaryFields.push(...face.secondaryFields);
 
   // Dernière promo du commerce, en tête du dos de la carte. Seul champ de la
   // carte à porter un changeMessage : à chaque nouveau texte, iOS l'affiche
@@ -159,7 +130,7 @@ export async function buildApplePass(
     format: "PKBarcodeFormatQR",
     message: customer.serial_number,
     messageEncoding: "iso-8859-1",
-    altText: customer.serial_number.slice(0, 8).toUpperCase(),
+    altText: face.barcodeAltText,
   });
 
   return pass.getAsBuffer();
