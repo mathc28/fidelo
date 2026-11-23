@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { CardTheme } from "@/lib/types";
 import { PoweredByBadge } from "@/components/ui";
+import { urlLogoEntier } from "@/lib/logoCommerce";
 import "./merchant.css";
 
 /**
@@ -23,14 +24,15 @@ export function MerchantShell({
     "--theme-text": theme.text_color,
     "--accent": theme.label_color,
   } as CSSProperties;
+  const logo = urlLogoEntier(logoUrl);
 
   return (
     <main className={`m-shell${theme.is_light ? "" : " on-dark"}`} style={vars}>
       <div className="m-col">
         <div className="m-brand">
-          {logoUrl && (
+          {logo && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoUrl} alt="" width={36} height={36} />
+            <img src={logo} alt={name} height={40} />
           )}
           <span>{name}</span>
         </div>

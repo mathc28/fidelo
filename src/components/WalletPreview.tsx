@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { texteCompteur } from "@/lib/wallet/rewardText";
+import { urlLogoEntier } from "@/lib/logoCommerce";
 
 /**
  * Aperçu réaliste d'une carte de fidélité dans Apple Wallet / Google Wallet.
@@ -134,7 +135,12 @@ function ApplePass(p: WalletPreviewProps) {
             `headerFields: []`, tout l'espace revient au nom. */}
         {logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={logoUrl} alt="" style={{ height: 22, maxWidth: 70, objectFit: "contain" }} />
+          <img
+            // Comme le vrai pass : le logo entier (logo.png), pas la vignette recadrée.
+            src={urlLogoEntier(logoUrl)!}
+            alt=""
+            style={{ height: 22, maxWidth: 70, objectFit: "contain" }}
+          />
         ) : null}
         <span style={{ color: theme.text_color, fontSize: 13, fontWeight: 500, flex: 1 }}>
           {merchantName}

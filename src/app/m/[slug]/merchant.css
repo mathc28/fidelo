@@ -34,9 +34,15 @@
   font-weight: 600;
 }
 
+/* Logo entier, jamais rogné : hauteur fixe, largeur selon ses proportions
+   (un logo horizontal s'étale jusqu'à 160 px). */
 .m-brand img {
-  border-radius: var(--radius-sm);
-  object-fit: cover;
+  display: block;
+  height: 40px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .m-title {
