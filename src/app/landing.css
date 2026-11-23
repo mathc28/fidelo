@@ -319,6 +319,15 @@
   }
 }
 
+/* Un enfant de grille ne descend pas sous sa largeur min-content : sans ce
+   min-width, une maquette trop large élargit toute la colonne, et le texte
+   voisin avec. */
+.landing-hero > *,
+.landing-proximite > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .landing-hero-titre-suite {
   color: var(--corail-fonce);
 }
@@ -377,7 +386,7 @@
 
 @keyframes landing-carton-sortie {
   to {
-    transform: rotate(-9deg) translate(-46%, 16%) scale(0.82);
+    transform: rotate(-9deg) translate(var(--carton-sortie-x, -46%), 16%) scale(0.82);
     opacity: 0.32;
   }
 }
@@ -484,6 +493,9 @@
   --echelle: 0.62;
   pointer-events: auto;
   transform-origin: center right;
+  /* Réduit dès le départ, et pas seulement par l'animation : avant qu'elle
+     démarre, la maquette pleine taille débordait de l'écran. */
+  transform: scale(var(--echelle));
   opacity: 0;
   animation: landing-telephone-entree 0.7s cubic-bezier(0.2, 0.9, 0.3, 1) 1.05s forwards;
 }
@@ -509,6 +521,10 @@
   .landing-telephone-echelle {
     --echelle: 0.5;
     transform-origin: center;
+  }
+  /* Colonne unique : le carton glisse moins loin, sans sortir de l'écran. */
+  .landing-carton {
+    --carton-sortie-x: -22%;
   }
 }
 
@@ -801,10 +817,13 @@
   justify-content: center;
 }
 
+/* Le scale ne réduit que le rendu, pas la place occupée : les marges
+   négatives retirent la différence (402 × 0,42 / 2 ≈ 84 px de chaque côté),
+   sinon la maquette garde ses 402 px et élargit la colonne de la grille. */
 .landing-proximite-echelle {
   transform: scale(0.58);
   transform-origin: center;
-  margin: -160px 0;
+  margin: -160px -84px;
 }
 
 /* Écran verrouillé : un fond d'écran uni, pas un dégradé. */
