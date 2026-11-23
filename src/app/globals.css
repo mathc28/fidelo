@@ -20,8 +20,14 @@
   --color-marine: #1a2e60; /* 9,7:1 sur kraft */
   --color-marine-hover: #24407f;
   --color-marine-deep: #101f45;
-  --color-coral: #f56c5a; /* aplats seulement : 2,8:1 sur papier */
-  --color-coral-hover: #e85b49;
+  /* Corail de marque : accents, titres, illustrations. Jamais sous du texte
+     blanc (2,9:1). */
+  --color-coral: #f56c5a;
+  /* Corail d'action : l'aplat des boutons. Texte blanc à 4,7:1 (WCAG AA),
+     5,6:1 au survol, 6,7:1 à l'appui. */
+  --color-coral-action: #cc4637;
+  --color-coral-action-hover: #b83e30;
+  --color-coral-action-active: #a3362a;
   /* Le corail encré : texte, contours et alertes sur fond clair (4,3:1 kraft). */
   --color-coral-ink: #b8391f;
 
@@ -203,15 +209,18 @@ h3 {
   color: var(--color-paper);
 }
 
-/* Le corail : réservé à ce qui quitte la boutique pour le client. Texte
-   marine profond, 5,5:1 — le blanc sur ce corail tombe à 2,9:1. */
+/* Le corail : réservé à ce qui quitte la boutique pour le client. Même
+   aplat que les actions de la landing (--color-coral-action, 4,7:1). */
 .btn-accent {
-  background: var(--color-coral);
-  color: var(--color-marine-deep);
+  background: var(--color-coral-action);
+  color: #fff;
 }
 .btn-accent:hover:not(:disabled) {
-  background: var(--color-coral-hover);
-  color: var(--color-marine-deep);
+  background: var(--color-coral-action-hover);
+  color: #fff;
+}
+.btn-accent:active:not(:disabled) {
+  background: var(--color-coral-action-active);
 }
 
 .btn-secondary {

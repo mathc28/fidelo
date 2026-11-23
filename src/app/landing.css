@@ -242,8 +242,8 @@
 
 /* ---------- Action ---------- */
 
-/* Aplat corail, texte blanc. Contraste faible (2,9:1, sous le seuil WCAG AA
-   de 4,5:1) : choix de marque assumé. Le marine profond tenait 5,5:1. */
+/* Aplat corail d'action, texte blanc : 4,7:1 (WCAG AA), plus au survol et à
+   l'appui. Le corail de marque reste aux accents et aux illustrations. */
 .landing-action {
   display: inline-flex;
   align-items: center;
@@ -258,15 +258,19 @@
   border: none;
   border-radius: var(--rayon-moyen);
   cursor: pointer;
-  background: var(--color-coral);
+  background: var(--color-coral-action);
   color: #fff;
   white-space: nowrap;
   transition: background-color 0.14s;
 }
 
 .landing-action:hover {
-  background: var(--color-coral-hover);
+  background: var(--color-coral-action-hover);
   color: #fff;
+}
+
+.landing-action:not(.landing-action--ghost):active {
+  background: var(--color-coral-action-active);
 }
 
 .landing-action--sm {
@@ -290,7 +294,7 @@
 .landing-page a:focus-visible,
 .landing-page button:focus-visible {
   outline: 2px solid var(--color-marine);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
 .landing-panel--marine a:focus-visible,
