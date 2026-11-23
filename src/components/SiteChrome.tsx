@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/ui";
-import { CONTACT, CTA } from "@/lib/site";
+import { ANCRE_DEMARRER, CTA_COURT } from "@/lib/site";
 import "@/app/landing.css";
 
 /*
@@ -35,9 +35,9 @@ export function SiteHeader() {
           <a href="/dashboard" className="landing-nav-link landing-nav-link--toujours">
             Se connecter
           </a>
-          <a href={CONTACT} className="landing-action landing-action--sm">
-            {CTA}
-          </a>
+          <Link href={ANCRE_DEMARRER} className="landing-action landing-action--sm">
+            {CTA_COURT}
+          </Link>
         </nav>
       </div>
     </header>

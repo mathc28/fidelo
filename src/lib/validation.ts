@@ -12,6 +12,10 @@ export const LIMITES = {
   libelleCaisse: 50,
   /** Montant maximum d'un ticket crédité en caisse (programmes à points). */
   montantMaxEuros: 10_000,
+  // Formulaire de contact de la landing.
+  nomCommerce: 100,
+  telephone: 30,
+  ville: 80,
 } as const;
 
 export type Resultat<T> = { ok: true; valeur: T } | { ok: false; erreur: string };
@@ -66,6 +70,65 @@ export function validerMontant(brut: unknown): Resultat<number> {
     );
   }
   return ok(montant);
+}
+
+/**
+ * Texte sur une seule ligne : caractères de contrôle (retours à la ligne
+ * compris) remplacés par une espace, espaces multiples réduits. Les champs
+ * du contact finissent dans le sujet d'un email.
+ */
+function uneLigne(brut: unknown): string {
+  if (typeof brut !== "string") return "";
+  return brut
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export type Prospect = {
+  commerce: string;
+  prenom: string;
+  email: string;
+  telephone: string | null;
+  ville: string | null;
+};
+
+/**
+ * Demande de mise en route envoyée depuis la landing : nom du commerce,
+ * prénom et email requis ; téléphone et ville facultatifs.
+ */
+export function validerProspect(corps: Record<string, unknown>): Resultat<Prospect> {
+  const commerce = uneLigne(corps.commerce);
+  if (!commerce) return ko("Indiquez le nom de votre commerce.");
+  if (commerce.length > LIMITES.nomCommerce) {
+    return ko(`Nom du commerce trop long : ${LIMITES.nomCommerce} caractères maximum.`);
+  }
+
+  const prenom = validerPrenom(uneLigne(corps.prenom));
+  if (!prenom.ok) return prenom;
+  const email = validerEmail(uneLigne(corps.email));
+  if (!email.ok) return email;
+
+  const telephone = uneLigne(corps.telephone);
+  if (telephone && !/^\+?[\d\s().-]{6,}$/.test(telephone)) {
+    return ko("Ce numéro de téléphone semble incomplet.");
+  }
+  if (telephone.length > LIMITES.telephone) {
+    return ko(`Numéro trop long : ${LIMITES.telephone} caractères maximum.`);
+  }
+
+  const ville = uneLigne(corps.ville);
+  if (ville.length > LIMITES.ville) {
+    return ko(`Nom de ville trop long : ${LIMITES.ville} caractères maximum.`);
+  }
+
+  return ok({
+    commerce,
+    prenom: prenom.valeur,
+    email: email.valeur,
+    telephone: telephone || null,
+    ville: ville || null,
+  });
 }
 
 /** Libellé de caisse : 50 caractères au plus, « Caisse » s'il est vide. */

@@ -6,10 +6,11 @@ import { IOSDevice } from "@/components/IOSFrame";
 import { Reveal } from "@/components/Reveal";
 import WalletPreview, { type Theme } from "@/components/WalletPreview";
 import { MAX_PROMOS } from "@/lib/promo";
-import { CONTACT, CTA } from "@/lib/site";
+import { CTA } from "@/lib/site";
 import { SiteHeader, SiteFooter } from "@/components/SiteChrome";
 import { Personnalisation } from "./Personnalisation";
 import { Promos } from "./Promos";
+import { ContactForm } from "./ContactForm";
 import "./landing.css";
 
 const HERO_THEME: Theme = { bg_color: "#1A2E60", text_color: "#F3EFE3", label_color: "#F56C5A" };
@@ -163,7 +164,7 @@ export default function LandingPage() {
               lui rappelle.
             </p>
             <div className="landing-hero-actions">
-              <a href={CONTACT} className="landing-action">
+              <a href="#demarrer" className="landing-action">
                 {CTA}
               </a>
               <a href="#gestes" className="landing-action landing-action--ghost">
@@ -398,7 +399,7 @@ export default function LandingPage() {
                 Tarif de lancement communiqué à l&apos;inscription
               </span>
             </div>
-            <a href={CONTACT} className="landing-action landing-ticket-action">
+            <a href="#demarrer" className="landing-action landing-ticket-action">
               {CTA}
             </a>
           </div>
@@ -447,8 +448,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ===== Clôture : l'invitation du lancement ===== */}
-      <section id="essai" className="landing-panel landing-panel--marine">
+      {/* ===== Clôture : l'invitation du lancement, et le formulaire ===== */}
+      <section id="demarrer" className="landing-panel landing-panel--marine">
         <div className="landing-wrap landing-cloture">
           <h2 className="landing-display landing-h2 landing-cloture-titre">
             Vos clients ont déjà tout dans leur poche.
@@ -456,11 +457,9 @@ export default function LandingPage() {
           {/* TODO : confirmer le nombre de places et la ville du programme pilote. */}
           <p className="landing-lede landing-cloture-lede">
             Pour le lancement, nous cherchons dix commerces lyonnais. La mise en route est offerte :
-            écrivez-nous, on installe la carte avec vous.
+            laissez-nous vos coordonnées, on installe la carte avec vous.
           </p>
-          <a href={CONTACT} className="landing-action">
-            {CTA}
-          </a>
+          <ContactForm />
         </div>
       </section>
 

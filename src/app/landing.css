@@ -1276,6 +1276,90 @@
   margin: 22px auto 34px;
 }
 
+/* Le titre de la section reste visible sous l'en-tête collant (68 px). */
+#demarrer {
+  scroll-margin-top: 68px;
+}
+
+/* ---------- Formulaire de mise en route ---------- */
+
+/* Une carte papier posée sur la bande marine, comme le ticket du tarif. */
+.landing-contact {
+  position: relative;
+  width: 100%;
+  max-width: 560px;
+  padding: clamp(20px, 4vw, 32px);
+  border-radius: var(--rayon-moyen);
+  background: var(--color-paper);
+  color: var(--color-marine);
+  text-align: left;
+}
+
+.landing-contact-paire {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 14px;
+}
+
+.landing-contact-paire > * {
+  min-width: 0;
+}
+
+@media (max-width: 520px) {
+  .landing-contact-paire {
+    grid-template-columns: 1fr;
+  }
+}
+
+.landing-contact-envoyer {
+  width: 100%;
+  margin-top: 6px;
+  white-space: normal;
+}
+
+.landing-contact-envoyer:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.landing-contact-alerte {
+  margin: 4px 0 14px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--color-error-text);
+}
+
+.landing-contact-alerte a {
+  color: inherit;
+  font-weight: 600;
+}
+
+.landing-contact-mention {
+  margin: 14px 0 0;
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+
+.landing-contact-mention a {
+  color: var(--color-marine);
+}
+
+.landing-contact-merci {
+  margin: 0;
+  font-family: var(--font-display), system-ui, sans-serif;
+  font-size: 1.3rem;
+  font-weight: 800;
+  text-align: center;
+  outline: none;
+}
+
+/* Carte claire sur la bande marine : anneau de focus marine, comme le ticket. */
+.landing-panel--marine .landing-contact a:focus-visible,
+.landing-panel--marine .landing-contact button:focus-visible {
+  outline-color: var(--color-marine);
+}
+
 /* ---------- Pied ---------- */
 
 .landing-pied {

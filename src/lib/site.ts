@@ -1,9 +1,16 @@
 /** Adresse de contact unique du site : boutons, pages légales, dashboard. */
 export const EMAIL_CONTACT = "hellofiduo@gmail.com";
 
-/** Tant qu'il n'y a pas d'inscription en libre-service, l'action est honnête : on écrit. */
-export const CONTACT = `mailto:${EMAIL_CONTACT}?subject=D%C3%A9marrer%20avec%20Fiduo`;
-export const CTA = "Démarrer";
+/**
+ * Les boutons d'action mènent au formulaire de mise en route (section
+ * #demarrer de la landing). Le lien email ne sert plus que de secours,
+ * quand l'envoi du formulaire échoue.
+ */
+export const ANCRE_DEMARRER = "/#demarrer";
+export const CTA = "Réserver ma mise en route";
+/** Libellé de l'en-tête, où la place manque. */
+export const CTA_COURT = "Démarrer";
+export const CONTACT_SECOURS = `mailto:${EMAIL_CONTACT}?subject=D%C3%A9marrer%20avec%20Fiduo`;
 
 /**
  * Version des CGV enregistrée avec l'acceptation du commerçant
@@ -30,3 +37,6 @@ export const REGION_SUPABASE = "Union européenne (Irlande)";
 
 /** Date de dernière mise à jour des pages légales et d'entrée en vigueur des CGV. */
 export const DATE_PAGES_LEGALES = "20 octobre 2026";
+
+/** Dernière mise à jour de la politique de confidentialité (formulaire de mise en route). */
+export const DATE_CONFIDENTIALITE = "23 novembre 2026";

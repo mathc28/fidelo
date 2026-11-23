@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { LegalShell } from "@/components/LegalShell";
-import { DATE_PAGES_LEGALES, EDITEUR, EMAIL_CONTACT, REGION_SUPABASE } from "@/lib/site";
+import { DATE_CONFIDENTIALITE, EDITEUR, EMAIL_CONTACT, REGION_SUPABASE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Politique de confidentialité",
@@ -27,6 +27,10 @@ const FINALITES = [
     "Envoyer les e-mails liés au compte commerçant (invitation, réinitialisation du mot de passe)",
     "Exécution du contrat",
   ],
+  [
+    "Répondre à une demande de mise en route envoyée depuis le site",
+    "Mesures précontractuelles prises à votre demande",
+  ],
   ["Sécuriser le service (inscriptions automatisées, tentatives d'intrusion)", "Intérêt légitime"],
   ["Conserver les factures", "Obligation légale"],
 ] as const;
@@ -35,7 +39,7 @@ export default function ConfidentialitePage() {
   return (
     <LegalShell
       titre="Politique de confidentialité"
-      sousTitre={<>Dernière mise à jour : {DATE_PAGES_LEGALES}</>}
+      sousTitre={<>Dernière mise à jour : {DATE_CONFIDENTIALITE}</>}
     >
       <p className="legal-chapeau">
         Fiduo permet aux commerces de proximité de proposer une carte de fidélité dans Apple Wallet
@@ -94,6 +98,16 @@ export default function ConfidentialitePage() {
           <li>téléphones de caisse appairés ;</li>
           <li>date d&apos;acceptation des conditions générales de vente.</li>
         </ul>
+
+        <h3>Demandes de mise en route</h3>
+        <ul>
+          <li>nom du commerce, prénom et adresse e-mail ;</li>
+          <li>si vous les indiquez : numéro de téléphone et ville.</li>
+        </ul>
+        <p>
+          Ces informations servent uniquement à vous recontacter. Elles ne sont pas enregistrées
+          dans notre base de données : elles nous parviennent par e-mail.
+        </p>
 
         <h3>Tous les utilisateurs</h3>
         <ul>
@@ -156,7 +170,10 @@ export default function ConfidentialitePage() {
               </tr>
               <tr>
                 <td>Resend Inc.</td>
-                <td>Envoi des e-mails aux commerçants (invitation, réinitialisation)</td>
+                <td>
+                  Envoi des e-mails aux commerçants (invitation, réinitialisation) et des demandes
+                  de mise en route envoyées depuis le site
+                </td>
                 <td>États-Unis</td>
               </tr>
               <tr>
@@ -167,6 +184,11 @@ export default function ConfidentialitePage() {
               <tr>
                 <td>Google LLC</td>
                 <td>Mise à jour et notifications des cartes Google Wallet</td>
+                <td>États-Unis</td>
+              </tr>
+              <tr>
+                <td>Google LLC (Gmail)</td>
+                <td>Réception des demandes de mise en route dans notre messagerie</td>
                 <td>États-Unis</td>
               </tr>
               <tr>
@@ -204,6 +226,10 @@ export default function ConfidentialitePage() {
           <li>
             <strong>Comptes commerçants :</strong> conservés pendant toute la durée de
             l&apos;abonnement, puis supprimés dans les 3 mois suivant la résiliation.
+          </li>
+          <li>
+            <strong>Demandes de mise en route :</strong> supprimées au plus tard 3 ans après notre
+            dernier échange si vous ne devenez pas client.
           </li>
           <li>
             <strong>Factures :</strong> 10 ans (obligation légale).
