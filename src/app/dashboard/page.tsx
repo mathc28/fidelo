@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseBrowser";
 import type * as Row from "@/lib/types";
@@ -13,6 +13,7 @@ import {
   subscriptionStatus,
 } from "@/components/ui";
 import WalletPreview from "@/components/WalletPreview";
+import { urlLogoEntier } from "@/lib/logoCommerce";
 import { EMAIL_CONTACT } from "@/lib/site";
 import { cgvRequise } from "@/lib/cgvClient";
 import { formaterCode } from "@/lib/codeAppairage";
@@ -87,6 +88,20 @@ const STATUT_CLASSE = {
   warning: "cpt-statut--essai",
   error: "cpt-statut--retard",
 } as Record<string, string>;
+
+/** Une URL qui ne se coupe qu'après une barre oblique : un <wbr> après chaque « / ». */
+function adresseCoupable(url: string) {
+  return url.split("/").map((segment, i, tous) => (
+    <Fragment key={i}>
+      {segment}
+      {i < tous.length - 1 && (
+        <>
+          /<wbr />
+        </>
+      )}
+    </Fragment>
+  ));
+}
 
 function Statut({ status }: { status: string }) {
   const { variant, label } = subscriptionStatus(status);
@@ -1130,7 +1145,9 @@ export default function DashboardPage() {
                 </div>
                 <div className="cpt-feuille-infos">
                   <span className="cpt-etiquette">Adresse encodée</span>
-                  <div className="cpt-adresse-qr">{inscriptionUrl ?? "…"}</div>
+                  <div className="cpt-adresse-qr">
+                    {inscriptionUrl ? adresseCoupable(inscriptionUrl) : "…"}
+                  </div>
                   <Button onClick={downloadQr} disabled={!qrDataUrl}>
                     Télécharger le QR
                   </Button>
@@ -1155,7 +1172,7 @@ export default function DashboardPage() {
             </p>
 
             <div className="cpt-carte-atelier">
-              <div>
+              <div className="cpt-carte-apercu">
                 <div className="cpt-bascules">
                   <Button
                     size="sm"
@@ -1204,10 +1221,15 @@ export default function DashboardPage() {
                     Logo
                   </span>
                   <div className="cpt-logo-rang">
-                    <div className="cpt-logo-vignette">
+                    {/* Sur la couleur de la carte choisie : un logo clair reste
+                        visible, et on le voit comme sur la carte. */}
+                    <div
+                      className="cpt-logo-vignette"
+                      style={{ background: activeTheme.bg_color, color: activeTheme.text_color }}
+                    >
                       {logoAffiche ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={logoAffiche} alt="" />
+                        <img src={urlLogoEntier(logoAffiche)!} alt="" />
                       ) : (
                         (name || merchant.name).charAt(0).toUpperCase()
                       )}

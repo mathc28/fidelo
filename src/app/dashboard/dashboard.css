@@ -582,7 +582,7 @@
 
 .cpt-carte-atelier {
   display: grid;
-  grid-template-columns: auto minmax(220px, 1fr);
+  grid-template-columns: minmax(0, 340px) minmax(220px, 1fr);
   gap: clamp(20px, 3vw, 34px);
   align-items: start;
 }
@@ -591,6 +591,15 @@
   .cpt-carte-atelier {
     grid-template-columns: minmax(0, 1fr);
   }
+}
+
+/* Colonne de l'aperçu : la carte y prend toute la largeur (340 px au plus),
+   centrée ; sur téléphone, ses bords s'alignent sur ceux des champs. */
+.cpt-carte-apercu {
+  width: 100%;
+  max-width: 340px;
+  margin-inline: auto;
+  min-width: 0;
 }
 
 .cpt-bascules {
@@ -613,20 +622,20 @@
   border-radius: var(--radius-xs);
   border: 1px solid var(--color-rule-soft);
   overflow: hidden;
-  background: #fff;
+  /* Fond et initiale aux couleurs de la carte choisie (style en ligne). */
   display: flex;
   align-items: center;
   justify-content: center;
   font-family: var(--font-display), system-ui, sans-serif;
   font-weight: 600;
   font-size: var(--text-lg);
-  color: var(--color-marine);
 }
 
 .cpt-logo-vignette img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  padding: 4px;
+  object-fit: contain;
 }
 
 /* Nuancier : un carré d'encre, pas une pastille. 44px : une cible au doigt. */
@@ -679,11 +688,12 @@
 
 /* ---------- La feuille du QR : la seule chose qu'on imprime ---------- */
 
+/* Le QR centré, l'adresse et le bouton dessous. */
 .cpt-feuille-rang {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 22px;
-  align-items: flex-start;
-  flex-wrap: wrap;
 }
 
 .cpt-feuille {
@@ -722,8 +732,8 @@
 }
 
 .cpt-feuille-infos {
-  flex: 1;
-  min-width: 190px;
+  align-self: stretch;
+  min-width: 0;
 }
 
 .cpt-feuille-infos .cpt-etiquette {
@@ -735,7 +745,8 @@
   font-size: var(--mono-m);
   line-height: 1.6;
   color: var(--color-text-secondary);
-  word-break: break-all;
+  /* Coupe de préférence après une « / » (<wbr>), n'importe où en dernier recours. */
+  overflow-wrap: anywhere;
   margin-bottom: 14px;
 }
 

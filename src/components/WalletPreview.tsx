@@ -378,7 +378,8 @@ function PhoneFrame({
   return (
     <div
       style={{
-        width: 340,
+        width: "100%",
+        maxWidth: 340,
         borderRadius: 44,
         padding: 12,
         background: "linear-gradient(160deg,#3a3a3c,#1c1c1e)",
