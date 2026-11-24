@@ -75,10 +75,26 @@ const THEMES: ({ id: string; label: string } & Theme)[] = [
   },
 ];
 
+/**
+ * Logo fictif de « Boulangerie Martin », horizontal comme beaucoup de vrais
+ * logos (320 × 100, le format de la zone logo du pass). SVG inline en data:
+ * URI, aux couleurs du thème choisi : lisible sur les dix fonds.
+ */
+function logoDemo(theme: Theme): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 100">
+<g fill="none" stroke="${theme.label_color}" stroke-width="6" stroke-linecap="round">
+<path d="M14 66c10-30 52-30 62 0"/><path d="M28 52c4-8 10-12 17-12M62 52c-4-8-10-12-17-12M45 40v-6"/>
+<path d="M10 72h70"/></g>
+<text x="96" y="47" fill="${theme.text_color}" font-family="Georgia, 'Times New Roman', serif" font-size="30" font-weight="700">Boulangerie</text>
+<text x="96" y="80" fill="${theme.text_color}" font-family="Georgia, 'Times New Roman', serif" font-size="27" font-style="italic">Martin</text>
+</svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
 const POINTS = [
   {
     titre: "Votre logo",
-    desc: "En haut de la carte, à côté du nom de votre commerce. C'est lui que votre client reconnaît en ouvrant son Wallet.",
+    desc: "En haut de la carte, à la place du nom : c'est lui que votre client reconnaît en ouvrant son Wallet.",
   },
   {
     titre: "Votre couleur",
@@ -127,6 +143,7 @@ export function Personnalisation() {
               <WalletPreview
                 theme={theme}
                 merchantName="Boulangerie Martin"
+                logoUrl={logoDemo(theme)}
                 programType="visits"
                 points={8}
                 reward={{ label: "Un café offert", cost_points: 10 }}

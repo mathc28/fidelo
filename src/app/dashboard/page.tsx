@@ -821,7 +821,10 @@ export default function DashboardPage() {
   const cardDirty =
     name !== merchant.name || themeId !== merchant.theme_id || address !== (merchant.address ?? "");
   const logoAffiche = logoPreviewUrl ?? merchant.logo_url;
-  const previewPoints = isVisits ? Math.min(7, reward?.cost_points ?? 7) : 182;
+  // Valeur d'exemple de l'aperçu : toujours en cours, sous le seuil (70 %),
+  // dans les deux modes. Sans récompense : un seuil de 10 passages ou 100 points.
+  const seuilApercu = reward?.cost_points ?? (isVisits ? 10 : 100);
+  const previewPoints = Math.max(0, Math.min(Math.round(seuilApercu * 0.7), seuilApercu - 1));
   const mm = Math.floor(codeLeft / 60),
     ss = String(codeLeft % 60).padStart(2, "0");
   const aujourdhui = new Date().toLocaleDateString("fr-FR", {
