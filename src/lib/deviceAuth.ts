@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt } from "crypto";
 import { NextRequest } from "next/server";
 import { db, Merchant } from "./supabaseAdmin";
 import { LONGUEUR_CODE, genererCode, normaliserCode } from "./codeAppairage";
+import { isRateLimited } from "./rateLimit";
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
@@ -106,6 +107,30 @@ export async function requireDevice(
   db.from("devices").update({ last_seen_at: new Date().toISOString() }).eq("id", device.id).then();
 
   return { merchant, deviceId: device.id };
+}
+
+/** Réponse 429 des crédits et récompenses, lue telle quelle par le commerçant sur /scan. */
+export const MESSAGE_OPERATIONS_LIMITEES =
+  "Trop d'opérations sur cette caisse en peu de temps. Patientez quelques minutes avant de réessayer.";
+
+/**
+ * Limite des opérations en caisse (crédit et récompense, comptés ensemble) :
+ * 120 par appareil et par 10 minutes. Une opération toutes les 5 secondes en
+ * continu, au-delà de n'importe quel comptoir, mais une caisse volée ou un
+ * script ne peut pas créditer des milliers de passages.
+ *
+ * siErreur « laisser » : si la limite est indisponible (base injoignable),
+ * on n'empêche jamais une caisse d'encaisser.
+ */
+export function operationsCaisseLimitees(auth: {
+  merchant: Merchant;
+  deviceId: string;
+}): Promise<boolean> {
+  return isRateLimited(`scan-operation:${auth.merchant.id}`, auth.deviceId, {
+    max: 120,
+    windowSeconds: 600,
+    siErreur: "laisser",
+  });
 }
 
 /**

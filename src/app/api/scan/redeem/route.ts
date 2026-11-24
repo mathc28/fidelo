@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { messageCarteIntrouvable, requireDevice } from "@/lib/deviceAuth";
+import {
+  MESSAGE_OPERATIONS_LIMITEES,
+  messageCarteIntrouvable,
+  operationsCaisseLimitees,
+  requireDevice,
+} from "@/lib/deviceAuth";
 import { db, merchantActive } from "@/lib/supabaseAdmin";
 import { applyTransaction, getMerchantReward } from "@/lib/loyalty";
 
@@ -14,6 +19,9 @@ import { applyTransaction, getMerchantReward } from "@/lib/loyalty";
 export async function POST(req: NextRequest) {
   const auth = await requireDevice(req);
   if (!auth) return new NextResponse("Appareil non appairé", { status: 401 });
+  if (await operationsCaisseLimitees(auth)) {
+    return new NextResponse(MESSAGE_OPERATIONS_LIMITEES, { status: 429 });
+  }
   if (!merchantActive(auth.merchant)) {
     return new NextResponse("Abonnement inactif", { status: 402 });
   }
