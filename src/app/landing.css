@@ -1067,12 +1067,11 @@
     color 0.35s ease;
 }
 
-/* La carte Wallet fait 300 px de large en dur : sur les plus petits
-   téléphones, on la réduit plutôt que de la rogner. */
-@media (max-width: 360px) {
-  .landing-perso-carte {
-    zoom: 0.9;
-  }
+/* L'aperçu est fluide (340 px au plus) : son cadre lui donne toute la
+   largeur disponible, centré dans la colonne. */
+.landing-perso-carte {
+  width: 100%;
+  max-width: 340px;
 }
 
 .landing-perso-themes {

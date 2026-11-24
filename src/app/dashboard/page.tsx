@@ -13,7 +13,6 @@ import {
   subscriptionStatus,
 } from "@/components/ui";
 import WalletPreview from "@/components/WalletPreview";
-import { separerRecompense, texteRecompense } from "@/lib/wallet/rewardText";
 import { EMAIL_CONTACT } from "@/lib/site";
 import { cgvRequise } from "@/lib/cgvClient";
 import { formaterCode } from "@/lib/codeAppairage";
@@ -823,15 +822,6 @@ export default function DashboardPage() {
     name !== merchant.name || themeId !== merchant.theme_id || address !== (merchant.address ?? "");
   const logoAffiche = logoPreviewUrl ?? merchant.logo_url;
   const previewPoints = isVisits ? Math.min(7, reward?.cost_points ?? 7) : 182;
-  const previewThreshold = reward?.cost_points ?? (isVisits ? 10 : null);
-  // Le texte vient du module partagé avec le générateur de pass : l'aperçu
-  // affiche mot pour mot ce que le client lira sur sa carte.
-  const previewSplit = separerRecompense(reward, previewPoints);
-  const previewReward = texteRecompense(
-    previewSplit.reachedReward,
-    previewSplit.nextReward,
-    previewPoints
-  );
   const mm = Math.floor(codeLeft / 60),
     ss = String(codeLeft % 60).padStart(2, "0");
   const aujourdhui = new Date().toLocaleDateString("fr-FR", {
@@ -1194,8 +1184,7 @@ export default function DashboardPage() {
                   logoUrl={logoAffiche}
                   programType={merchant.program_type}
                   points={previewPoints}
-                  threshold={previewThreshold}
-                  rewardLabel={previewReward}
+                  reward={reward}
                   firstName="Léa"
                 />
               </div>

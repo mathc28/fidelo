@@ -129,8 +129,7 @@ export function Personnalisation() {
                 merchantName="Boulangerie Martin"
                 programType="visits"
                 points={8}
-                threshold={10}
-                rewardLabel="Plus que 2 avant le café offert"
+                reward={{ label: "Un café offert", cost_points: 10 }}
                 firstName="Léa"
                 platform="apple"
               />

@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { texteCompteur } from "@/lib/wallet/rewardText";
+import type { RecompenseAffichable } from "@/lib/wallet/rewardText";
+import { champsCarte } from "@/lib/wallet/champsCarte";
 import { urlLogoEntier } from "@/lib/logoCommerce";
 
 /**
  * Aperçu réaliste d'une carte de fidélité dans Apple Wallet / Google Wallet.
  *
- * Fidélité au rendu réel :
- * - proportions et rayons des vrais passes (375 pt de large, coins 14 px)
- * - police système Apple (SF Pro via -apple-system) / Roboto côté Google
- * - hiérarchie exacte des champs : label 11 px majuscules espacées,
- *   valeur primaire ~38 px, secondaires ~15 px
- * - vrai QR code scannable (lib `qrcode`), pas un motif décoratif
- * - zone code-barres blanche avec marge de silence + altText en mono
- * - ombre portée et léger dégradé de surface comme dans Wallet
+ * Côté Apple, la face avant vient de champsCarte, la même source que le
+ * générateur de pass (applePass.ts) : mêmes champs, mêmes libellés, mêmes
+ * textes. La mise en page est calquée sur le rendu iOS d'une storeCard sans
+ * image de bande : logo et en-tête, zone principale vide, une rangée
+ * secondaire, le QR en bas.
  */
 
 export type Theme = {
@@ -30,13 +28,16 @@ export type WalletPreviewProps = {
   logoUrl?: string | null;
   programType: "visits" | "points";
   points: number;
-  threshold?: number | null;
-  rewardLabel?: string | null;
+  /** La récompense du commerce, comme en base : le texte en est déduit comme sur la vraie carte. */
+  reward?: RecompenseAffichable | null;
   firstName?: string;
   serial?: string;
   /** Affiche la carte dans un cadre d'iPhone (écran verrouillé) */
   framed?: boolean;
 };
+
+/** Serial d'exemple : altText « F1D0A2B3 » sous le QR. */
+const SERIAL_DEMO = "f1d0a2b3-0000-4000-8000-000000000000";
 
 /* ---------- QR code réel ---------- */
 function useQrDataUrl(value: string, dark: string) {
@@ -65,6 +66,16 @@ function useQrDataUrl(value: string, dark: string) {
 const APPLE_FONT = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif';
 const GOOGLE_FONT = 'Roboto, "Google Sans", system-ui, sans-serif';
 
+/**
+ * Une longueur en points iOS, à l'échelle de la carte : une carte Wallet
+ * fait 343 pt de large sur iPhone, et l'aperçu occupe toute la largeur de
+ * son conteneur (unités cqw). Tout grandit et rétrécit ensemble.
+ */
+const pt = (n: number) => `calc(${n} * 100cqw / 343)`;
+
+/** Un nombre s'affiche comme iOS le formate (espace des milliers) ; un texte, tel quel. */
+const afficher = (v: string | number) => (typeof v === "number" ? v.toLocaleString("fr-FR") : v);
+
 function withAlpha(hex: string, alpha: number) {
   const h = hex.replace("#", "");
   const n = parseInt(
@@ -83,41 +94,45 @@ function initials(name: string) {
   return name.trim().charAt(0).toUpperCase() || "•";
 }
 
+/** Largeur et proportions communes aux deux aperçus. */
+const CADRE_CARTE: React.CSSProperties = {
+  width: "100%",
+  maxWidth: 340,
+  containerType: "inline-size",
+};
+
 /* ---------- Carte Apple Wallet ---------- */
 function ApplePass(p: WalletPreviewProps) {
-  const {
-    theme,
-    merchantName,
-    logoUrl,
+  const { theme, logoUrl, programType, points, reward, firstName, serial } = p;
+  const face = champsCarte({
     programType,
     points,
-    threshold,
-    rewardLabel,
-    firstName,
-    serial,
-  } = p;
-  const isVisits = programType === "visits";
-  const qr = useQrDataUrl(serial || "FIDUO-DEMO", "#111111");
+    reward: reward ?? null,
+    firstName: firstName || "—",
+    serial: serial || SERIAL_DEMO,
+  });
+  const qr = useQrDataUrl(serial || SERIAL_DEMO, "#000000");
 
-  const label: React.CSSProperties = {
-    fontSize: 10,
-    fontWeight: 600,
-    letterSpacing: 0.8,
+  const libelle: React.CSSProperties = {
+    margin: 0,
+    fontSize: pt(11),
+    fontWeight: 500,
+    letterSpacing: "0.02em",
+    lineHeight: 1.25,
     textTransform: "uppercase",
     color: theme.label_color,
-    margin: 0,
-    lineHeight: 1.2,
   };
-  const value: React.CSSProperties = {
+  const valeur: React.CSSProperties = {
+    margin: `${pt(2)} 0 0`,
+    lineHeight: 1.2,
     color: theme.text_color,
-    margin: "2px 0 0",
-    lineHeight: 1.15,
   };
 
   return (
     <div
       style={{
-        width: 300,
+        ...CADRE_CARTE,
+        aspectRatio: "1 / 1.6",
         borderRadius: 14,
         background: theme.bg_color,
         // léger dégradé de surface, comme le rendu Wallet
@@ -128,90 +143,103 @@ function ApplePass(p: WalletPreviewProps) {
         WebkitFontSmoothing: "antialiased",
       }}
     >
-      {/* En-tête : logo + nom + champ header à droite */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 0" }}>
-        {/* Sans logo uploadé, le pass n'en embarque aucun : pas d'initiales de
-            repli ici non plus. Et aucun champ d'en-tête à droite — le pass a
-            `headerFields: []`, tout l'espace revient au nom. */}
-        {logoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            // Comme le vrai pass : le logo entier (logo.png), pas la vignette recadrée.
-            src={urlLogoEntier(logoUrl)!}
-            alt=""
-            style={{ height: 22, maxWidth: 70, objectFit: "contain" }}
-          />
-        ) : null}
-        <span style={{ color: theme.text_color, fontSize: 13, fontWeight: 500, flex: 1 }}>
-          {merchantName}
-        </span>
-      </div>
-
-      {/* Compteur — rangée secondaire du pass, seul sur sa ligne.
-          La valeur d'un champ PassKit est du texte brut : pas de tailles
-          mixtes, donc pas de « / 10 » plus petit ni grisé. Une seule chaîne,
-          un seul corps, exactement ce qu'iOS affichera. */}
-      <div style={{ padding: "16px 14px 0" }}>
-        <p style={label}>{isVisits ? "Passages" : "Points"}</p>
-        <p style={{ ...value, fontSize: 18, fontWeight: 600, letterSpacing: -0.2 }}>
-          {threshold ? texteCompteur(points, threshold, isVisits) : points}
-        </p>
-      </div>
-
-      {/* Champs secondaires */}
-      <div style={{ display: "flex", gap: 12, padding: "16px 14px 0" }}>
-        <div style={{ flex: 1 }}>
-          <p style={label}>Membre</p>
-          <p style={{ ...value, fontSize: 14 }}>{firstName || "—"}</p>
-        </div>
-        {rewardLabel ? (
-          <div style={{ flex: 1.4 }}>
-            <p style={label}>Récompense</p>
-            <p style={{ ...value, fontSize: 12.5 }}>{rewardLabel}</p>
+      <div
+        style={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          padding: `${pt(12)} ${pt(14)} ${pt(14)}`,
+        }}
+      >
+        {/* En-tête : le logo à gauche (160 × 50 pt au plus, jamais rogné),
+            les champs d'en-tête à droite. Pas de nom du commerce en texte :
+            le pass n'a pas de logoText. Sans logo, la zone reste vide. */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: pt(12) }}>
+          <div style={{ width: pt(160), height: pt(50), flexShrink: 0 }}>
+            {logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                // Comme le vrai pass : le logo entier (logo.png), pas la vignette recadrée.
+                src={urlLogoEntier(logoUrl)!}
+                alt=""
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",
+                  objectPosition: "left center",
+                }}
+              />
+            ) : null}
           </div>
-        ) : null}
-      </div>
+          <div style={{ marginLeft: "auto", display: "flex", gap: pt(12), minWidth: 0 }}>
+            {face.headerFields.map((c) => (
+              <div key={c.key} style={{ textAlign: "right", minWidth: 0 }}>
+                <p style={libelle}>{c.label}</p>
+                <p style={{ ...valeur, fontSize: pt(17), overflowWrap: "anywhere" }}>
+                  {afficher(c.value)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
 
-      {/* Code-barres : fond blanc, marge de silence, altText mono */}
-      <div style={{ padding: "16px 14px 14px" }}>
+        {/* Zone principale : vide, comme sur le pass (primaryFields: []).
+            L'espace libre se partage comme sur iOS : deux tiers au-dessus
+            de la rangée secondaire, un tiers entre elle et le QR. */}
+        <div style={{ flex: 2 }} />
+
+        {/* Rangée secondaire : compteur à gauche, récompense à droite. */}
+        <div style={{ display: "flex", gap: pt(16), alignItems: "flex-start" }}>
+          {face.secondaryFields.map((c) => {
+            const aDroite = c.textAlignment === "PKTextAlignmentRight";
+            return (
+              <div
+                key={c.key}
+                style={{
+                  textAlign: aDroite ? "right" : "left",
+                  marginLeft: aDroite ? "auto" : undefined,
+                  flexShrink: aDroite ? 1 : 0,
+                  minWidth: 0,
+                }}
+              >
+                <p style={libelle}>{c.label}</p>
+                <p style={{ ...valeur, fontSize: pt(14) }}>{afficher(c.value)}</p>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ flex: 1, minHeight: pt(16) }} />
+
+        {/* QR : centré en bas, sur fond blanc arrondi, l'altText dessous. */}
         <div
           style={{
+            alignSelf: "center",
             background: "#fff",
-            borderRadius: 8,
-            padding: "12px 12px 8px",
+            borderRadius: pt(8),
+            padding: `${pt(10)} ${pt(10)} ${pt(6)}`,
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
           }}
         >
-          <div
-            style={{
-              width: 92,
-              height: 92,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+          <div style={{ width: pt(128), height: pt(128) }}>
             {qr ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={qr} alt="QR code" style={{ width: "100%", height: "100%" }} />
             ) : (
-              <div
-                style={{ width: "100%", height: "100%", background: "#f0f0f0", borderRadius: 4 }}
-              />
+              <div style={{ width: "100%", height: "100%", background: "#f0f0f0" }} />
             )}
           </div>
           <span
             style={{
-              marginTop: 6,
-              fontSize: 9,
-              letterSpacing: 1.5,
-              fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-              color: "#3c3c43",
+              marginTop: pt(4),
+              fontSize: pt(17),
+              lineHeight: 1.2,
+              color: "#000",
             }}
           >
-            {(serial || "FIDUO").slice(0, 8).toUpperCase()}
+            {face.barcodeAltText}
           </span>
         </div>
       </div>
@@ -221,7 +249,8 @@ function ApplePass(p: WalletPreviewProps) {
 
 /* ---------- Carte Google Wallet ---------- */
 function GooglePass(p: WalletPreviewProps) {
-  const { theme, merchantName, logoUrl, programType, points, threshold, firstName, serial } = p;
+  const { theme, merchantName, logoUrl, programType, points, reward, firstName, serial } = p;
+  const threshold = reward?.cost_points;
   const isVisits = programType === "visits";
   const qr = useQrDataUrl(serial || "FIDUO-DEMO", "#202124");
 
@@ -410,7 +439,7 @@ function PhoneFrame({
             {merchantName} est juste à côté. Votre carte est prête.
           </p>
         </div>
-        <div style={{ marginTop: 16, transform: "scale(.92)" }}>{children}</div>
+        <div style={{ marginTop: 16, width: "100%", transform: "scale(.92)" }}>{children}</div>
       </div>
     </div>
   );
