@@ -132,7 +132,8 @@ function ApplePass(p: WalletPreviewProps) {
     <div
       style={{
         ...CADRE_CARTE,
-        aspectRatio: "1 / 1.6",
+        // Mesuré sur une vraie storeCard dans Apple Wallet (1084 × 1510 px).
+        aspectRatio: "1 / 1.39",
         borderRadius: 14,
         background: theme.bg_color,
         // léger dégradé de surface, comme le rendu Wallet
@@ -184,9 +185,11 @@ function ApplePass(p: WalletPreviewProps) {
         </div>
 
         {/* Zone principale : vide, comme sur le pass (primaryFields: []).
-            L'espace libre se partage comme sur iOS : deux tiers au-dessus
-            de la rangée secondaire, un tiers entre elle et le QR. */}
-        <div style={{ flex: 2 }} />
+            Hauteur fixe, comme sur iOS : la rangée secondaire commence à
+            environ 43 % de la carte (12 + 50 + 140 = 202 pt sur 477), comme
+            sur la capture. Elle peut rétrécir si l'en-tête passe sur deux
+            lignes, pour ne jamais pousser le QR hors de la carte. */}
+        <div style={{ height: pt(140), flexShrink: 1, minHeight: pt(8) }} />
 
         {/* Rangée secondaire : compteur à gauche, récompense à droite. */}
         <div style={{ display: "flex", gap: pt(16), alignItems: "flex-start" }}>
