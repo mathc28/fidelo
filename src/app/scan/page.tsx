@@ -346,7 +346,7 @@ export default function ScanPage() {
       {/* Le commerce de la caisse, en premier : on sait d'un coup d'œil pour
           qui on scanne. Il vient du jeton d'appairage, pas de l'URL. */}
       <header className="scan-barre">
-        <span className="scan-barre-label">Caisse de</span>
+        <span className="scan-barre-label">Caisse associée à :</span>
         <h1 className="scan-enseigne">{merchantName || "votre commerce"}</h1>
       </header>
 

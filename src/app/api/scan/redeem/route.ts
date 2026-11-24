@@ -31,7 +31,9 @@ export async function POST(req: NextRequest) {
   ]);
 
   if (!customer) {
-    return new NextResponse(await messageCarteIntrouvable(serial), { status: 404 });
+    return new NextResponse(await messageCarteIntrouvable(serial, auth.merchant.name), {
+      status: 404,
+    });
   }
   if (!reward) return new NextResponse("Aucune récompense configurée", { status: 404 });
 

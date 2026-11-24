@@ -23,7 +23,9 @@ export async function POST(req: NextRequest) {
     .eq("merchant_id", auth.merchant.id)
     .single();
   if (!customer) {
-    return new NextResponse(await messageCarteIntrouvable(serial), { status: 404 });
+    return new NextResponse(await messageCarteIntrouvable(serial, auth.merchant.name), {
+      status: 404,
+    });
   }
 
   const isVisits = auth.merchant.program_type === "visits";

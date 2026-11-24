@@ -54,7 +54,9 @@ export async function POST(req: NextRequest) {
     .single();
 
   if (!customer) {
-    return new NextResponse(await messageCarteIntrouvable(serial), { status: 404 });
+    return new NextResponse(await messageCarteIntrouvable(serial, auth.merchant.name), {
+      status: 404,
+    });
   }
 
   const reward = await getMerchantReward(auth.merchant.id);

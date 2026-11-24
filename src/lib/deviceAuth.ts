@@ -112,13 +112,18 @@ export async function requireDevice(
  * Message quand un QR scanné en caisse ne correspond à aucun client du
  * commerce de la caisse. On distingue la carte d'un autre commerce Fiduo
  * (erreur fréquente : le client présente la mauvaise carte de son Wallet) d'un
- * QR qui n'est pas une carte du tout — sans jamais nommer l'autre commerce.
+ * QR qui n'est pas une carte du tout — sans jamais nommer l'autre commerce
+ * ni rien dire de son client.
  */
-export async function messageCarteIntrouvable(serial: unknown): Promise<string> {
-  if (typeof serial !== "string" || !serial) return "Carte inconnue";
+export async function messageCarteIntrouvable(
+  serial: unknown,
+  nomCommerce: string
+): Promise<string> {
+  const inconnue = `Carte inconnue. Vérifiez que le client présente bien sa carte ${nomCommerce}.`;
+  if (typeof serial !== "string" || !serial) return inconnue;
   const { count } = await db
     .from("customers")
     .select("id", { count: "exact", head: true })
     .eq("serial_number", serial);
-  return count ? "Cette carte appartient à un autre commerce" : "Carte inconnue";
+  return count ? "Cette carte appartient à un autre commerce." : inconnue;
 }
