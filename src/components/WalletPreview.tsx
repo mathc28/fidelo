@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { RecompenseAffichable } from "@/lib/wallet/rewardText";
+import { rewardSummary, type RecompenseAffichable } from "@/lib/wallet/rewardText";
 import { champsCarte } from "@/lib/wallet/champsCarte";
 import { urlLogoEntier } from "@/lib/logoCommerce";
 
@@ -248,20 +248,28 @@ function ApplePass(p: WalletPreviewProps) {
 }
 
 /* ---------- Carte Google Wallet ---------- */
+
+/**
+ * Calquée sur l'objet que construit googleWallet.ts : issuerName (le
+ * commerce) et programName (« Carte de fidélité ») en tête, le solde seul sur
+ * la première ligne, puis le prénom (accountName) et le module « Récompense »
+ * (rewardSummary, le même texte que la vraie carte).
+ */
 function GooglePass(p: WalletPreviewProps) {
   const { theme, merchantName, logoUrl, programType, points, reward, firstName, serial } = p;
-  const threshold = reward?.cost_points;
   const isVisits = programType === "visits";
-  const qr = useQrDataUrl(serial || "FIDUO-DEMO", "#202124");
+  const resume = rewardSummary(reward, isVisits);
+  const qr = useQrDataUrl(serial || SERIAL_DEMO, "#202124");
 
   // Google calcule lui-même la couleur du texte (clair sur fond sombre)
   const fg = "#FFFFFF";
   const dim = "rgba(255,255,255,.72)";
+  const libelle: React.CSSProperties = { color: dim, fontSize: 11, margin: 0 };
 
   return (
     <div
       style={{
-        width: 300,
+        ...CADRE_CARTE,
         borderRadius: 12,
         overflow: "hidden",
         fontFamily: GOOGLE_FONT,
@@ -271,6 +279,7 @@ function GooglePass(p: WalletPreviewProps) {
     >
       <div style={{ background: theme.bg_color, padding: "14px 16px 18px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* programLogo : Google le masque en cercle, logo entier avec marge. */}
           <div
             style={{
               width: 30,
@@ -290,9 +299,9 @@ function GooglePass(p: WalletPreviewProps) {
             {logoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={logoUrl}
+                src={urlLogoEntier(logoUrl)!}
                 alt=""
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                style={{ width: "100%", height: "100%", objectFit: "contain", padding: "15%" }}
               />
             ) : (
               initials(merchantName)
@@ -300,33 +309,30 @@ function GooglePass(p: WalletPreviewProps) {
           </div>
           <div style={{ minWidth: 0 }}>
             <p style={{ color: fg, fontSize: 13, fontWeight: 500, margin: 0 }}>{merchantName}</p>
-            <p style={{ color: dim, fontSize: 11, margin: 0 }}>Fidélité {merchantName}</p>
+            <p style={{ color: dim, fontSize: 11, margin: 0 }}>Carte de fidélité</p>
           </div>
         </div>
 
-        <div
-          style={{
-            marginTop: 18,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "flex-end",
-          }}
-        >
-          <div>
-            <p style={{ color: dim, fontSize: 11, margin: 0 }}>
-              {isVisits ? "Passages" : "Points"}
-            </p>
-            <p style={{ color: fg, fontSize: 28, fontWeight: 500, margin: "2px 0 0" }}>
-              {points}
-              {isVisits && threshold ? (
-                <span style={{ fontSize: 16, color: dim }}> / {threshold}</span>
-              ) : null}
-            </p>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ color: dim, fontSize: 11, margin: 0 }}>Membre</p>
+        {/* Ligne 1 : le solde seul, comme loyaltyPoints (un entier, sans seuil). */}
+        <div style={{ marginTop: 18 }}>
+          <p style={libelle}>{isVisits ? "Passages" : "Points"}</p>
+          <p style={{ color: fg, fontSize: 28, fontWeight: 500, margin: "2px 0 0" }}>
+            {points.toLocaleString("fr-FR")}
+          </p>
+        </div>
+
+        {/* Ligne 2 : prénom (accountName) à gauche, récompense à droite. */}
+        <div style={{ marginTop: 14, display: "flex", gap: 12, alignItems: "flex-start" }}>
+          <div style={{ minWidth: 0 }}>
+            <p style={libelle}>Membre</p>
             <p style={{ color: fg, fontSize: 13, margin: "2px 0 0" }}>{firstName || "—"}</p>
           </div>
+          {resume ? (
+            <div style={{ marginLeft: "auto", textAlign: "right", minWidth: 0 }}>
+              <p style={libelle}>Récompense</p>
+              <p style={{ color: fg, fontSize: 13, margin: "2px 0 0" }}>{resume}</p>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -351,7 +357,7 @@ function GooglePass(p: WalletPreviewProps) {
           )}
         </div>
         <span style={{ marginTop: 8, fontSize: 11, color: "#5f6368", letterSpacing: 1 }}>
-          {(serial || "FIDUO").slice(0, 8).toUpperCase()}
+          {(serial || SERIAL_DEMO).slice(0, 8).toUpperCase()}
         </span>
       </div>
     </div>

@@ -2,6 +2,11 @@ import { GoogleAuth } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { config } from "./config";
 import { db, Customer, Merchant, Reward, getCardTheme } from "./supabaseAdmin";
+import { rewardSummary } from "./wallet/rewardText";
+
+// Le résumé de la récompense vit dans wallet/rewardText (pur, partagé avec
+// l'aperçu Google du dashboard) ; réexporté ici pour les appelants existants.
+export { frenchOrdinal, rewardSummary } from "./wallet/rewardText";
 
 const API = "https://walletobjects.googleapis.com/walletobjects/v1";
 
@@ -130,27 +135,6 @@ export async function ensureMerchantClass(merchant: Merchant): Promise<string> {
     await db.from("merchants").update({ google_class_id: classId }).eq("id", merchant.id);
   }
   return classId;
-}
-
-/** Ordinal français au masculin (passage) : 1 → "1er", n → "ne". */
-export function frenchOrdinal(n: number): string {
-  return n === 1 ? "1er" : `${n}e`;
-}
-
-/**
- * Résumé statique du programme, affiché sur la carte : seuil + libellé de la
- * récompense du commerce. null s'il n'en a aucune.
- *
- * Le seuil s'énonce différemment selon le mode : un passage se compte
- * ("au 10e passage"), des points s'accumulent ("à 100 points").
- */
-export function rewardSummary(reward: Reward | null, isVisits: boolean): string | null {
-  if (!reward) return null;
-
-  const threshold = isVisits
-    ? `au ${frenchOrdinal(reward.cost_points)} passage`
-    : `à ${reward.cost_points} points`;
-  return `${reward.label} ${threshold}`;
 }
 
 function objectId(serial: string): string {

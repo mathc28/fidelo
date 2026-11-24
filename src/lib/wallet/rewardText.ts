@@ -66,3 +66,27 @@ export function separerRecompense<T extends RecompenseAffichable>(
   const reachedReward = reward && points >= reward.cost_points ? reward : undefined;
   return { reachedReward, nextReward: reachedReward ? undefined : (reward ?? undefined) };
 }
+
+/** Ordinal français au masculin (passage) : 1 → "1er", n → "ne". */
+export function frenchOrdinal(n: number): string {
+  return n === 1 ? "1er" : `${n}e`;
+}
+
+/**
+ * Résumé statique du programme sur la carte Google (module « Récompense ») :
+ * seuil + libellé de la récompense du commerce. null s'il n'en a aucune.
+ *
+ * Le seuil s'énonce différemment selon le mode : un passage se compte
+ * ("au 10e passage"), des points s'accumulent ("à 100 points").
+ */
+export function rewardSummary(
+  reward: RecompenseAffichable | null | undefined,
+  isVisits: boolean
+): string | null {
+  if (!reward) return null;
+
+  const threshold = isVisits
+    ? `au ${frenchOrdinal(reward.cost_points)} passage`
+    : `à ${reward.cost_points} points`;
+  return `${reward.label} ${threshold}`;
+}
