@@ -252,3 +252,20 @@
   font-weight: 600;
   margin: 8px 0 0;
 }
+
+/* ---------- Coins « squircle » (voir globals.css) ---------- */
+
+@supports (corner-shape: squircle) {
+  .m-action,
+  .m-wallet,
+  .m-propulse,
+  .m-card {
+    corner-shape: squircle;
+  }
+
+  /* La jauge (6 px de haut) garde ses coins de 2 px : avec le jeton
+     multiplié (3 px), elle deviendrait une pilule. */
+  .m-progress {
+    border-radius: 2px;
+  }
+}

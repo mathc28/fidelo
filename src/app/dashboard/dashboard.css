@@ -1189,3 +1189,24 @@
   color: var(--color-marine);
   border-bottom-color: var(--color-marine);
 }
+
+/* ---------- Coins « squircle » (voir globals.css) ---------- */
+
+@supports (corner-shape: squircle) {
+  .cpt-statut,
+  .cpt-nav-lien,
+  .cpt-panneau,
+  .cpt-registre,
+  .cpt-ajout,
+  .cpt-logo-vignette,
+  .cpt-teinte,
+  .cpt-feuille,
+  .cpt-quota,
+  .cpt-promo-en-cours,
+  .cpt-code,
+  .cpt-vide,
+  .cpt-recu,
+  .cpt-seuil-feuille {
+    corner-shape: squircle;
+  }
+}

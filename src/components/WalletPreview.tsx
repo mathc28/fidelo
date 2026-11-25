@@ -130,11 +130,14 @@ function ApplePass(p: WalletPreviewProps) {
 
   return (
     <div
+      className="squircle"
       style={{
         ...CADRE_CARTE,
         // Mesuré sur une vraie storeCard dans Apple Wallet (1084 × 1510 px).
         aspectRatio: "1 / 1.39",
-        borderRadius: 14,
+        // Squircle là où corner-shape existe (globals.css), comme les coins
+        // continus d'iOS ; ailleurs, 14 px comme avant.
+        borderRadius: "calc(14px * var(--echelle-rayon, 1))",
         background: theme.bg_color,
         // léger dégradé de surface, comme le rendu Wallet
         backgroundImage: `linear-gradient(180deg, ${withAlpha("#ffffff", 0.06)} 0%, ${withAlpha("#000000", 0.05)} 100%)`,
@@ -216,10 +219,11 @@ function ApplePass(p: WalletPreviewProps) {
 
         {/* QR : centré en bas, sur fond blanc arrondi, l'altText dessous. */}
         <div
+          className="squircle"
           style={{
             alignSelf: "center",
             background: "#fff",
-            borderRadius: pt(8),
+            borderRadius: `calc(${pt(8)} * var(--echelle-rayon, 1))`,
             padding: `${pt(10)} ${pt(10)} ${pt(6)}`,
             display: "flex",
             flexDirection: "column",
@@ -271,9 +275,10 @@ function GooglePass(p: WalletPreviewProps) {
 
   return (
     <div
+      className="squircle"
       style={{
         ...CADRE_CARTE,
-        borderRadius: 12,
+        borderRadius: "calc(12px * var(--echelle-rayon, 1))",
         overflow: "hidden",
         fontFamily: GOOGLE_FONT,
         boxShadow: "0 8px 24px rgba(0,0,0,.22), 0 1px 3px rgba(0,0,0,.14)",
@@ -355,7 +360,13 @@ function GooglePass(p: WalletPreviewProps) {
             <img src={qr} alt="QR code" style={{ width: "100%", height: "100%" }} />
           ) : (
             <div
-              style={{ width: "100%", height: "100%", background: "#f1f3f4", borderRadius: 4 }}
+              className="squircle"
+              style={{
+                width: "100%",
+                height: "100%",
+                background: "#f1f3f4",
+                borderRadius: "calc(4px * var(--echelle-rayon, 1))",
+              }}
             />
           )}
         </div>
@@ -380,18 +391,21 @@ function PhoneFrame({
   const mm = now.getMinutes().toString().padStart(2, "0");
   return (
     <div
+      className="squircle"
       style={{
         width: "100%",
         maxWidth: 340,
-        borderRadius: 44,
+        borderRadius: "calc(44px * var(--echelle-rayon, 1))",
         padding: 12,
         background: "linear-gradient(160deg,#3a3a3c,#1c1c1e)",
         boxShadow: "0 24px 60px rgba(0,0,0,.35)",
       }}
     >
       <div
+        className="squircle"
         style={{
-          borderRadius: 34,
+          // 10 px de moins que le cadre, comme avant le squircle.
+          borderRadius: "calc(44px * var(--echelle-rayon, 1) - 10px)",
           overflow: "hidden",
           position: "relative",
           background: "linear-gradient(160deg,#1b2a4a,#0d1220)",
@@ -432,10 +446,11 @@ function PhoneFrame({
         </div>
         {/* notification de proximité */}
         <div
+          className="squircle"
           style={{
             marginTop: 18,
             width: "100%",
-            borderRadius: 16,
+            borderRadius: "calc(16px * var(--echelle-rayon, 1))",
             padding: "10px 12px",
             background: "rgba(255,255,255,.16)",
             backdropFilter: "blur(12px)",

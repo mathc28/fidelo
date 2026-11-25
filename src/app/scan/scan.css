@@ -164,3 +164,14 @@
 .scan-avis {
   margin-bottom: 12px;
 }
+
+/* ---------- Coins « squircle » (voir globals.css) ---------- */
+
+@supports (corner-shape: squircle) {
+  .scan-barre,
+  .scan-camera,
+  .scan-resultat,
+  .scan-fiche {
+    corner-shape: squircle;
+  }
+}

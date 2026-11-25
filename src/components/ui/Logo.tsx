@@ -28,6 +28,7 @@ export function PoweredByBadge({ variant = "plain" }: { variant?: "plain" | "pil
   if (variant === "pill") {
     return (
       <div
+        className="squircle"
         style={{
           display: "inline-flex",
           alignItems: "center",

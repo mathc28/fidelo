@@ -134,10 +134,13 @@ export function IOSDevice({
 
   return (
     <div
+      // Coque et écran en squircle là où corner-shape existe (globals.css) ;
+      // ailleurs, --echelle-rayon est absent et les rayons restent 56 et 44.
+      className="squircle"
       style={{
         width,
         height,
-        borderRadius: 56,
+        borderRadius: "calc(56px * var(--echelle-rayon, 1))",
         position: "relative",
         boxSizing: "border-box",
         padding: bezel,
@@ -165,10 +168,12 @@ export function IOSDevice({
       />
 
       <div
+        className="squircle"
         style={{
           width: "100%",
           height: "100%",
-          borderRadius: 56 - bezel,
+          // Concentrique à la coque : son rayon moins l'épaisseur du bord.
+          borderRadius: `calc(56px * var(--echelle-rayon, 1) - ${bezel}px)`,
           overflow: "hidden",
           position: "relative",
           background: dark ? "#000" : "#F2F2F7",

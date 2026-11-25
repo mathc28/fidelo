@@ -1539,3 +1539,39 @@
     transform: none !important;
   }
 }
+
+/* ---------- Coins « squircle » (voir globals.css) ---------- */
+
+@supports (corner-shape: squircle) {
+  .landing-page {
+    --rayon-petit: calc(10px * 1.5);
+    --rayon-moyen: calc(14px * 1.5);
+  }
+
+  .landing-action,
+  .landing-carton,
+  .landing-formule,
+  .landing-formule-etiquette,
+  .landing-formule-svg,
+  .landing-perso-note,
+  .landing-contact,
+  .landing-verrou-notif,
+  .landing-verrou-icone {
+    corner-shape: squircle;
+  }
+
+  /* Rayons écrits en dur : notification et icône d'app de l'écran verrouillé. */
+  .landing-verrou-notif {
+    border-radius: calc(16px * 1.5);
+  }
+
+  .landing-verrou-icone {
+    border-radius: calc(8px * 1.5);
+  }
+
+  /* L'aperçu de pass est découpé par le squircle du <svg> : son fond n'a
+     plus besoin de ses propres coins ronds (rx), qui dépasseraient. */
+  .landing-formule-fond {
+    rx: 0;
+  }
+}

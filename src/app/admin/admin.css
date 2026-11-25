@@ -402,3 +402,13 @@
 .admin-certificat {
   margin: 0;
 }
+
+/* ---------- Coins « squircle » (voir globals.css) ---------- */
+
+@supports (corner-shape: squircle) {
+  .admin-slug-apercu strong,
+  .admin-url,
+  .admin-ligne {
+    corner-shape: squircle;
+  }
+}
