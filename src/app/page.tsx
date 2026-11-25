@@ -177,17 +177,25 @@ export default function LandingPage() {
           </div>
 
           <div className="landing-scene" aria-hidden="true">
-            {/* La carte carton : dix cases, huit déjà tamponnées à l'arrivée. */}
+            {/* Le carton de Café Cosi : 25 cases, 18 tamponnées, le compteur
+                que reprend la vraie carte du téléphone (18 / 25). */}
             <div className="landing-carton">
               <div className="landing-carton-entete">
-                <span className="landing-carton-nom">Boulangerie Martin</span>
+                <Image
+                  src="/landing/logo-cafe-cosi.png"
+                  alt=""
+                  width={480}
+                  height={123}
+                  priority
+                  className="landing-carton-logo"
+                />
                 <span className="landing-carton-mention">Carte fidélité</span>
               </div>
               <div className="landing-carton-grille">
-                {Array.from({ length: 10 }, (_, i) => {
-                  const frappe = i < 8;
+                {Array.from({ length: 25 }, (_, i) => {
+                  const frappe = i < 18;
                   // Le dernier tampon posé est un cœur, comme sur la carte du logo.
-                  const coeur = i === 7;
+                  const coeur = i === 17;
                   return (
                     <div key={i} className={`landing-case${frappe ? " landing-case--frappe" : ""}`}>
                       {frappe && (
@@ -196,7 +204,9 @@ export default function LandingPage() {
                           style={
                             {
                               "--tilt": `${((i * 37) % 17) - 8}deg`,
-                              "--retard": `${0.1 + i * 0.08}s`,
+                              // 18 tampons en ~0,8 s : le dernier tombe vers
+                              // 1 s, quand le carton s'efface.
+                              "--retard": `${(0.1 + i * 0.045).toFixed(3)}s`,
                             } as React.CSSProperties
                           }
                         />
