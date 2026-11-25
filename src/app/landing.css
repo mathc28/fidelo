@@ -392,7 +392,7 @@
   background: var(--carton-fond);
   border: 1px solid var(--carton-bordure);
   border-radius: var(--rayon-moyen);
-  padding: 20px 24px 24px;
+  padding: 22px 24px 26px;
   transform: rotate(-4deg);
   /* Plus marquée qu'un carton clair : le bleu nuit doit se détacher du crème. */
   box-shadow:
@@ -418,7 +418,7 @@
   gap: 6px 12px;
   border-bottom: 1px dashed var(--carton-filet);
   padding-bottom: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
 /* Logo blanc sur transparent : 28 px de haut, largeur proportionnelle. */
@@ -438,12 +438,11 @@
   white-space: nowrap;
 }
 
-/* 5 × 5 : un gap serré pour que les 25 cases tiennent dans la largeur du
-   carton sans qu'il grandisse trop. */
+/* 2 rangées de 5 cases : le carton reste bas, sous le téléphone. */
 .landing-carton-grille {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 6px;
+  gap: 12px;
 }
 
 .landing-case {

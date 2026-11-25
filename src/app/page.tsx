@@ -178,8 +178,9 @@ export default function LandingPage() {
           </div>
 
           <div className="landing-scene" aria-hidden="true">
-            {/* Le carton de Café Cosi : 25 cases, 18 tamponnées, le compteur
-                que reprend la vraie carte du téléphone (18 / 25). */}
+            {/* Le carton de Café Cosi : 10 cases, 7 tamponnées, la même
+                proportion que le compteur du téléphone (18 / 25). Deux
+                rangées seulement, pour garder un carton bas (~205 px). */}
             <div className="landing-carton">
               <div className="landing-carton-entete">
                 <Image
@@ -193,10 +194,10 @@ export default function LandingPage() {
                 <span className="landing-carton-mention">Carte fidélité</span>
               </div>
               <div className="landing-carton-grille">
-                {Array.from({ length: 25 }, (_, i) => {
-                  const frappe = i < 18;
+                {Array.from({ length: 10 }, (_, i) => {
+                  const frappe = i < 7;
                   // Le dernier tampon posé est un cœur, comme sur la carte du logo.
-                  const coeur = i === 17;
+                  const coeur = i === 6;
                   return (
                     <div key={i} className={`landing-case${frappe ? " landing-case--frappe" : ""}`}>
                       {frappe && (
@@ -205,9 +206,9 @@ export default function LandingPage() {
                           style={
                             {
                               "--tilt": `${((i * 37) % 17) - 8}deg`,
-                              // 18 tampons en ~0,8 s : le dernier tombe vers
-                              // 1 s, quand le carton s'efface.
-                              "--retard": `${(0.1 + i * 0.045).toFixed(3)}s`,
+                              // 7 tampons, un toutes les 0,12 s : le dernier
+                              // tombe vers 1 s, quand le carton s'efface.
+                              "--retard": `${(0.1 + i * 0.12).toFixed(2)}s`,
                             } as React.CSSProperties
                           }
                         />
