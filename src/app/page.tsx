@@ -7,6 +7,7 @@ import { IOSDevice } from "@/components/IOSFrame";
 import { Reveal } from "@/components/Reveal";
 import { MAX_PROMOS } from "@/lib/promo";
 import { CTA } from "@/lib/site";
+import { texteProximite } from "@/lib/wallet/proximite";
 import { SiteHeader, SiteFooter } from "@/components/SiteChrome";
 import { Personnalisation } from "./Personnalisation";
 import { Promos } from "./Promos";
@@ -282,9 +283,7 @@ export default function LandingPage() {
                         <span className="landing-verrou-app">Wallet</span>
                         <span className="landing-verrou-quand">maintenant</span>
                       </div>
-                      <div className="landing-verrou-texte">
-                        Boulangerie Martin est juste à côté. Votre carte est prête.
-                      </div>
+                      <div className="landing-verrou-texte">{texteProximite("Café Cosi")}</div>
                     </div>
                   </div>
                 </div>

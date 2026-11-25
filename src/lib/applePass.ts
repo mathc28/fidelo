@@ -3,6 +3,7 @@ import { config } from "./config";
 import { Customer, Merchant, Reward, db, getCardTheme } from "./supabaseAdmin";
 import { getPassImages } from "./passAssets";
 import { champsCarte } from "./wallet/champsCarte";
+import { texteProximite } from "./wallet/proximite";
 import { promoActive } from "./promo";
 import { identiteCarte } from "./passCerts";
 
@@ -152,11 +153,6 @@ async function dernierePromo(merchantId: string): Promise<string | null> {
     .limit(1)
     .maybeSingle();
   return data && promoActive(data.expires_at) ? data.message : null;
-}
-
-/** Texte affiché sur l'écran verrouillé près de la boutique. */
-export function texteProximite(nomCommerce: string): string {
-  return `${nomCommerce} est juste à côté. Votre carte est prête.`;
 }
 
 function hexToRgb(hex: string): string {
