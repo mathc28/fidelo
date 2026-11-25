@@ -802,10 +802,15 @@
   fill: var(--color-paper);
 }
 
-/* Sur le pass kraft, le QR reprenait le kraft du fond : invisible sur le
-   carré papier. Il passe en marine, comme les textes de cette carte. */
-.landing-formule-svg--foret .landing-formule-qr {
+/* Sur le pass kraft, un carré papier se confondait avec le fond : le carré
+   du QR passe en marine, comme les textes de cette carte, et les modules
+   en papier. */
+.landing-formule-svg--foret .landing-formule-qr-fond {
   fill: var(--color-marine);
+}
+
+.landing-formule-svg--foret .landing-formule-qr {
+  fill: var(--color-paper);
 }
 
 .landing-formule-etiq {
