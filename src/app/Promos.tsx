@@ -5,7 +5,7 @@ import { IOSDevice } from "@/components/IOSFrame";
 import { useInView } from "@/lib/useInView";
 import { MAX_PROMOS } from "@/lib/promo";
 
-const MESSAGE = "Croissants offerts samedi dès 5 € d'achat !";
+const MESSAGE = "Cappuccino offert samedi pour toute pâtisserie achetée !";
 
 const FAITS = [
   "Écrit en 30 secondes",
@@ -59,7 +59,7 @@ export function Promos() {
                       <span className="landing-verrou-app">Wallet</span>
                       <span className="landing-verrou-quand">maintenant</span>
                     </div>
-                    <div className="landing-verrou-texte">Boulangerie Martin — {MESSAGE}</div>
+                    <div className="landing-verrou-texte">Café Cosi — {MESSAGE}</div>
                   </div>
                 </div>
               </div>
