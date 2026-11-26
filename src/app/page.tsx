@@ -196,13 +196,11 @@ export default function LandingPage() {
               <div className="landing-carton-grille">
                 {Array.from({ length: 10 }, (_, i) => {
                   const frappe = i < 7;
-                  // Le dernier tampon posé est un cœur, comme sur la carte du logo.
-                  const coeur = i === 6;
                   return (
                     <div key={i} className={`landing-case${frappe ? " landing-case--frappe" : ""}`}>
                       {frappe && (
                         <span
-                          className={`landing-case-encre${coeur ? " landing-case-encre--coeur" : ""}`}
+                          className="landing-case-encre"
                           style={
                             {
                               "--tilt": `${((i * 37) % 17) - 8}deg`,

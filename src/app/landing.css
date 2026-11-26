@@ -468,17 +468,6 @@
   filter: url(#landing-encre-rugueuse);
 }
 
-/* Le dernier tampon : un cœur, plein et net. Pas de filtre d'encre ici —
-   à cette taille, il mangerait la pointe et les deux lobes. */
-.landing-case-encre--coeur {
-  background: var(--carton-accent);
-  opacity: 1;
-  filter: none;
-  -webkit-mask: var(--masque-coeur) center / contain no-repeat;
-  mask: var(--masque-coeur) center / contain no-repeat;
-  --masque-coeur: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z'/%3E%3C/svg%3E");
-}
-
 .landing-case--frappe .landing-case-encre {
   animation: landing-frappe 0.34s cubic-bezier(0.3, 1.5, 0.5, 1) backwards;
   animation-delay: var(--retard, 0s);
@@ -1527,8 +1516,7 @@
     transform: scale(var(--echelle));
   }
 
-  /* Sans animation, chaque tampon garde son opacité de base : 0,86 pour
-     l'encre, 1 pour le cœur. */
+  /* Sans animation, les 7 tampons gardent leur opacité de base (0,86). */
   .landing-case-encre {
     animation: none !important;
   }
